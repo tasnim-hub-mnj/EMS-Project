@@ -29,15 +29,10 @@ class Visitor extends Model
     }
 
 
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
-
-    public function conversations()
-    {
-        return $this->hasMany(Conversation::class);
-    }
+    // public function conversations()
+    // {
+    //     return $this->hasMany(Conversation::class);
+    // }
 
     public function messages()
     {
