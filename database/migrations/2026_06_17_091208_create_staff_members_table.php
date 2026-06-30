@@ -16,14 +16,26 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            $table->enum('type',[''])->nullable();
-            $table->enum('role',['']);
-            $table->integer('rank');
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->enum('type',['administrative','technical','services','organizational','security'])->default('services')->nullable();
+            $table->string('proffesion')->nullable();
+            $table->enum('role',['manager','supervisor','specicialist','employee'])->nullable()->default('employee');
+            $table->date('availability_date');
+            $table->integer('national_num');
+            $table->float('exp_salary');
+            $table->text('bio');
+            $table->text('scientific_experience');
+            $table->text('educational_qualifications');
+            $table->text('skills');
+            $table->enum('status', ['new','pending','approved','rejected'])->default('new');
+
+            
             $table->string('team');
             $table->json('schedule');//ايام و اوقات العمل
             $table->string('qr_code');
             $table->float('att_rate');//معدل الحضور
-            $table->enum('status', ['active','inactive','on_leave','suspended'])->default('active');
+
             $table->timestamps();
         });
     }

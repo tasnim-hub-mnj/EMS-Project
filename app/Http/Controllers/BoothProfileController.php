@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdatedBoothProfileRequest;
+use App\Models\BoothBooking;
 use App\Models\BoothProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -9,7 +11,167 @@ use Illuminate\Support\Facades\Storage;
 
 class BoothProfileController extends Controller
 {
-    // public function addProductImage(Request $request, $boothId)
+    public function getBoothProfile($booth_profile_id)
+    {
+        $booth_profile=BoothProfile::findOrfail($booth_profile_id);
+        return response()->json([
+            'booth_profile'=>$booth_profile
+        ], 200);
+
+    }
+    // public function getBoothProfile($booking_id)
+    // {
+    //     $booking=BoothBooking::findOrfail($booking_id);
+    //     $booth=$booking->booth;
+
+    //     $booth_profile= $booking->map(function($bookin)
+    //     {
+    //         $investor=$bookin->investor;
+    //         return
+    //         [
+    //             'company_nature'=>$investor->company_nature,
+    //             ''
+    //         ];
+    //     });
+
+    //     return response()->json([
+    //         'booth_profile'=>$booth_profile
+    //     ], 200);
+
+    // }
+    //=====================================================================
+    public function UpdateBoothPorfile(UpdatedBoothProfileRequest $request,$booth_profile_id)
+    {
+        $user=Auth::user();
+        $booth_profile=BoothProfile::findOrfail($booth_profile_id);
+        $validate=$request->validated();
+
+
+        $booth_profile->update($validate);
+
+        return response()->json([
+            'message'=>'Updated booth profile',
+            'booth_profile' =>$booth_profile,
+        ], 200);
+
+    }
+    //=====================================================================
+    //=====================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    //=====================================================================
+    // public function addBoothImage(Request $request, $boothId)
     // {
     //     $request->validate([
     //         'image' => 'required|image|max:2048'
@@ -21,126 +183,96 @@ class BoothProfileController extends Controller
     //                         ->where('investor_id', $investor->id)
     //                         ->firstOrFail();
 
-    //     // رفع الصورة
-    //     $path = $request->file('image')->store('product_images', 'public');
+    //     $path = $request->file('image')->store('booth_images', 'public');
 
-    //     // إضافة الصورة إلى JSON
-    //     $images = $profile->product_images ?? [];
+    //     $images = $profile->booth_images ?? [];
     //     $images[] = $path;
 
-    //     $profile->update(['product_images' => $images]);
+    //     $profile->update(['booth_images' => $images]);
 
     //     return response()->json([
-    //         'message' => 'Product image added successfully',
+    //         'message' => 'Booth image added successfully',
     //         'images' => $images
     //     ]);
     // }
-    //=====================================================================
-    public function addBoothImage(Request $request, $boothId)
-    {
-        $request->validate([
-            'image' => 'required|image|max:2048'
-        ]);
 
-        $investor = Auth::user()->investor;
+    // //=====================================================================
+    // public function deleteProductImage(Request $request, $boothId)
+    // {
+    //     $request->validate([
+    //         'image_path' => 'required|string'
+    //     ]);
 
-        $profile = BoothProfile::where('booth_id', $boothId)
-                            ->where('investor_id', $investor->id)
-                            ->firstOrFail();
+    //     $investor = Auth::user()->investor;
 
-        $path = $request->file('image')->store('booth_images', 'public');
+    //     $profile = BoothProfile::where('booth_id', $boothId)
+    //                         ->where('investor_id', $investor->id)
+    //                         ->firstOrFail();
 
-        $images = $profile->booth_images ?? [];
-        $images[] = $path;
+    //     $images = $profile->product_images ?? [];
 
-        $profile->update(['booth_images' => $images]);
+    //     // إذا الصورة غير موجودة
+    //     if (!in_array($request->image_path, $images)) {
+    //         return response()->json(['message' => 'Image not found'], 404);
+    //     }
 
-        return response()->json([
-            'message' => 'Booth image added successfully',
-            'images' => $images
-        ]);
-    }
+    //     // حذف الصورة من التخزين
+    //     if (Storage::disk('public')->exists($request->image_path)) {
+    //         Storage::disk('public')->delete($request->image_path);
+    //     }
 
-    //=====================================================================
-    public function deleteProductImage(Request $request, $boothId)
-    {
-        $request->validate([
-            'image_path' => 'required|string'
-        ]);
+    //     // حذف الصورة من الـ array
+    //     $images = array_values(array_filter($images, function ($img) use ($request) {
+    //         return $img !== $request->image_path;
+    //     }));
 
-        $investor = Auth::user()->investor;
+    //     // تحديث JSON
+    //     $profile->update(['product_images' => $images]);
 
-        $profile = BoothProfile::where('booth_id', $boothId)
-                            ->where('investor_id', $investor->id)
-                            ->firstOrFail();
+    //     return response()->json([
+    //         'message' => 'Product image deleted successfully',
+    //         'images' => $images
+    //     ], 200);
+    // }
 
-        $images = $profile->product_images ?? [];
+    // //=====================================================================
+    // public function deleteBoothImage(Request $request, $boothId)
+    // {
+    //     $request->validate([
+    //         'image_path' => 'required|string'
+    //     ]);
 
-        // إذا الصورة غير موجودة
-        if (!in_array($request->image_path, $images)) {
-            return response()->json(['message' => 'Image not found'], 404);
-        }
+    //     $investor = Auth::user()->investor;
 
-        // حذف الصورة من التخزين
-        if (Storage::disk('public')->exists($request->image_path)) {
-            Storage::disk('public')->delete($request->image_path);
-        }
+    //     $profile = BoothProfile::where('booth_id', $boothId)
+    //                         ->where('investor_id', $investor->id)
+    //                         ->firstOrFail();
 
-        // حذف الصورة من الـ array
-        $images = array_values(array_filter($images, function ($img) use ($request) {
-            return $img !== $request->image_path;
-        }));
+    //     $images = $profile->booth_images ?? [];
 
-        // تحديث JSON
-        $profile->update(['product_images' => $images]);
+    //     // إذا الصورة غير موجودة
+    //     if (!in_array($request->image_path, $images)) {
+    //         return response()->json(['message' => 'Image not found'], 404);
+    //     }
 
-        return response()->json([
-            'message' => 'Product image deleted successfully',
-            'images' => $images
-        ], 200);
-    }
+    //     // حذف الصورة من التخزين
+    //     if (Storage::disk('public')->exists($request->image_path)) {
+    //         Storage::disk('public')->delete($request->image_path);
+    //     }
 
-    //=====================================================================
-    public function deleteBoothImage(Request $request, $boothId)
-    {
-        $request->validate([
-            'image_path' => 'required|string'
-        ]);
+    //     // حذف الصورة من الـ array
+    //     $images = array_values(array_filter($images, function ($img) use ($request) {
+    //         return $img !== $request->image_path;
+    //     }));
 
-        $investor = Auth::user()->investor;
+    //     // تحديث JSON
+    //     $profile->update(['booth_images' => $images]);
 
-        $profile = BoothProfile::where('booth_id', $boothId)
-                            ->where('investor_id', $investor->id)
-                            ->firstOrFail();
+    //     return response()->json([
+    //         'message' => 'Booth image deleted successfully',
+    //         'images' => $images
+    //     ], 200);
+    // }
 
-        $images = $profile->booth_images ?? [];
-
-        // إذا الصورة غير موجودة
-        if (!in_array($request->image_path, $images)) {
-            return response()->json(['message' => 'Image not found'], 404);
-        }
-
-        // حذف الصورة من التخزين
-        if (Storage::disk('public')->exists($request->image_path)) {
-            Storage::disk('public')->delete($request->image_path);
-        }
-
-        // حذف الصورة من الـ array
-        $images = array_values(array_filter($images, function ($img) use ($request) {
-            return $img !== $request->image_path;
-        }));
-
-        // تحديث JSON
-        $profile->update(['booth_images' => $images]);
-
-        return response()->json([
-            'message' => 'Booth image deleted successfully',
-            'images' => $images
-        ], 200);
-    }
-
-    //=====================================================================
-    //=====================================================================
-    //=====================================================================
 
 }

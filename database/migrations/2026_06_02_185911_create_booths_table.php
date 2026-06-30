@@ -17,16 +17,16 @@ return new class extends Migration
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->string('number');
             $table->float('area');
-            $table->enum('status', ['available', 'booked', 'pending', 'closed'])->default('available');
+            $table->enum('status_inv', ['available', 'booked', 'pending'])->default('available');
+            $table->enum('status', ['available', 'unavailable', 'pending'])->default('available');
             $table->float('price');
             $table->date('end_date')->nullable();
             $table->string('location')->nullable();//الموقع داخل المعرض
-            $table->json('amenities')->nullable();// مثال: ["Electricity","Water","Internet"]
-            $table->integer('hall_id')->nullable();//رقم القاعة
+            $table->json('services');//الخدمة + السعر
             $table->integer('map_x')->nullable();
             $table->integer('map_y')->nullable();
             $table->integer('map_z')->nullable();
-            $table->timestamps();
+            $table->timestamps();//sponsor_event_programe
         });
     }
 

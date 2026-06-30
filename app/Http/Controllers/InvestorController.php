@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InvestorRequest;
+use App\Http\Requests\UpdatedInvestorProfileRequest;
 use App\Models\Investor;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Auth as FacadesAuth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -15,16 +17,7 @@ class InvestorController extends Controller
 {
     public function register(Request $request)
     {
-        $request->validate([
-            'company_name'   => 'required|string|max:200',
-            'trade_name'     => 'nullable|string|max:200',
-            'email'          => 'required|email|unique:users,email',
-            'phone'          => 'required|string|unique:users,phone',
-            'website'        => 'nullable|url',
-            'activity_type'  => 'required|string|max:200',
-            'password'       => 'required|string|min:6|confirmed',
-            'terms_accepted' => 'required|boolean|in:1',
-        ]);
+        $request->validated();
 
         $user = User::create([
             'email'    => $request->email,
@@ -61,7 +54,9 @@ class InvestorController extends Controller
 
         if (!$user || $user->role !== 'investor')
         {
-            return response()->json(['message' => 'This account is not an investor'], 403);
+            return response()->json([
+                'message' => 'This account is not an investor'
+            ], 403);
         }
 
         if (!Hash::check($request->password, $user->password))
@@ -94,10 +89,12 @@ class InvestorController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logout successful'], 200);
+        return response()->json([
+            'message' => 'Logout successful'
+        ], 200);
     }
     //================================================================
-    public function sendResetCode(Request $request)
+    public function forgotPassword(Request $request)
     {
         $request->validate([
             'email' => 'required|email|exists:users,email',
@@ -145,6 +142,33 @@ class InvestorController extends Controller
             'message' => 'Password changed successfully'
         ], 200);
     }
+    //================================================================
+    public function getPorfile($investor_id)
+    {
+        $user=Auth::user();
+        $investor=Investor::findOrfail($investor_id);
+        return response()->json([
+            'investor' =>$investor,
+            'user'=>$user
+        ], 200);
 
+    }
+    //================================================================
+    public function UpdatePorfile(UpdatedInvestorProfileRequest $request,$investor_id)
+    {
+        $user=Auth::user();
+        $investor=Investor::findOrfail($investor_id);
+        $validate=$request->validated();
+
+        $user->update($validate);
+        $investor->update($validate);
+
+        return response()->json([
+            'message'=>'Updated profile',
+            'investor' =>$investor,
+            'user'=>$user
+        ], 200);
+
+    }
 
 }

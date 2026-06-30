@@ -147,7 +147,7 @@ class EventController extends Controller
         ], 200);
     }
     //===========================================================
-    // عرض كل الأحداث الخاصة بالأجنحة التي حجزها المستثمر
+    // عرض كل الفعاليات الخاصة بالأجنحة التي حجزها المستثمر
     public function myBoothEvents()
     {
         $investor = Auth::user()->investor;
@@ -166,14 +166,16 @@ class EventController extends Controller
         ], 200);
     }
     //===========================================================
-    // عرض تفاصيل حدث معين ضمن أجنحة المستثمر
+    // عرض تفاصيل فعالية معينة ضمن أجنحة المستثمر
     public function showEventDetails($eventId)
     {
         $investor = Auth::user()->investor;
 
         $event = Event::where('id', $eventId)
-            ->whereHas('booth', function ($query) use ($investor) {
-                $query->whereHas('bookings', function ($q) use ($investor) {
+            ->whereHas('booth', function ($query) use ($investor)
+            {
+                $query->whereHas('bookings', function ($q) use ($investor)
+                {
                     $q->where('investor_id', $investor->id)
                       ->where('status', 'approved');
                 });

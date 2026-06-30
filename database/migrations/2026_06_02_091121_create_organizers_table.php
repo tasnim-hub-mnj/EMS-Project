@@ -16,10 +16,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('company_name')->nullable();
-            $table->json('category')->nullable();
+            $table->json('category')->nullable();//exhibitoin->type
             $table->string('headquarters')->nullable();
             $table->integer('reg_number')->unique()->nullable();
-            $table->string('website');
+            $table->string('location');//EXHIBITION->LOCATION
+            $table->string('logo');
+            $table->file('file');
             $table->string('description')->nullable();
             $table->timestamps();
         });

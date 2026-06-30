@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//???oi🌿🥺
         Schema::create('campaigns', function (Blueprint $table)
         {
             $table->id();

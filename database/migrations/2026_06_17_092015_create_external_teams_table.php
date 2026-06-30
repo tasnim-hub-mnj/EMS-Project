@@ -17,20 +17,17 @@ return new class extends Migration
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->string('name');
             $table->string('company')->nullable();
-            $table->enum('role',[''])->nullable();
-            $table->json('category')->nullable();
-            $table->string('contact_name')->nullable();
-            $table->string('contact_phone')->nullable();
-            $table->string('contact_email')->nullable();
-            $table->decimal('contract_value', 12, 2)->nullable();
+            $table->string('role')->nullable();
+            $table->text('description')->nullable();
+            $table->string('offical_name')->nullable();//اسم المسؤوول
+            $table->string('email')->nullable();
+            $table->string('phone')->nullable();
+            $table->float('amount')->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
-            $table->enum('status', ['pending', 'active', 'completed', 'rejected'])->default('pending');
-            $table->text('description')->nullable();
+            $table->string('classification')->nullable();//التصنيف
             $table->text('notes')->nullable();
-            $table->date('request_date')->nullable();
-            $table->json('members')->nullable(); // [ { id, name, role, phone, email } ]
-            $table->json('tasks')->nullable();   // [ { id, title, status, assignedTo, due } ]
+            $table->enum('status', ['pending', 'active', 'finished'])->default('pending');
             $table->timestamps();
         });
     }

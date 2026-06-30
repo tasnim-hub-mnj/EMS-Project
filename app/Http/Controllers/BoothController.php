@@ -4,51 +4,65 @@ namespace App\Http\Controllers;
 
 use App\Models\BoothBooking;
 use App\Models\Booth;
+use App\Models\Exhibition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Auth as FacadesAuth;
+use App\Models\User;
+use App\Notifications\OrderStatusNotification;
+
 
 class BoothController extends Controller
 {
-    public function boothBasicDetails($booth_id)//عرض جناح على لخريطة
+    public function getBothsExhibition($exhibition_id)//عرض كل الاجنحة الخاصة بمعرض معين
     {
-        $booth = Booth::select(
-            'id',
-            'number',
-            'image_url',
-            'area',
-            'price',
-            'status',
-            'location',
-            'amenities',
-            'hall_id',
-            'row',
-            'col'
-        )->find($booth_id);
-
-        if (!$booth)
-        {
-            return response()->json(['message' => 'Booth not found'], 404);
-        }
-
+        $exhibition=Exhibition::findOrfail($exhibition_id);
+        $booths=$exhibition->booths;
         return response()->json([
-            'booth' => $booth
+            'booths' => $booths
         ], 200);
     }
+    //=================================================================================
+    // public function boothBasicDetails($booth_id)//عرض جناح على لخريطة
+    // {
+    //     $booth = Booth::findOrfail($booth_id);
+
+    //     if (!$booth)
+    //     {
+    //         return response()->json(['message' => 'Booth not found'], 404);
+    //     }
+
+    //     $booth_map=$booth->map(function($b)
+    //     {
+    //         return
+    //         [
+    //             'id' => $b->id,
+    //             'number'=>$b->number,
+    //             'area'=>$b->area,
+    //             'price'=>$b->price,
+    //             'location'=>$b->location,
+    //             'high'=>$b->map_y,
+    //             'X # Y'=>[$b->map_x.'#'.$b->map_z],
+    //             'services'=>$b->services
+    //         ];
+    //     });
+    //     return response()->json([
+    //         'booth' => $booth_map
+    //     ], 200);
+    // }
     //==============================================================
     public function bookBooth(Request $request,$booth_id)//حجز
     {
+        $user_id=Auth::User()->id;
+
         $request->validate([
             'duration_days'  => 'required|integer|min:1',
             'notes'          => 'nullable|string',
-            'screen_service' => 'boolean',
-            'setup_service'  => 'boolean',
-            'security_service' => 'boolean',
-            'cleaning_service' => 'boolean',
+            'services' => 'required|json'
         ]);
 
         $investor = Auth::user()->investor;
-        $booth = Booth::find($booth_id);
+        $booth = Booth::findOrfail($booth_id);
 
         //التحقق من توفر البوث
         if ($booth->status !== 'available')
@@ -59,7 +73,7 @@ class BoothController extends Controller
         }
 
         //التحقق من عدم وجود حجز سابق
-        $existing = BoothBooking::where('investor_id', $investor->id)
+        $existing = BoothBooking::whereOr('investor_id', $investor->id)
                         ->where('booth_id', $booth->id)
                         ->whereIn('status', ['pending', 'approved'])
                         ->first();
@@ -73,16 +87,20 @@ class BoothController extends Controller
 
         //إنشاء الحجز
         $booking = BoothBooking::create([
-            'investor_id'      => $investor->id,
             'booth_id'         => $booth->id,
             'duration_days'    => $request->duration_days,
             'notes'            => $request->notes,
-            'screen_service'   => $request->screen_service ?? false,
-            'setup_service'    => $request->setup_service ?? false,
-            'security_service' => $request->security_service ?? false,
-            'cleaning_service' => $request->cleaning_service ?? false,
-            'total_price'
+            'services'         => $request->services,
+            'total_price' => BoothBooking::booted(),
         ]);
+
+        $user = User::findOrfail($user_id);
+        $title = "تم قبول طلبك رقم #520";
+$body = "مرحباً " . $user->name . "، لقد تم قبول طلبك وجاري تحضيره الآن.";
+
+// 3. إرسال الإشعار وتمرير المتغيرات له مباشرة
+$user->notify(new OrderStatusNotification($title, $body));
+
 
         //تغيير حالة البوث
         $booth->update(['status' => 'pending']);
@@ -93,6 +111,16 @@ class BoothController extends Controller
         ], 201);
     }
 
+    //==============================================================
+    public function cancelBooking($bookingId)
+    {
+        $booking=BoothBooking::findOrfail($bookingId);
+        $booking->status->update('canceled');
+        return response()->json([
+            'message' => 'Booth canceled',
+            'booking' => $booking
+        ], 201);
+    }
     //==============================================================
     public function myBookings()//عرض كل الاجنحة يلي حجزها هاد المستثمر
     {
@@ -162,7 +190,7 @@ class BoothController extends Controller
         return response()->json(['bookings' => $bookings], 200);
     }
     //==============================================================
-    public function boothDetails($bookingId)//عرض
+    public function boothDetails($bookingId)//عرض تفاصيل الجناح المحجوز
     {
         $investor = Auth::user()->investor;
 

@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//o//🌿🥺
         Schema::create('sponsors', function (Blueprint $table)
         {
             $table->id();

@@ -23,6 +23,7 @@ class User extends Authenticatable
         'phone',
         'password',
         'role',
+        'token_fcm',
 
     ];
 
@@ -47,6 +48,12 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function routeNotificationForFcm()
+    {
+        //fcm_token
+        return $this->fcm_token;
     }
     //=====================================================
     public function organizer()
@@ -130,7 +137,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(OtpCode::class);
     }
-    
+
 
 }
 

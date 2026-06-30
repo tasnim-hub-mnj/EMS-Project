@@ -14,12 +14,13 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table)
         {
             $table->id();
-            $table->string('name');
+            // $table->string('name')->nullable();
             $table->string('email')->unique()->nullable();
             $table->string('phone')->unique()->nullable();
-            $table->string('password');
+            $table->string('password')->nullable();
             $table->enum('role',['organizer','investor','visitor','staff','admin'])->default('visitor');
             $table->enum('status', ['pending','approved','rejected'])->default('pending');
+            $table->string('token_fcm');
             $table->rememberToken();
             $table->timestamps();
         });

@@ -66,8 +66,7 @@ class ExhibitionController extends Controller
         ], 200);
     }
     //===============================================================
-    // هذا المسار مخصص لمنظم المعرض لعرض معارضه فقط
-    public function organizerIndex()
+    public function organizerIndex()// مخصص لمنظم المعرض لعرض معارضه فقط
     {
         $user = Auth::user();
 
@@ -80,8 +79,7 @@ class ExhibitionController extends Controller
         ], 200);
     }
     //===============================================================
-    // إنشاء معرض جديد من قبل المنظم
-    public function store(Request $request)
+    public function store(Request $request)// إنشاء معرض جديد من قبل المنظم
     {
         $request->validate([
             'name' => 'required|string|max:255',

@@ -10,14 +10,14 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {//v
-        Schema::create('booth_reviews', function (Blueprint $table)
-        {
+    {
+        Schema::create('external_team_members', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('booth_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->decimal('rating', 3, 2);
-            $table->text('comment')->nullable();
+            $table->foreignId('external_teams_id')->constrained('external_teams')->onDelete('cascade');
+            $table->string('name');
+            $table->string('role');
+            $table->string('phone')->nullable();
+            $table->string('email')->nullable();
             $table->timestamps();
         });
     }
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('booth_reviews');
+        Schema::dropIfExists('external_team_members');
     }
 };

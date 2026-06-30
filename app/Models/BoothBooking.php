@@ -38,25 +38,22 @@ class BoothBooking extends Model
         {
             // جلب المعرض من خلال البوث
             $exhibition = $booking->booth->exhibition;
-
+            $booth=$booking->booth;
             // جلب الأسعار من JSON
-            $services = $exhibition->extra_services ?? [];
+            $services = $booth->services ?? [];
+            $prices=$services->map(function($s) use ($services)
+            {
 
-            $screen   = $services['screen']   ?? 0;
-            $setup    = $services['setup']    ?? 0;
-            $security = $services['security'] ?? 0;
-            $cleaning = $services['cleaning'] ?? 0;
+            });
 
             // سعر البوث
             $boothPrice = $booking->booth->price;
 
             // حساب السعر الكلي
             $booking->total_price =
-                ($boothPrice * $booking->duration_days)
-                + ($booking->screen_service   ? $screen   : 0)
-                + ($booking->setup_service    ? $setup    : 0)
-                + ($booking->security_service ? $security : 0)
-                + ($booking->cleaning_service ? $cleaning : 0);
+                ($boothPrice * $booking->duration_days);
+                // +;
+
 
             // تعبئة booked_at تلقائياً
             if (empty($booking->booked_at))

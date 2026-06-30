@@ -15,10 +15,15 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('avatar_url')->nullable();
-            $table->json('interests');
-            $table->string('country');
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('proffesion');
             $table->string('city');
+            $table->string('hobby');
+            $table->json('interests');//اخيار اكثر من واحدة (ثابتين ككل)
+            // $table->string('country');
+            $table->string('avatar_url')->nullable();
+
             $table->timestamps();
         });
     }

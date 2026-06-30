@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//o
         Schema::create('sponsorship_requests', function (Blueprint $table)
         {
             $table->id();
@@ -18,27 +18,27 @@ return new class extends Migration
             $table->foreignId('sponsor_id')->constrained('sponsors')->onDelete('cascade');
 
             $table->string('company_name');
-            $table->enum('company_type', ['corporate', 'government', 'ngo', 'startup'])->nullable();
-            $table->string('website')->nullable();
-
-            $table->string('contact_name')->nullable();
-            $table->string('contact_phone')->nullable();
-            $table->string('contact_email')->nullable();
-
+            $table->string('company_type')->nullable();
             $table->enum('proposed_tier',['gold','silver','bronze','title'])->nullable();
-            $table->decimal('proposed_amount', 12, 2)->nullable();
+            $table->enum('status', ['new','pending','negotiating','approved', 'rejected'])->default('new');
+            $table->float('proposed_amount')->nullable();
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
+            $table->date('book_at')->nullable();//تلقائي
+            $table->string('contact_name')->nullable();//اسم المسؤول
             $table->text('offer_details')->nullable();
             $table->text('conditions')->nullable();
             $table->text('contract_terms')->nullable();
+            $table->text('organizer_notes')->nullable();
+            $table->integer('last_sponsor')->default(0);
+            $table->text('reject_reason')->nullable();
 
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
 
+            $table->string('website')->nullable();
+            $table->string('contact_phone')->nullable();
+            $table->string('contact_email')->nullable();
             $table->date('request_date')->nullable();
 
-            $table->enum('status', ['new','reviewing','negotiating','accepted','rejected'])->default('new');
-            $table->text('reject_reason')->nullable();
-            $table->text('organizer_notes')->nullable();
             $table->timestamps();
         });
     }

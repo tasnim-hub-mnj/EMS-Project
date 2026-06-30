@@ -16,14 +16,15 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('company_name');
-            $table->string('trade_name')->nullable();//المجال التجاري
+            // $table->string('trade_name')->nullable();//المجال التجاري
+            $table->string('location');
             $table->string('website')->nullable();
-            $table->string('activity_type')->nullable();//نوع النشاط
+            $table->enum('activity_type',['technology','food&hospitality','fashion','health','education','other'])->nullable();//نوع النشاط
             $table->boolean('terms_accepted')->default(false);//الموافقة على الشروط
+
             $table->text('bio')->nullable();
             $table->string('logo')->nullable();
-            $table->string('avatar_url')->nullable();
-            $table->json('social_links')->nullable();
+            // $table->json('social_links')->nullable();//جدول لحال
             $table->timestamps();
         });
     }

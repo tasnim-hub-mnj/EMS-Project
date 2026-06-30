@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//v
         Schema::create('exhibition_reviews', function (Blueprint $table)
         {
             $table->id();

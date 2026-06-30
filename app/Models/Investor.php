@@ -43,11 +43,11 @@ class Investor extends Model
         return $this->hasMany(BoothBooking::class);
     }
     //=====================================================
-    // المستثمر يملك قائمة مفضلات
-    public function favorites()
-    {
-        return $this->hasMany(Favorite::class, 'investor_id');
-    }
+    // // المستثمر يملك قائمة مفضلات
+    // public function favorites()
+    // {
+    //     return $this->hasMany(Favorite::class, 'investor_id');
+    // }
     //=====================================================
     // المستثمر لديه طلبات حجز رعاية متعددة
     public function sponsorshipBookings()

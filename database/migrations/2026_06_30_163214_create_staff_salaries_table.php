@@ -10,17 +10,16 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {//v
-    //تذكرة معرض
-        Schema::create('tickets', function (Blueprint $table)
-        {
+    {
+        Schema::create('staff_salaries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            $table->string('qr_code')->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->float('amount')->nullable();
-            $table->timestamp('booked_at')->nullable();//وقت طلب التذكرة
+            $table->foreignId('staff_id')->constrained('staff_members')->onDelete('cascade');//full_name
+            $table->string('year');
+            $table->string('month');
+            $table->string('year');
+            $table->enum('type_staff',['administrative','technical','services','organizational','security'])->nullable();
+            $table->float('salary');
             $table->timestamps();
         });
     }
@@ -30,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('tickets');
+        Schema::dropIfExists('staff_salaries');
     }
 };
