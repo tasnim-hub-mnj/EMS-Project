@@ -6,14 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class SupportTicket extends Model
 {
-      protected $fillable = [
+    protected $fillable = [
         'user_id',
         'type',
         'body',
-        'latitude',
-        'longitude',
+        //'latitude',
+        //'longitude',
         'status'
-           ];
+    ];
 
     public function user()
     {
