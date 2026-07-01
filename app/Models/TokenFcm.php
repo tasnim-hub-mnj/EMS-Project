@@ -5,16 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class EventImage extends Model
+class Token_fcm extends Model
 {
     use HasFactory;
 
     protected $fillable =
     [
-        'event_id',
-        'url',
+        'token_fcm'
     ];
-
-    protected $table = 'event_images';
-    //===============Relationships==================
+    
+    protected $table = 'token_fcms';
 }

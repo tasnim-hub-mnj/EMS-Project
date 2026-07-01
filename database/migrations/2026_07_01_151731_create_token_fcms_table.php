@@ -11,14 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('copies', function (Blueprint $table)
+        Schema::create('token_fcms', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            $table->string('year', 4);
-            $table->date('start_date');
-            $table->date('end_date');
-            $table->enum('status', ['upcoming', 'ongoing', 'finished'])->default('upcoming');
+            $table->string('token_fcm');
             $table->timestamps();
         });
     }
@@ -28,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('copies');
+        Schema::dropIfExists('token_fcms');
     }
 };

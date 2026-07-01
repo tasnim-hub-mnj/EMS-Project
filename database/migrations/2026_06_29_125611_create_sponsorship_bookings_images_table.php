@@ -8,10 +8,11 @@ return new class extends Migration
 {//i
     public function up(): void
     {
-        Schema::create('sponsorship_bookings_images', function (Blueprint $table) {
+        Schema::create('sponsorship_bookings_images', function (Blueprint $table)
+        {
             $table->id();
-            $table->foreignId('sponsorEvent_id')->constrained('sponsorEvents')->onDelete('cascade');
-            $table->string('image');
+            $table->foreignId('sponsorship_booking_id')->constrained('sponsorship_bookings')->onDelete('cascade');
+            $table->string('url');
             $table->enum('type',['spo_event','poste']);
             $table->timestamps();
         });

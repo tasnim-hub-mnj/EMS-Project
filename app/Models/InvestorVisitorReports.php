@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class InvestorBoothReports extends Model
+class InvestorVisitorReports extends Model
 {
     use HasFactory;
 
@@ -15,12 +15,14 @@ class InvestorBoothReports extends Model
         'booth_booking_id',
         'date',
         'total_visitors',
-        'potential_clients',
-        'conversions',
-        'performance_index',
+        'new_visitors',
+        'avg_visit_time',
+        'peak_hour',
+        'repeat_rate',
+        'growth_rate',
     ];
 
-    protected $table = 'investor_booth_reports';
+    protected $table = 'investor_visitor_reports';
 
     //===============Relationships==================
 }

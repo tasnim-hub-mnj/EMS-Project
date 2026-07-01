@@ -8,9 +8,11 @@ return new class extends Migration
 {//o
     public function up(): void
     {
-        Schema::create('sponsor_event_images', function (Blueprint $table) {
+        Schema::create('sponsor_event_images', function (Blueprint $table)
+        {
             $table->id();
-            $table->string('image');
+            $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
+            $table->string('url');
             $table->timestamps();
         });
     }

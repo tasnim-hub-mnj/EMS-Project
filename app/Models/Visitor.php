@@ -2,27 +2,33 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Visitor extends Model
 {
-    protected $fillable = [
+    use HasFactory;
+
+    protected $fillable =
+    [
         'user_id',
         'first_name',
         'last_name',
         'profession',
         'city',
-        'country',
+        'hobby',
         'interests',
-        'preferred_language',
+        'avatar_url',
     ];
 
-    protected $casts = [
+    protected $table = 'visitors';
+
+    protected $casts =
+    [
         'interests' => 'array',
     ];
-    //==========================================
-    //الزائر له
 
+    // =================Relationships===================
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

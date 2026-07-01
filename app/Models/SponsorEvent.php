@@ -10,23 +10,36 @@ class SponsorEvent extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+    protected $fillable =
+    [
         'exhibition_id',
         'name',
         'type',
-        'date',
+        'by',
+        'place',
         'start_time',
         'end_time',
-        'place',
-        'listing_days',
         'description',
+        'is_general_invitation',
+        'ticket_price',
+        'max_participants',
+        'listing_days',
         'duration_options',
+        'registered_count',
+        'total_seats',
+        'scanned_count',
+        'status',
+        'copy_status'
     ];
 
-    protected $casts = [
+    protected $table = 'sponsor_events';
+
+    protected $casts =
+    [
         'duration_options' => 'array',
     ];
 
+    //===============Relationships==================
 
     public function getEndDateAttribute()
     {

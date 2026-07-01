@@ -9,29 +9,27 @@ class Investor extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+    protected $fillable =
+    [
         'user_id',
         'company_name',
         'trade_name',
+        'location',
         'website',
         'activity_type',
-        'avatar_url',
-        'bio',
-        'location',
-        'logo',
         'terms_accepted',
-        'status',
-        'social_links',
+        'bio',
+        'logo',
     ];
 
-    protected $casts = [
+    protected $table = 'investors';
+
+    protected $casts =
+    [
         'terms_accepted' => 'boolean',
-        'social_links' => 'array',
     ];
-
 
     // =================Relationships===================
-    // كل مستثمر يرتبط بحساب مستخدم واحد
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -43,28 +41,10 @@ class Investor extends Model
         return $this->hasMany(BoothBooking::class);
     }
     //=====================================================
-    // // المستثمر يملك قائمة مفضلات
-    // public function favorites()
-    // {
-    //     return $this->hasMany(Favorite::class, 'investor_id');
-    // }
-    //=====================================================
     // المستثمر لديه طلبات حجز رعاية متعددة
     public function sponsorshipBookings()
     {
         return $this->hasMany(SponsorshipBooking::class);
-    }
-    //=====================================================
-    // التقارير المرتبطة بالمستثمر
-    public function reports()
-    {
-        return $this->hasMany(Report::class);
-    }
-    //=====================================================
-    // الملف التجاري للمستثمر
-    public function companyProfile()
-    {
-        return $this->hasOne(CompanyProfile::class, 'investor_id');
     }
     //=====================================================
     // الفعاليات التي أنشأها المستثمر

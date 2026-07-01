@@ -2,18 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class BoothImage extends Model
 {
-     protected $fillable = [
-        'booth_id',
-         'url',
-         'type'
-         ];
+    use HasFactory;
 
-    public function booth()
+    protected $fillable =
+    [
+        'booth_booking_id',
+        'url',
+        'type'
+    ];
+
+    protected $table = 'booth_images';
+    //===============Relationships==================
+    public function boothBooking()
     {
-        return $this->belongsTo(Booth::class);
+        return $this->belongsTo(BoothBooking::class);
     }
 }

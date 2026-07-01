@@ -5,21 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class StaffSalary extends Model
+class EventTicket extends Model
 {
     use HasFactory;
 
     protected $fillable =
     [
-        'exhibition_id',
-        'staff_id',
-        'year',
-        'month',
-        'type_staff',
-        'salary'
+
     ];
 
-    protected $table = 'staff_salaries';
-
+    protected $table = 'event_tickets';
     //===============Relationships==================
+    
 }

@@ -8,26 +8,24 @@ class BoothBooking extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+    protected $fillable =
+    [
         'investor_id',
         'booth_id',
         'duration_days',
         'notes',
-        'screen_service',
-        'setup_service',
-        'security_service',
-        'cleaning_service',
         'total_price',
+        'paid_amount',
+        'services_products',
         'status',
         'booked_at',
     ];
 
-    protected $casts = [
+    protected $table = 'booth_bookings';
+
+    protected $casts =
+    [
         'duration_days'    => 'integer',
-        'screen_service'   => 'boolean',
-        'setup_service'    => 'boolean',
-        'security_service' => 'boolean',
-        'cleaning_service' => 'boolean',
         'total_price'      => 'float',
         'booked_at'        => 'date',
     ];

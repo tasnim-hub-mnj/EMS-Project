@@ -9,27 +9,39 @@ class Exhibition extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+    protected $fillable =
+    [
+        'organizer_id',
         'name',
-        'description',
-        'image_url',
+        'type',
         'start_date',
         'end_date',
         'location',
+        'description',
         'city',
         'status',
+        'copy_status',
         'available_booths',
+        'total_booths',
+        'total_sponser_events',
+        'visitors_count',
         'sectors',
         'extra_services',
+        'working_hours',
+        'is_paid',
     ];
 
-    protected $casts = [
+    protected $table = 'exhibitions';
+
+    protected $casts =
+    [
         'sectors'        => 'array',
         'extra_services' => 'array',
         'start_date'     => 'date',
         'end_date'       => 'date',
     ];
-    //=====================================================
+    
+    //===============Relationships==================
     public function organizer()
     {
         return $this->belongsTo(User::class, 'organizer_id');

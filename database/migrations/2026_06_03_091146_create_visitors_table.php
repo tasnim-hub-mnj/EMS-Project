@@ -22,7 +22,6 @@ return new class extends Migration {
             // $table->string('country');
             $table->string('avatar_url')->nullable();
 
-
             $table->timestamps();
         });
     }

@@ -5,12 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+{//v
     public function up(): void
-    {//v
+    {
         Schema::create('booth_reviews', function (Blueprint $table)
         {
             $table->id();

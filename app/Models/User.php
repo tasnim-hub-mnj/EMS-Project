@@ -6,25 +6,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory,Notifiable,HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'name',
+    protected $fillable =
+    [
         'email',
         'phone',
         'password',
         'role',
+        'status',
         'token_fcm',
-
     ];
 
     /**
@@ -49,13 +50,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-
+    //------------------------------------------------
     public function routeNotificationForFcm()
     {
         //fcm_token
         return $this->fcm_token;
     }
-    //=====================================================
+
+    // =================Relationships===================
     public function organizer()
     {
         return $this->hasOne(Organizer::class, 'user_id');
