@@ -10,8 +10,8 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('boothBookings', function (Blueprint $table)
+    {//i
+        Schema::create('booth_bookings', function (Blueprint $table)
         {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
@@ -24,6 +24,7 @@ return new class extends Migration
             $table->text('services_products')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled','Finished'])->default('pending');
             $table->date('booked_at')->nullable();
+            // $table->json('images');//جدول لحال
             $table->timestamps();
         });
     }
@@ -33,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('boothBookings');
+        Schema::dropIfExists('booth_bookings');
     }
 };

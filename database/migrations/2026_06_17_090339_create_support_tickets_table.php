@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('support_tickets', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->enum('type', ['message', 'report', 'location'])->default('message');
             $table->text('body')->nullable();
             // $table->decimal('latitude', 10, 7)->nullable();

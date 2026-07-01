@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('visitor_schedules', function (Blueprint $table)
-        {
+        Schema::create('copies', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('event_id')->constrained('events')->cascadeOnDelete();
-            $table->timestamp('added_at')->nullable();
+            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+            $table->string('year', 4);
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->enum('status', ['upcoming', 'ongoing', 'finished'])->default('upcoming');
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('visitor_schedules');
+        Schema::dropIfExists('copies');
     }
 };

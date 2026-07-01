@@ -12,8 +12,8 @@ return new class extends Migration {
     {
         Schema::create('conversations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('exhibition_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('exhibition_id')->nullable('exhibitions')->constrained()->nullOnDelete();
             $table->text('last_message')->nullable();
             $table->integer('unread_count')->default(0);
             $table->timestamps();

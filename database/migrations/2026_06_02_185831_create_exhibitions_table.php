@@ -9,7 +9,7 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//o
         Schema::create('exhibitions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organizer_id')->constrained('users')->onDelete('cascade');
@@ -30,6 +30,7 @@ return new class extends Migration {
             $table->json('extra_services')->nullable();
             $table->float('working_hours');//00000
             $table->boolean('is_paid')->default(false);
+            // $table->json('images');//جدول لحال
 
             $table->float('ticket_price')->nullable();
             $table->json('map');

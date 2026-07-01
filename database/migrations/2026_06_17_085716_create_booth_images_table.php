@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('booth_images', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('booth_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('booth_booking_id')->constrained('booth_bookings')->cascadeOnDelete();
             $table->string('url');
             $table->enum('type',['product','booth'])->nullable();
             $table->timestamps();

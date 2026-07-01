@@ -10,13 +10,13 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//i
         Schema::create('investors', function (Blueprint $table)
         {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('company_name');
-            // $table->string('trade_name')->nullable();//المجال التجاري
+            $table->string('trade_name')->nullable();//المجال التجاري//activity_type
             $table->string('location');
             $table->string('website')->nullable();
             $table->enum('activity_type',['technology','food&hospitality','fashion','health','education','other'])->nullable();//نوع النشاط

@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('collected_booths', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('booth_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('booth_id')->constrained('booths')->cascadeOnDelete();
             $table->string('qr_data')->nullable();
             $table->timestamp('scanned_at')->nullable();
             $table->timestamps();

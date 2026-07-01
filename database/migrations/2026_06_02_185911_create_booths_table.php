@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//oi
         Schema::create('booths', function (Blueprint $table)
         {
             $table->id();
@@ -26,7 +26,7 @@ return new class extends Migration
             $table->integer('map_x')->nullable();
             $table->integer('map_y')->nullable();
             $table->integer('map_z')->nullable();
-            $table->timestamps();//sponsor_event_programe
+            $table->timestamps();
         });
     }
 

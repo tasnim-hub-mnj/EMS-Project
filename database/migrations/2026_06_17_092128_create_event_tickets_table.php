@@ -15,15 +15,7 @@ return new class extends Migration
         Schema::create('event_tickets', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->foreignId('sponsorEvent_id')->constrained('sponsorEvents')->onDelete('cascade');
-            $table->string('name');
-            $table->string('email')->nullable();
-            $table->string('phone')->nullable();
-            $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
-            $table->string('qr_code')->nullable();
-            $table->decimal('amount', 12, 2)->nullable();
-            $table->timestamp('booked_at')->nullable();
+            $table->foreignId('event_id')->constrained('exhibitions')->onDelete('cascade');
             $table->timestamps();
         });
     }
