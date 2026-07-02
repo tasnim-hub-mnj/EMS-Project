@@ -2,18 +2,98 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreExhibitionRequest;
 use App\Models\Exhibition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ExhibitionController extends Controller
 {
+    public function featurrdExhibitionsI()//عرض المعارض المميزة للمستثمر
+    {
+        $invsetor_user=Auth::user()->investor;
+        $exhibitions = Exhibition::orderBy('start_date', 'asc')->get();
+        if($invsetor_user->location == $exhibitions->location||
+        $invsetor_user->activity_type == $exhibitions->type&&
+        $exhibitions->status == 'upcoming'||$exhibitions->status == 'ongoing'&&
+        $exhibitions->available_booths > 0 )
+        {
+            return response()->json(
+            [
+                'exhibitions' => $exhibitions
+            ], 200);
+        }
+        else
+        {
+            return response()->json(
+            [
+                'message' => 'No featured exhibitions found',
+                'exhibitions' => $exhibitions
+            ], 200);
+
+        }
+    }
+    //===============================================================
+    public function latestExhibitions()//عرض احدث المعارض
+    {
+        $exhibitions = Exhibition::weher('status',['upcoming','ongoing'])
+        ->orderBy('start_date', 'asc')
+        ->get();
+
+        $exhibitions_data = $exhibitions->map(function($exhibition)
+        {
+            return [
+                'id' => $exhibition->id,
+                'name' => $exhibition->name,
+                'type' => $exhibition->type,
+                'start_date' => $exhibition->start_date,
+                'end_date' => $exhibition->end_date,
+                'location' => $exhibition->location,
+                'city' => $exhibition->city,
+                'status' => $exhibition->status,
+                'available_booths' => $exhibition->available_booths,
+                'total_booths' => $exhibition->total_booths,
+                'visitors_count' => $exhibition->visitors_count,
+                'is_favorite'=> Auth::user()->favorites->where('favoritable_id', $exhibition->id)
+                ->where('favoritable_type', 'App\Models\Exhibition')
+                ->exists()
+            ];
+
+        });
+
+        return response()->json(
+        [
+            'exhibitions' => $exhibitions_data
+        ], 200);
+    }
+    //===============================================================
     public function getAllExhibitions()//عرض كل المعارض
     {
         $exhibitions = Exhibition::orderBy('start_date', 'asc')->get();
+        $exhibitions_data = $exhibitions->map(function($exhibition)
+        {
+            return [
+                'id' => $exhibition->id,
+                'name' => $exhibition->name,
+                'type' => $exhibition->type,
+                'start_date' => $exhibition->start_date,
+                'end_date' => $exhibition->end_date,
+                'location' => $exhibition->location,
+                'city' => $exhibition->city,
+                'status' => $exhibition->status,
+                'available_booths' => $exhibition->available_booths,
+                'total_booths' => $exhibition->total_booths,
+                'visitors_count' => $exhibition->visitors_count,
+                'is_favorite'=> Auth::user()->favorites->where('favoritable_id', $exhibition->id)
+                ->where('favoritable_type', 'App\Models\Exhibition')
+                ->exists()
+            ];
 
-        return response()->json([
-            'exhibitions' => $exhibitions
+        });
+
+        return response()->json(
+        [
+            'exhibitions' => $exhibitions_data
         ], 200);
     }
     //===============================================================
@@ -22,94 +102,87 @@ class ExhibitionController extends Controller
         $query = Exhibition::query();
 
         // بحث بالاسم
-        if ($request->has('search') && $request->search != '') {
+        if ($request->has('search') && $request->search != '')
+        {
             $query->where('name', 'LIKE', '%' . $request->search . '%');
         }
 
         // فلترة حسب الحالة
-        if ($request->has('status') && in_array($request->status, ['upcoming', 'ongoing', 'finished'])) {
+        if ($request->has('status') && in_array($request->status,['far', 'upcoming', 'ongoing', 'finished']))
+        {
             $query->where('status', $request->status);
         }
 
         // فلترة حسب المدينة
-        if ($request->has('city') && $request->city != '') {
+        if ($request->has('city') && $request->city != '')
+        {
             $query->where('city', $request->city);
         }
 
         // فلترة حسب القطاع
-        if ($request->has('sector') && $request->sector != '') {
+        if ($request->has('sector') && $request->sector != '')
+        {
             $query->whereJsonContains('sectors', $request->sector);
         }
 
         $exhibitions = $query->orderBy('start_date', 'asc')->get();
 
-        return response()->json([
+        return response()->json(
+        [
             'exhibitions' => $exhibitions
         ], 200);
     }
     //===============================================================
-    public function show($Exhibition_id)//عرض معرض معين
+    public function show($exhibition_id)//عرض معرض معين
     {
+        $user=Auth::user();
+        if($user->favorites->where('favoritable_id', $exhibition_id)
+        ->where('favoritable_type', 'App\Models\Exhibition')
+        ->exists())
+        {
+            $is_favorite = true;
+        }
+        else
+        {
+            $is_favorite = false;
+        }
+
         $exhibition = Exhibition::with([
             'booths',
             'sponsorEvents',
-            'favorites'
-        ])->find($Exhibition_id);
+        ])->find($exhibition_id);
 
-        if (!$exhibition) {
+        if (!$exhibition)
+        {
             return response()->json(['message' => 'Exhibition not found'], 404);
         }
 
         return response()->json([
-            'exhibition' => $exhibition
+            'exhibition' => $exhibition,
+            'is_favorite'=>$is_favorite
         ], 200);
     }
     //===============================================================
-    public function organizerIndex()// مخصص لمنظم المعرض لعرض معارضه فقط
-    {
-        $user = Auth::user();
+    // public function myExhibitions()//o
+    // {
+    //     $user = Auth::user();
 
-        $exhibitions = Exhibition::where('organizer_id', $user->id)
-            ->orderBy('start_date', 'asc')
-            ->get();
+    //     $exhibitions = Exhibition::where('organizer_id', $user->id)
+    //         ->orderBy('start_date', 'asc')
+    //         ->get();
 
-        return response()->json([
-            'exhibitions' => $exhibitions
-        ], 200);
-    }
+    //     return response()->json([
+    //         'exhibitions' => $exhibitions
+    //     ], 200);
+    // }
     //===============================================================
-    public function store(Request $request)// إنشاء معرض جديد من قبل المنظم
+    public function store(StoreExhibitionRequest $request)// إنشاء معرض جديد من قبل المنظم
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'location' => 'required|string',
-            'city' => 'nullable|string',
-            'status' => 'nullable|string|in:far,upcoming,ongoing,finished',
-            'sectors' => 'nullable|array',
-            'extra_services' => 'nullable|array',
-        ]);
+        $organizer= Auth::user()->organizer;
+        $validate_data = $request->validated();
+        $validate_data['organizer_id']= Auth::id();
 
-        $exhibition = Exhibition::create([
-            'organizer_id' => Auth::id(),
-            'name' => $request->name,
-            'type' => $request->type,
-            'description' => $request->description,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'location' => $request->location,
-            'city' => $request->city,
-            'status' => $request->status ?? 'upcoming',
-            'sectors' => $request->sectors,
-            'extra_services' => $request->extra_services,
-            'working_hours' => $request->working_hours ?? 0,
-            'is_paid' => $request->is_paid ?? false,
-            'ticket_price' => $request->ticket_price,
-            'map' => $request->map ?? [],
-        ]);
+        $exhibition = Exhibition::create($validate_data);
 
         return response()->json([
             'message' => 'Exhibition created successfully',
