@@ -21,4 +21,14 @@ class ExternalTeamTask extends Model
     protected $table = 'external_team_tasks';
 
     //===============Relationships==================
+    // public function externalTeam()
+    // {
+    //     return $this->belongsTo(ExternalTeam::class);
+    // }
+    //=====================================================
+    public function externalTeamMember()
+    {
+        return $this->belongsTo(ExternalTeamMember::class);
+    }
+    //=====================================================
 }

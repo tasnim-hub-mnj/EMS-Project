@@ -30,6 +30,21 @@ class ExternalTeam extends Model
     protected $table = 'external_teams';
 
     //===============Relationships==================
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
+    public function externalTeamMembers()
+    {
+        return $this->hasMany(ExternalTeamMember::class);
+    }
+    //=====================================================
+    public function externalTeamTasks()
+    {
+        return $this->hasMany(ExternalTeamTask::class);
+    }
+    //=====================================================
 
-    
+
 }

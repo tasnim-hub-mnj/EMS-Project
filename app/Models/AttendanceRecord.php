@@ -26,5 +26,10 @@ class AttendanceRecord extends Model
         'check_in'   => 'time',
         'check_out'    => 'time',
     ];
+    //===============Relationships==================
+    public function staff()
+    {
+        return $this->belongsTo(StaffMember::class);
+    }
     //=====================================================
 }

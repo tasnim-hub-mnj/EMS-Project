@@ -29,4 +29,9 @@ class CopyReport extends Model
     protected $table = 'copy_reports';
 
     //===============Relationships==================
+    public function copy()
+    {
+        return $this->belongsTo(Copy::class);
+    }
+    //=====================================================
 }

@@ -58,13 +58,29 @@ class SponsorEvent extends Model
         return $this->belongsTo(Exhibition::class);
     }
     //=====================================================
-    public function bookings()
+    public function sponsorshipBookings()
     {
         return $this->hasMany(SponsorshipBooking::class);
+    }
+    //=====================================================
+    public function sponsorEventImages()
+    {
+        return $this->hasMany(SponsorEventImage::class);
+    }
+    //=====================================================
+    public function sponsorEventPrograms()
+    {
+        return $this->hasMany(SponsorEventProgram::class);
     }
     //=====================================================
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'favoritable');
     }
+    //=====================================================
+    public function invitations()
+    {
+        return $this->hasMany(Invitation::class);
+    }
+    //=====================================================
 }

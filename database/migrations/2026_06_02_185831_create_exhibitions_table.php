@@ -12,7 +12,7 @@ return new class extends Migration {
     {//o
         Schema::create('exhibitions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organizer_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('organizer_id')->constrained('organizers')->onDelete('cascade');
             $table->string('name');
             $table->string('type');//organizers->category
             $table->date('start_date');

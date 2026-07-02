@@ -34,7 +34,6 @@ class SponsorshipBooking extends Model
     ];
 
     // =================Relationships===================
-
     public function investor()
     {
         return $this->belongsTo(Investor::class);
@@ -45,6 +44,10 @@ class SponsorshipBooking extends Model
         return $this->belongsTo(SponsorEvent::class);
     }
     //=====================================================
+    public function sponsorshipBookingImages()
+    {
+        return $this->hasMany(SponsorshipBookingImage::class);
+    }
     //=====================================================
     //=====================================================
 }

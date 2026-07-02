@@ -18,5 +18,10 @@ class SponsorEventImage extends Model
     protected $table = 'sponsor_event_images';
 
     //===============Relationships==================
-    
+    public function sponsorEvent()
+    {
+        return $this->belongsTo(SponsorEvent::class);
+    }
+    //=====================================================
+
 }

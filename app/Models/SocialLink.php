@@ -19,4 +19,9 @@ class SocialLink extends Model
     protected $table = 'social_links';
 
     //===============Relationships==================
+    public function investor()
+    {
+        return $this->belongsTo(Investor::class);
+    }
+    //=====================================================
 }

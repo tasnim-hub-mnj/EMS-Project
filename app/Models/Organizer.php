@@ -29,4 +29,10 @@ class Organizer extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    //===================================================
+    public function exhibitions()
+    {
+        return $this->hasMany(Exhibition::class, 'organizer_id');
+    }
+    //=====================================================
 }

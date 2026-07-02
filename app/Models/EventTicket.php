@@ -16,5 +16,15 @@ class EventTicket extends Model
 
     protected $table = 'event_tickets';
     //===============Relationships==================
-    
+    public function visitor()
+    {
+        return $this->belongsTo(Visitor::class, 'visitor_id');
+    }
+    //=====================================================
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+    //=====================================================
+
 }

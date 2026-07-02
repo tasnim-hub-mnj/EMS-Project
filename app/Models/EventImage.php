@@ -17,4 +17,9 @@ class EventImage extends Model
 
     protected $table = 'event_images';
     //===============Relationships==================
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+    //=====================================================
 }

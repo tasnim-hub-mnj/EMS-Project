@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('visitor_schedules', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
             $table->foreignId('event_id')->constrained('events')->cascadeOnDelete();
             $table->timestamp('added_at')->nullable();
             $table->timestamps();

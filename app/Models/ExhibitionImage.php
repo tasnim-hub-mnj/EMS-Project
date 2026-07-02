@@ -23,4 +23,5 @@ class ExhibitionImage extends Model
     {
         return $this->belongsTo(Exhibition::class);
     }
+    //=====================================================
 }

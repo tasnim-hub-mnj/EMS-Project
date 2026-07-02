@@ -13,6 +13,7 @@ class Token_fcm extends Model
     [
         'token_fcm'
     ];
-    
+
     protected $table = 'token_fcms';
+    //============================================
 }

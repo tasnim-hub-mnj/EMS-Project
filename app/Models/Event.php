@@ -38,32 +38,29 @@ class Event extends Model
     protected $table = 'events';
 
     // =================Relationships===================
-    // كل فعالية مرتبطة بمستثمر صاحب الجناح
-    public function investor()
+    // public function investor()
+    // {
+    //     return $this->belongsTo(Investor::class);
+    // }
+    //=====================================================
+    public function boothBooking()
     {
-        return $this->belongsTo(Investor::class);
+        return $this->belongsTo(BoothBooking::class);
     }
     //=====================================================
-    // كل فعالية تعود إلى جناح محدد
-    public function booth()
+    public function enventTickets()
     {
-        return $this->belongsTo(Booth::class);
+        return $this->hasMany(EventTicket::class, 'event_id');
     }
     //=====================================================
-    // كل فعالية يمكن أن يكون لها طلبات تذاكر متعددة
-    public function tickets()
-    {
-        return $this->hasMany(Ticket::class, 'event_id');
-    }
-    //=====================================================
-    // الفعالية يمكن أن تظهر في المفضلة
-    public function favorites()
+    public function favorites()//v
     {
         return $this->morphMany(Favorite::class, 'favoritable');
     }
     //=====================================================
-     public function schedule()
-    {
-        return $this->hasMany(VisitorSchedule::class);
-    }
+    // public function schedule()
+    // {
+    //     return $this->hasMany(VisitorSchedule::class);
+    // }
+    //=====================================================
 }

@@ -36,4 +36,16 @@ class SponsorshipRequest extends Model
     ];
 
     protected $table = 'sponsorship_requests';
+
+    //===============Relationships==================
+    public function investor()
+    {
+        return $this->belongsTo(Investor::class);
+    }
+    //=====================================================
+    public function sponsor()
+    {
+        return $this->belongsTo(Sponsor::class);
+    }
+    //=====================================================
 }

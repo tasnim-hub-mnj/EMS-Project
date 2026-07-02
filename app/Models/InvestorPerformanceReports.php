@@ -22,4 +22,9 @@ class InvestorPerformanceReports extends Model
     protected $table = 'investor_performance_reports';
 
     //===============Relationships==================
+    public function investor()
+    {
+        return $this->belongsTo(Investor::class);
+    }
+    //=================================================
 }

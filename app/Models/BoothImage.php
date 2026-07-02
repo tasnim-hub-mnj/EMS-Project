@@ -22,4 +22,5 @@ class BoothImage extends Model
     {
         return $this->belongsTo(BoothBooking::class);
     }
+    //=================================================
 }

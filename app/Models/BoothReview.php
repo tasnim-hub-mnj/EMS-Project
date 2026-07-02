@@ -23,4 +23,10 @@ class BoothReview extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    //=================================================
+    public function booth()
+    {
+        return $this->belongsTo(Booth::class);
+    }
+    //=================================================
 }

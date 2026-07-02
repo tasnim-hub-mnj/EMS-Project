@@ -23,4 +23,10 @@ class InvestorBoothReports extends Model
     protected $table = 'investor_booth_reports';
 
     //===============Relationships==================
+    public function boothBooking()
+    {
+        return $this->belongsTo(BoothBooking::class);
+    }
+    //=================================================
+
 }

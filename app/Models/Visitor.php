@@ -33,6 +33,17 @@ class Visitor extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    //===================================================
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class, 'user_id');
+    }
+    //===================================================
+    public function eventTickets()
+    {
+        return $this->hasMany(EventTicket::class, 'visitor_id');
+    }
+    //===================================================
 
 
     // public function conversations()

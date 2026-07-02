@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('invitations', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('sponsorEvent_id')->constrained('sponsorEvents')->onDelete('cascade');
+            $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
             $table->string('name');
             $table->string('email');
             $table->string('phone')->nullable();

@@ -33,7 +33,7 @@ class Booth extends Model
         'end_date'  => 'date',
     ];
 
-    //=====================================================
+    //---------------------------------------------------
     protected static function booted()
     {
         static::creating(function ($booth)
@@ -47,47 +47,30 @@ class Booth extends Model
     }
 
     // =================Relationships===================
-    // كل جناح ينتمي لمعرض محدد
     public function exhibition()
     {
         return $this->belongsTo(Exhibition::class);
     }
     //=====================================================
-    // الجناح يمكن أن يحتوي على عدة حجوزات من المستثمرين
-    public function bookings()
+    public function boothBookings()
     {
         return $this->hasMany(BoothBooking::class);
     }
-
     //=====================================================
-    // داخل الجناح يمكن تنظيم عدة فعاليات
-    public function events()
-    {
-        return $this->hasMany(Event::class);
-    }
-    //=====================================================
-    // المستثمر يمكنه تفضيل الجناح
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'favoritable');
     }
     //=====================================================
-    // صور الجناح إن وجدت
-    public function images()
-    {
-        return $this->hasMany(BoothImage::class);
-    }
-    //====================================================
-    // تقييمات الجناح
     public function reviews()
     {
         return $this->hasMany(BoothReview::class);
     }
     //=====================================================
-     public function collectedBooths()
-    {
-        return $this->hasMany(CollectedBooths::class);
-    }
+    // public function collectedBooths()
+    // {
+    //     return $this->hasMany(CollectedBooths::class);
+    // }
     //=====================================================
 
 }

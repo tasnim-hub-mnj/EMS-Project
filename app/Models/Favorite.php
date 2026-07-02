@@ -20,14 +20,14 @@ class Favorite extends Model
     protected $table = 'favorites';
 
     //===============Relationships==================
-
     public function favoritable()
     {
         return $this->morphTo();
     }
-    //=============================================
+    //===============================================
     public function user()
     {
         return $this->belongsTo(User::class);
     }
+    //================================================
 }

@@ -78,57 +78,29 @@ class User extends Authenticatable
         return $this->hasOne(StaffMember::class, 'user_id');
     }
     //=====================================================
-    public function exhibitions()
-    {
-        return $this->hasMany(Exhibition::class, 'organizer_id');
-    }
-    //=====================================================
-    public function boothBookings()
-    {
-        return $this->hasMany(BoothBooking::class, 'investor_id');
-    }
-    //=====================================================
-    public function tickets()
-    {
-        return $this->hasMany(Ticket::class, 'user_id');
-    }
-    //=====================================================
-    public function events()
-    {
-        return $this->hasMany(Event::class, 'investor_id');
-    }
-
-    public function sponsroEvents()
-    {
-        return $this->hasMany(SponsorEvent::class, 'investor_id');
-    }
-
-    public function sponsorshipBookings()
-    {
-        return $this->hasMany(SponsorshipBooking::class, 'investor_id');
-    }
-    //=====================================================
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'user_id');
     }
-
+    //=====================================================
     public function exhibitionReviews()
     {
         return $this->hasMany(ExhibitionReview::class, 'user_id');
     }
-
+    //=====================================================
     public function boothReviews()
     {
         return $this->hasMany(BoothReview::class, 'user_id');
     }
-
+    
     //=====================================================
+    //=====================HANAN===========================
+    //=====================================================
+
     public function schecules()
     {
         return $this->hasMany(VisitorSchedule::class);
     }
-
     //=====================================================
      public function collectedBooths()
     {
@@ -139,6 +111,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(OtpCode::class);
     }
+    //=====================================================
 
 
 }

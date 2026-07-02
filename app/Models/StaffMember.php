@@ -34,10 +34,30 @@ class StaffMember extends Model
 
     protected $table = 'staff_members';
 
-    // =================Relationships===================
+    //=================Relationships===================
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+    //=====================================================
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
+    //=====================================================
+    public function salaries()
+    {
+        return $this->hasMany(StaffSalary::class);
+    }
+    //=====================================================
+    public function attendanceRecords()
+    {
+        return $this->hasMany(AttendanceRecord::class);
     }
     //=====================================================
 

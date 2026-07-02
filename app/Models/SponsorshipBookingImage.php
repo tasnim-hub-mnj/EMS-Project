@@ -18,4 +18,9 @@ class SponsorshipBookingImage extends Model
     protected $table = 'sponsorship_booking_images';
 
     //===============Relationships==================
+    public function sponsorshipBooking()
+    {
+        return $this->belongsTo(SponsorshipBooking::class);
+    }
+    //=====================================================
 }

@@ -61,17 +61,44 @@ class BoothBooking extends Model
         });
     }
 
-    //Relationships==========================================
-
+    //=================Relationships===================
     public function investor()
     {
         return $this->belongsTo(Investor::class);
     }
-    //=======================================================
+    //=================================================
     public function booth()
     {
         return $this->belongsTo(Booth::class);
     }
+    //=================================================
+    public function events()
+    {
+        return $this->hasMany(Event::class,'booth_booking_id');
+    }
+    //=================================================
+    public function boothImages()
+    {
+        return $this->hasMany(BoothImage::class);
+    }
+    //=================================================
+    public function investorBoothReports()
+    {
+        return $this->hasMany(InvestorBoothReports::class);
+    }
+    //=================================================
+    public function investorEventReports()
+    {
+        return $this->hasMany(InvestorEventReports::class);
+    }
+    //=================================================
+    public function investorVisitorReports()
+    {
+        return $this->hasMany(InvestorVisitorReports::class);
+    }
+    //=================================================
+
+
 
 
 

@@ -22,7 +22,6 @@ class OtpCode extends Model
         'is_used' => 'boolean'
     ];
     // =================Relationships===================
-
     public function user()
     {
         return $this->belongsTo(User::class);

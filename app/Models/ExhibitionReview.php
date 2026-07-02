@@ -20,8 +20,14 @@ class ExhibitionReview extends Model
     protected $table = 'exhibition_reviews';
 
     //===============Relationships==================
-    public function user()
+    public function visitor()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Visitor::class, 'visitor_id');
     }
+    //=====================================================
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
 }

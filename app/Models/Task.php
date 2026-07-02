@@ -22,4 +22,14 @@ class Task extends Model
     protected $table = 'tasks';
 
     //===============Relationships==================
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
+    public function staff()
+    {
+        return $this->belongsTo(StaffMember::class);
+    }
+    //=====================================================
 }

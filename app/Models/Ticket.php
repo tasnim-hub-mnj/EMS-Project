@@ -24,12 +24,16 @@ class Ticket extends Model
     ];
 
     //===============Relationships==================
-
-
-    public function event()
+    public function visitor()
     {
-        return $this->belongsTo(Event::class, 'event_id');
+        return $this->belongsTo(Visitor::class, 'visitor_id');
     }
+    //=====================================================
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
 
 }
 

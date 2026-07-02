@@ -22,4 +22,9 @@ class StaffSalary extends Model
     protected $table = 'staff_salaries';
 
     //===============Relationships==================
+    public function staff()
+    {
+        return $this->belongsTo(StaffMember::class);
+    }
+    //=====================================================
 }

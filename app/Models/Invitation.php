@@ -22,4 +22,9 @@ class Invitation extends Model
     protected $table = 'invitations';
 
     //===============Relationships==================
+    public function sponsorEvent()
+    {
+        return $this->belongsTo(SponsorEvent::class);
+    }
+    //=====================================================
 }

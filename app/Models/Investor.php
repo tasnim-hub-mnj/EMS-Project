@@ -29,28 +29,41 @@ class Investor extends Model
         'terms_accepted' => 'boolean',
     ];
 
-    // =================Relationships===================
+    //=================Relationships===================
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
     //=====================================================
-    // المستثمر يمكنه حجز عدة أجنحة
     public function boothBookings()
     {
-        return $this->hasMany(BoothBooking::class);
+        return $this->hasMany(BoothBooking::class,'investor_id');
     }
     //=====================================================
-    // المستثمر لديه طلبات حجز رعاية متعددة
-    public function sponsorshipBookings()
-    {
-        return $this->hasMany(SponsorshipBooking::class);
-    }
-    //=====================================================
-    // الفعاليات التي أنشأها المستثمر
     public function events()
     {
         return $this->hasMany(Event::class);
     }
     //=====================================================
+    public function sponsorshipBookings()
+    {
+        return $this->hasMany(SponsorshipBooking::class);
+    }
+    //=====================================================
+    public function sponsorshipRequests()
+    {
+        return $this->hasMany(SponsorshipRequest::class);
+    }
+    //=====================================================
+    public function socialLinks()
+    {
+        return $this->hasMany(SocialLink::class);
+    }
+    //=====================================================
+    public function investorPerformanceReports()
+    {
+        return $this->hasOne(InvestorPerformanceReports::class);
+    }
+    //=================================================
+
 }

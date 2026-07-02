@@ -20,4 +20,9 @@ class SponsorEventProgram extends Model
     protected $table = 'sponsor_event_programs';
 
     //===============Relationships==================
+    public function sponsorEvent()
+    {
+        return $this->belongsTo(SponsorEvent::class);
+    }
+    //=====================================================
 }

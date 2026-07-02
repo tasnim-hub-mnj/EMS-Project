@@ -40,47 +40,56 @@ class Exhibition extends Model
         'start_date'     => 'date',
         'end_date'       => 'date',
     ];
-    
+
     //===============Relationships==================
     public function organizer()
     {
-        return $this->belongsTo(User::class, 'organizer_id');
+        return $this->belongsTo(Organizer::class, 'organizer_id');
     }
     //=====================================================
-    // المعرض يحتوي على عدة أجنحة
     public function booths()
     {
         return $this->hasMany(Booth::class);
     }
     //=====================================================
-    // المعرض يحتوي على فعاليات إعلانية متعلقة به
     public function sponsorEvents()
     {
         return $this->hasMany(SponsorEvent::class);
     }
     //=====================================================
-    // المعرض قد يحتوي على طلبات تذاكر عبر الأحداث والأجنحة
-    public function tickets()
+    public function sponsors()
     {
-        return $this->hasManyThrough(Ticket::class, Booth::class);
+        return $this->hasMany(Sponsor::class);
     }
     //=====================================================
-    // يمكن للمستثمر إضافة المعرض إلى المفضلة
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+    //=====================================================
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'favoritable');
     }
     //=====================================================
-    // الصور المرتبطة بالمعرض إن وجدت
-    public function images()
+    public function exhibitionImages()
     {
         return $this->hasMany(ExhibitionImage::class);
     }
     //=====================================================
-    // التقييمات التي يضعها المستخدمون على المعرض
-    public function reviews()
+    public function exhibitionReviews()
     {
-        return $this->hasMany(ExhibitionImage::class);
+        return $this->hasMany(ExhibitionReview::class);
+    }
+    //=====================================================
+    public function staffs()
+    {
+        return $this->hasMany(StaffMember::class);
+    }
+    //=====================================================
+    public function copies()
+    {
+        return $this->hasMany(Copy::class);
     }
     //=====================================================
 }

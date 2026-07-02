@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('investor_booth_reports', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
+            $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');//00
             // $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
             $table->foreignId('booth_booking_id')->constrained('booth_bookings')->onDelete('cascade');
             $table->date('date');

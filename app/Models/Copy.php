@@ -21,4 +21,14 @@ class Copy extends Model
     protected $table = 'copies';
 
     //===============Relationships==================
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
+    public function copyReports()
+    {
+        return $this->hasMany(CopyReport::class);
+    }
+    //=====================================================
 }
