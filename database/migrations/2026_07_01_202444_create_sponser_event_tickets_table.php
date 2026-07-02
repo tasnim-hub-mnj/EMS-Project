@@ -10,14 +10,11 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('sponser_event_tickets', function (Blueprint $table) {
+        Schema::create('sponser_event_tickets', function (Blueprint $table)
+        {
             $table->id();
-            // ربط التذكرة بالفعالية الراعية
+            $table->foreignId('visitor_id')->constrained('visitors')->cascadeOnDelete();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->cascadeOnDelete();
-            $table->foreignId('visitor_id')->nullable()->constrained('visitors')->cascadeOnDelete();
-
-
-            // بيانات الشخص الذي حجز التذكرة
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->string('qr_code')->nullable();
             $table->decimal('amount', 12, 2)->nullable();
