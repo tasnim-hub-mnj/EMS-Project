@@ -6,17 +6,16 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {//o
-        Schema::create('sponsor_events', function (Blueprint $table)
-        {
+        Schema::create('sponsor_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+            $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
             // $table->foreignId('created_by')->constrained('organizers')->onDelete('cascade');
             $table->string('name');
             $table->string('type')->nullable();
@@ -36,8 +35,8 @@ return new class extends Migration
             $table->integer('registered_count')->default(0);//المحجوز
             $table->integer('total_seats')->nullable();//المتبقي
             $table->integer('scanned_count')->default(0);//عدد الحضور
-            $table->enum('status',['active','nonactive','finished'])->default('active');
-            $table->enum('copy_status', ['draft','active','archived'])->default('draft');
+            $table->enum('status', ['active', 'nonactive', 'finished'])->default('active');
+            $table->enum('copy_status', ['draft', 'active', 'archived'])->default('draft');
             $table->timestamps();
         });
     }

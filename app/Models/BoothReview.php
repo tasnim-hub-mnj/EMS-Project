@@ -7,15 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class BoothReview extends Model
 {
-    use HasFactory;
-
-    protected $fillable =
-    [
-        'user_id',
+    protected $fillable = [
         'booth_id',
+        'user_id',
         'rating',
-        'comment'
+        'comment',
     ];
+
+    // التقييم تابع لكشك واحد
 
     protected $table = 'booth_reviews';
     //===============Relationships==================

@@ -11,33 +11,33 @@ class SponsorEvent extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'exhibition_id',
-        'name',
-        'type',
-        'by',
-        'place',
-        'start_time',
-        'end_time',
-        'description',
-        'is_general_invitation',
-        'ticket_price',
-        'max_participants',
-        'listing_days',
-        'duration_options',
-        'registered_count',
-        'total_seats',
-        'scanned_count',
-        'status',
-        'copy_status'
-    ];
+        [
+            'exhibition_id',
+            'name',
+            'type',
+            'by',
+            'place',
+            'start_time',
+            'end_time',
+            'description',
+            'is_general_invitation',
+            'ticket_price',
+            'max_participants',
+            'listing_days',
+            'duration_options',
+            'registered_count',
+            'total_seats',
+            'scanned_count',
+            'status',
+            'copy_status'
+        ];
 
     protected $table = 'sponsor_events';
 
     protected $casts =
-    [
-        'duration_options' => 'array',
-    ];
+        [
+            'duration_options' => 'array',
+        ];
 
     //===============Relationships==================
 
@@ -48,8 +48,8 @@ class SponsorEvent extends Model
         }
 
         return Carbon::parse($this->date)
-                    ->addDays($this->listing_days - 1)
-                    ->toDateString();
+            ->addDays($this->listing_days - 1)
+            ->toDateString();
     }
 
     //=================Relationships===================

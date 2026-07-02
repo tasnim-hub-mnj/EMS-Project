@@ -81,6 +81,12 @@ class Visitor extends Model
     {
         return $this->hasMany(SupportTicket::class);
     }
+    //=============================================
+    public function boothReviews()
+    {
+        return $this->hasMany(BoothReview::class);
+    }
+
 
 
 }

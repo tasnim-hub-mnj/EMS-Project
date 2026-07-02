@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Booth;
+use App\Models\CollectedBooths;
 use Illuminate\Http\Request;
 
 class VisitorScheduleController extends Controller
@@ -26,7 +28,7 @@ class VisitorScheduleController extends Controller
 
         $booth = Booth::findOrFail($data['booth_id']);
 
-        $collected = CollectedBooth::create([
+        $collected = CollectedBooths::create([
             'user_id' => $request->user()->id,
             'booth_id' => $booth->id,
             'qr_data' => $data['qr_data'] ?? null,
@@ -43,7 +45,7 @@ class VisitorScheduleController extends Controller
             'qr_data' => 'required|string',
         ]);
 
-        $collected = CollectedBooth::create([
+        $collected = CollectedBooths::create([
             'user_id' => $request->user()->id,
             'booth_id' => Booth::where('id', $data['qr_data'])->orWhereHas('collectedBooths', function ($query) use ($data) {
                 $query->where('qr_data', $data['qr_data']);
