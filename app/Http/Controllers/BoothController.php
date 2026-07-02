@@ -16,8 +16,8 @@ class BoothController extends Controller
 {
     public function getBothsExhibition($exhibition_id)//عرض كل الاجنحة الخاصة بمعرض معين
     {
-        $exhibition=Exhibition::findOrfail($exhibition_id);
-        $booths=$exhibition->booths;
+        $exhibition = Exhibition::findOrfail($exhibition_id);
+        $booths = $exhibition->booths;
 
         return response()->json([
             'booths' => $booths
@@ -54,11 +54,11 @@ class BoothController extends Controller
     //==============================================================
     public function bookBooth(Request $request, $booth_id)//حجز
     {
-        $user_id=Auth::User()->id;
+        $user_id = Auth::User()->id;
 
         $request->validate([
-            'duration_days'  => 'required|integer|min:1',
-            'notes'          => 'nullable|string',
+            'duration_days' => 'required|integer|min:1',
+            'notes' => 'nullable|string',
             'services' => 'required|json'
         ]);
 
@@ -87,20 +87,20 @@ class BoothController extends Controller
 
         //إنشاء الحجز
         $booking = BoothBooking::create([
-            'booth_id'         => $booth->id,
-            'duration_days'    => $request->duration_days,
-            'notes'            => $request->notes,
-            'services'         => $request->services,
+            'booth_id' => $booth->id,
+            'duration_days' => $request->duration_days,
+            'notes' => $request->notes,
+            'services' => $request->services,
             'total_price' => BoothBooking::booted(),
 
         ]);
 
         $user = User::findOrfail($user_id);
         $title = "تم قبول طلبك رقم #520";
-$body = "مرحباً " . $user->name . "، لقد تم قبول طلبك وجاري تحضيره الآن.";
+        $body = "مرحباً " . $user->name . "، لقد تم قبول طلبك وجاري تحضيره الآن.";
 
-// 3. إرسال الإشعار وتمرير المتغيرات له مباشرة
-$user->notify(new OrderStatusNotification($title, $body));
+        // 3. إرسال الإشعار وتمرير المتغيرات له مباشرة
+        $user->notify(new OrderStatusNotification($title, $body));
 
 
         //تغيير حالة البوث
@@ -115,7 +115,7 @@ $user->notify(new OrderStatusNotification($title, $body));
     //==============================================================
     public function cancelBooking($bookingId)
     {
-        $booking=BoothBooking::findOrfail($bookingId);
+        $booking = BoothBooking::findOrfail($bookingId);
         $booking->status->update('canceled');
         return response()->json([
             'message' => 'Booth canceled',
@@ -217,55 +217,51 @@ $user->notify(new OrderStatusNotification($title, $body));
     //==============================================================
 
     //===============الزائر======================//
+    // عرض الاجنحة كاملة مع امكانية البحث وبجيب الاجنحة مع المعارض المرتبطة فيهن
+    public function AllBooths(Request $request)
+    {
+        $query = Booth::with('exhibition')
+            ->orderByDesc('created_at');
 
-    // عرض قائمة الأكشاك مع خيارات بحث وتصنيف
-    // public function index(Request $request)
-    // {
-    //     $query = Booth::with(['images', 'reviews', 'exhibition']);
+        if ($request->filled('search')) {
+            $search = $request->input('search');
 
-    //     if ($request->filled('search')) {
-    //         $search = $request->query('search');
-    //         $query->where('company_name', 'like', "%{$search}%")
-    //             ->orWhere('hall', 'like', "%{$search}%")
-    //             ->orWhere('booth_number', 'like', "%{$search}%");
-    //     }
+            $query->where(function ($q) use ($search) {
+                $q->where('number', 'LIKE', "%$search%")
+                    ->orWhere('location', 'LIKE', "%$search%");
+            });
+        }
 
-    //     if ($request->filled('exhibition_id')) {
-    //         $query->where('exhibition_id', $request->query('exhibition_id'));
-    //     }
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
 
-    //     return $query->get();
-    // }
-    //==================================================
+        if ($request->filled('exhibition_id')) {
+            $query->where('exhibition_id', $request->input('exhibition_id'));
+        }
 
-    // عرض تفاصيل كشك معين
-    // public function show($id)
-    // {
-    //     $booth = Booth::with(['images', 'reviews', 'socialLinks', 'exhibition'])->findOrFail($id);
-    //     return response()->json($booth);
-    // }
+        return response()->json($query->get());
+    }
+    //===================================================
 
-    // public function reviews($id)
-    // {
-    //     $booth = Booth::findOrFail($id);
-    //     return response()->json($booth->reviews()->get());
-    // }
-    // //================================================
 
-    // public function qr($qrData)
-    // {
-    //     $booth = Booth::where('id', $qrData)
-    //         ->orWhereHas('collectedBooths', function ($query) use ($qrData) {
-    //             $query->where('qr_data', $qrData);
-    //         })
-    //         ->with(['images', 'reviews', 'exhibition'])
-    //         ->first();
+    // عرض كشك معين
+    public function showBooth($id)
+    {
+        $booth = Booth::with([
+            'exhibition',
+            'profile',
+            'images',
+            'bookings',
+            'reviews.user'
+        ])->find($id);
 
-    //     if (!$booth) {
-    //         return response()->json(['message' => 'Booth not found'], 404);
-    //     }
+        if (!$booth) {
+            return response()->json(['message' => 'الكشك غير موجود'], 404);
+        }
 
-    //     return response()->json($booth);
-    // }
+        return response()->json($booth);
+    }
+
 
 }

@@ -35,8 +35,8 @@ class SponsorEvent extends Model
         }
 
         return Carbon::parse($this->date)
-                    ->addDays($this->listing_days - 1)
-                    ->toDateString();
+            ->addDays($this->listing_days - 1)
+            ->toDateString();
     }
 
     //=================Relationships===================
@@ -53,5 +53,9 @@ class SponsorEvent extends Model
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'favoritable');
+    }
+    public function tickets()
+    {
+        return $this->hasMany(SponserEventTicket::class);
     }
 }

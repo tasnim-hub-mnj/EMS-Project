@@ -9,14 +9,15 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void
-    {//v
-        //تذكرة فعالية
-        Schema::create('event_tickets', function (Blueprint $table) {
+    {
+        Schema::create('sponser_event_tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->foreignId('sponsorEvent_id')->constrained('sponsorEvents')->onDelete('cascade');
+            // ربط التذكرة بالفعالية الراعية
+            $table->foreignId('sponsor_event_id')->constrained('sponsorEvents')->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
 
+
+            // بيانات الشخص الذي حجز التذكرة
             $table->string('name')->nullable();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
@@ -33,6 +34,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('event_tickets');
+        Schema::dropIfExists('sponser_event_tickets');
     }
 };
