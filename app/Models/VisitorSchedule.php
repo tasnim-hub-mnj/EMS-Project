@@ -10,24 +10,24 @@ class VisitorSchedule extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'user_id',
-        'event_id',
-        'added_at'
-    ];
+        [
+            'user_id',
+            'event_id',
+            'added_at'
+        ];
 
     protected $table = 'visitor_schedules';
 
     protected $casts =
-    [
-        'added_at' => 'datetime'
-    ];
+        [
+            'added_at' => 'datetime'
+        ];
 
     //===============Relationships==================
 
-    public function user()
+    public function visitor()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Visitor::class);
     }
 
     public function event()

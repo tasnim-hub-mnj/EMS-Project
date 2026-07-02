@@ -16,7 +16,6 @@ return new class extends Migration {
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->cascadeOnDelete();
             $table->foreignId('visitor_id')->nullable()->constrained('visitors')->cascadeOnDelete();
 
-
             // بيانات الشخص الذي حجز التذكرة
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->string('qr_code')->nullable();

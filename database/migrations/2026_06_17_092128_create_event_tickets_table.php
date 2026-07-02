@@ -13,10 +13,11 @@ return new class extends Migration {
         //تذكرة فعالية
         Schema::create('event_tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
-            $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
+            // $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
             $table->foreignId('visitor_id')->constrained('visitors')->OnDelete('cascade');
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+            //  $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
+
 
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->string('qr_code')->nullable();
