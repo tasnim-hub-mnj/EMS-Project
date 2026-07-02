@@ -9,11 +9,16 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('sponser_event_tickets', function (Blueprint $table) {
+    {//v
+        //تذكرة فعالية
+        Schema::create('event_tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('visitor_id')->constrained('visitors')->cascadeOnDelete();
-            $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->cascadeOnDelete();
+            // $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
+            $table->foreignId('visitor_id')->constrained('visitors')->OnDelete('cascade');
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+            //  $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
+
+
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->string('qr_code')->nullable();
             $table->decimal('amount', 12, 2)->nullable();
@@ -27,6 +32,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('sponser_event_tickets');
+        Schema::dropIfExists('event_tickets');
     }
 };
