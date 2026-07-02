@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('external_team_tasks', function (Blueprint $table) {
+        Schema::create('external_team_tasks', function (Blueprint $table)
+        {
             $table->id();
             $table->string('title')->nullable();
-            $table->foreignId('external_teams_id')->constrained('external_teams')->onDelete('cascade');
+            // $table->foreignId('external_teams_id')->constrained('external_teams')->onDelete('cascade');
             $table->foreignId('external_team_member_id')->constrained('external_team_members')->onDelete('cascade');//name
             $table->date('due_date')->nullable();//موعد انتهاء المهمة
             $table->enum('status',['pending','in_progress','completed','delayed'])->default('pending');//تخزين الوقت عند انجاز المهمة

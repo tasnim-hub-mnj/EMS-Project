@@ -5,18 +5,14 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+{//i
     public function up(): void
     {
-        Schema::create('booth_images', function (Blueprint $table)
+        Schema::create('event_images', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('booth_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
             $table->string('url');
-            $table->enum('type',['product','booth'])->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('booth_images');
+        Schema::dropIfExists('event_images');
     }
 };

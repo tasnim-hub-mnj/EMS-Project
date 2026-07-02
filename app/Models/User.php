@@ -6,25 +6,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory,Notifiable,HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'name',
+    protected $fillable =
+    [
         'email',
         'phone',
         'password',
         'role',
+        'status',
         'token_fcm',
-
     ];
 
     /**
@@ -49,13 +50,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-
+    //------------------------------------------------
     public function routeNotificationForFcm()
     {
         //fcm_token
         return $this->fcm_token;
     }
-    //=====================================================
+
+    // =================Relationships===================
     public function organizer()
     {
         return $this->hasOne(Organizer::class, 'user_id');
@@ -76,57 +78,29 @@ class User extends Authenticatable
         return $this->hasOne(StaffMember::class, 'user_id');
     }
     //=====================================================
-    public function exhibitions()
-    {
-        return $this->hasMany(Exhibition::class, 'organizer_id');
-    }
-    //=====================================================
-    public function boothBookings()
-    {
-        return $this->hasMany(BoothBooking::class, 'investor_id');
-    }
-    //=====================================================
-    public function tickets()
-    {
-        return $this->hasMany(Ticket::class, 'user_id');
-    }
-    //=====================================================
-    public function events()
-    {
-        return $this->hasMany(Event::class, 'investor_id');
-    }
-
-    public function sponsroEvents()
-    {
-        return $this->hasMany(SponsorEvent::class, 'investor_id');
-    }
-
-    public function sponsorshipBookings()
-    {
-        return $this->hasMany(SponsorshipBooking::class, 'investor_id');
-    }
-    //=====================================================
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'user_id');
     }
-
+    //=====================================================
     public function exhibitionReviews()
     {
         return $this->hasMany(ExhibitionReview::class, 'user_id');
     }
-
+    //=====================================================
     public function boothReviews()
     {
         return $this->hasMany(BoothReview::class, 'user_id');
     }
-
+    
     //=====================================================
+    //=====================HANAN===========================
+    //=====================================================
+
     public function schecules()
     {
         return $this->hasMany(VisitorSchedule::class);
     }
-
     //=====================================================
      public function collectedBooths()
     {
@@ -137,6 +111,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(OtpCode::class);
     }
+    //=====================================================
 
 
 }

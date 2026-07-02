@@ -2,18 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ExhibitionImage extends Model
 {
-     protected $fillable = [
-        'exhibition_id',
-         'url',
-         'order'
-         ];
+    use HasFactory;
 
-     public function exhibition()
+    protected $fillable =
+    [
+        'exhibition_id',
+        'url',
+        'order'
+    ];
+
+    protected $table = 'exhibition_images';
+
+    //===============Relationships==================
+    public function exhibition()
     {
         return $this->belongsTo(Exhibition::class);
     }
+    //=====================================================
 }

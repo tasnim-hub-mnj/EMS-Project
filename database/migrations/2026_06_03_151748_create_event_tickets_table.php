@@ -5,15 +5,18 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{//v
+{
+    /**
+     * Run the migrations.
+     */
     public function up(): void
-    {
-        Schema::create('visitor_schedules', function (Blueprint $table)
+    {//v
+    //تذكرة فعالية
+        Schema::create('event_tickets', function (Blueprint $table)
         {
             $table->id();
             $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
-            $table->foreignId('event_id')->constrained('events')->cascadeOnDelete();
-            $table->timestamp('added_at')->nullable();
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -23,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('visitor_schedules');
+        Schema::dropIfExists('event_tickets');
     }
 };

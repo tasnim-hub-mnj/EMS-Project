@@ -8,9 +8,10 @@ return new class extends Migration
 {//برنامج الفعالية o
     public function up(): void
     {
-        Schema::create('sponsor_event_programs', function (Blueprint $table) {
+        Schema::create('sponsor_event_programs', function (Blueprint $table)
+        {
             $table->id();
-            $table->foreignId('sponsorEvent_id')->constrained('sponsorEvents')->onDelete('cascade');
+            $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
             $table->string('activity');
             $table->string('presenter');
             $table->string('comunication');

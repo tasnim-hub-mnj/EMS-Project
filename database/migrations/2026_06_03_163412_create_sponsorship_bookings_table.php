@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('sponsorshipBookings', function (Blueprint $table)
+        Schema::create('sponsorship_bookings', function (Blueprint $table)
         {//oi
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->foreignId('sponsorEvent_id')->constrained('sponsorEvents')->onDelete('cascade');
+            $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
             // $table->string('selected_duration_label')->nullable();//مدة العرض المختارة
             $table->integer('selected_days')->default(1);//عدد الأيام المختارة
-            $table->float('amo')->default(0);
+            $table->float('amount')->default(0);
             $table->enum('status', ['pending', 'approved', 'rejected','cancelled','ended'])->default('pending');
             $table->string('logo')->nullable();
             $table->text('product_names')->nullable();
@@ -40,6 +40,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sponsorshipBookings');
+        Schema::dropIfExists('sponsorship_bookings');
     }
 };

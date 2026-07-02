@@ -5,18 +5,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class BoothImage extends Model
+class InvestorEventReports extends Model
 {
     use HasFactory;
 
     protected $fillable =
     [
+        'investor_id',
         'booth_booking_id',
-        'url',
-        'type'
+        'event_id',
+        'date',
+        'total_registrations',
+        'actual_attendance',
+        'rating',
+        'growth_rate',
     ];
 
-    protected $table = 'booth_images';
+    protected $table = 'investor_event_reports';
+
     //===============Relationships==================
     public function boothBooking()
     {

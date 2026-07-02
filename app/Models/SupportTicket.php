@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SupportTicket extends Model
 {
-    protected $fillable = [
+    use HasFactory;
+
+    protected $fillable =
+    [
         'user_id',
         'type',
         'body',
@@ -14,6 +18,10 @@ class SupportTicket extends Model
         //'longitude',
         'status'
     ];
+    
+    protected $table = 'support_tickets';
+
+    //===============Relationships==================
 
     public function user()
     {

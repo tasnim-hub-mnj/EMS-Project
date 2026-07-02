@@ -10,19 +10,24 @@ class Favorite extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'investor_id',
+    protected $fillable =
+    [
+        'user_id',
         'favoritable_id',
         'favoritable_type',
     ];
-// =================Relationships===================
+
+    protected $table = 'favorites';
+
+    //===============Relationships==================
     public function favoritable()
     {
         return $this->morphTo();
     }
-//=============================================
-    public function investor()
+    //===============================================
+    public function user()
     {
-        return $this->belongsTo(Investor::class);
+        return $this->belongsTo(User::class);
     }
+    //================================================
 }

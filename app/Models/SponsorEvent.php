@@ -10,23 +10,36 @@ class SponsorEvent extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'exhibition_id',
-        'name',
-        'type',
-        'date',
-        'start_time',
-        'end_time',
-        'place',
-        'listing_days',
-        'description',
-        'duration_options',
-    ];
+    protected $fillable =
+        [
+            'exhibition_id',
+            'name',
+            'type',
+            'by',
+            'place',
+            'start_time',
+            'end_time',
+            'description',
+            'is_general_invitation',
+            'ticket_price',
+            'max_participants',
+            'listing_days',
+            'duration_options',
+            'registered_count',
+            'total_seats',
+            'scanned_count',
+            'status',
+            'copy_status'
+        ];
 
-    protected $casts = [
-        'duration_options' => 'array',
-    ];
+    protected $table = 'sponsor_events';
 
+    protected $casts =
+        [
+            'duration_options' => 'array',
+        ];
+
+    //===============Relationships==================
 
     public function getEndDateAttribute()
     {
@@ -45,17 +58,29 @@ class SponsorEvent extends Model
         return $this->belongsTo(Exhibition::class);
     }
     //=====================================================
-    public function bookings()
+    public function sponsorshipBookings()
     {
         return $this->hasMany(SponsorshipBooking::class);
+    }
+    //=====================================================
+    public function sponsorEventImages()
+    {
+        return $this->hasMany(SponsorEventImage::class);
+    }
+    //=====================================================
+    public function sponsorEventPrograms()
+    {
+        return $this->hasMany(SponsorEventProgram::class);
     }
     //=====================================================
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'favoritable');
     }
-    public function tickets()
+    //=====================================================
+    public function invitations()
     {
-        return $this->hasMany(SponserEventTicket::class);
+        return $this->hasMany(Invitation::class);
     }
+    //=====================================================
 }

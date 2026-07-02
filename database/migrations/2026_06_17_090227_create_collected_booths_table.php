@@ -6,16 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('collected_booths', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('booth_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
+            $table->foreignId('booth_id')->constrained('booths')->cascadeOnDelete();
             $table->string('qr_data')->nullable();
             $table->timestamp('scanned_at')->nullable();
             $table->timestamps();

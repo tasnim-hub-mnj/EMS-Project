@@ -5,17 +5,14 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+{//v
     public function up(): void
-    {//v
+    {
         Schema::create('booth_reviews', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('booth_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
+            $table->foreignId('booth_id')->constrained('booths')->cascadeOnDelete();
             $table->decimal('rating', 3, 2);
             $table->text('comment')->nullable();
             $table->timestamps();

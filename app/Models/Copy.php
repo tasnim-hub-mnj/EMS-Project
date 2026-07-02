@@ -5,26 +5,30 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class StaffSalary extends Model
+class Copy extends Model
 {
     use HasFactory;
 
     protected $fillable =
     [
         'exhibition_id',
-        'staff_id',
         'year',
-        'month',
-        'type_staff',
-        'salary'
+        'start_date',
+        'end_date',
+        'status'
     ];
 
-    protected $table = 'staff_salaries';
+    protected $table = 'copies';
 
     //===============Relationships==================
-    public function staff()
+    public function exhibition()
     {
-        return $this->belongsTo(StaffMember::class);
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
+    public function copyReports()
+    {
+        return $this->hasMany(CopyReport::class);
     }
     //=====================================================
 }

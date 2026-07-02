@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class BoothReview extends Model
@@ -14,13 +15,17 @@ class BoothReview extends Model
     ];
 
     // التقييم تابع لكشك واحد
-    public function booth()
-    {
-        return $this->belongsTo(Booth::class);
-    }
 
+    protected $table = 'booth_reviews';
+    //===============Relationships==================
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    //=================================================
+    public function booth()
+    {
+        return $this->belongsTo(Booth::class);
+    }
+    //=================================================
 }

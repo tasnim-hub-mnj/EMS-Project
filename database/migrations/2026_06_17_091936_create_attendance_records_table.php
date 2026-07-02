@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('attendance_records', function (Blueprint $table)
         {
             $table->id();
+            // $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->foreignId('staff_id')->constrained('staff_members')->onDelete('cascade');//full_name
-            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->enum('type',['administrative','technical','services','organizational','security'])->default('services');
             $table->date('date')->nullable();//تاريخ الحضور (اليوم فقط)
             $table->time('check_in')->nullable();

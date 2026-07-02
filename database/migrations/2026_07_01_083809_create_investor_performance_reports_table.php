@@ -8,12 +8,15 @@ return new class extends Migration
 {//i
     public function up(): void
     {
-        Schema::create('social_links', function (Blueprint $table)
+        Schema::create('investor_performance_reports', function (Blueprint $table)
         {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->string('link')->nullable();
-            $table->string('type')->nullable();
+            $table->integer('total_booths')->default(0);
+            $table->integer('total_visitors')->default(0);
+            $table->integer('total_potential_clients')->default(0);
+            $table->integer('total_conversions')->default(0);
+            $table->float('avg_performance_index')->default(0);
             $table->timestamps();
         });
     }
@@ -23,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('social_links');
+        Schema::dropIfExists('investor_performance_reports');
     }
 };

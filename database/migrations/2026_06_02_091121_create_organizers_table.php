@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
+    {//o
         Schema::create('organizers', function (Blueprint $table)
         {
             $table->id();
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('reg_number')->unique()->nullable();
             $table->string('location');//EXHIBITION->LOCATION
             $table->string('logo');
-            $table->file('file');
+            $table->file('file');//العقد
             $table->string('description')->nullable();
             $table->timestamps();
         });

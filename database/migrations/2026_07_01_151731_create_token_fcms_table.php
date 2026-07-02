@@ -5,12 +5,16 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{//o
+{
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('sponsor_event_images', function (Blueprint $table) {
+        Schema::create('token_fcms', function (Blueprint $table)
+        {
             $table->id();
-            $table->string('image');
+            $table->string('token_fcm');
             $table->timestamps();
         });
     }
@@ -20,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sponsor_event_images');
+        Schema::dropIfExists('token_fcms');
     }
 };

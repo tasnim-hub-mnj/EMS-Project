@@ -11,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('staff_salaries', function (Blueprint $table) {
+        Schema::create('staff_salaries', function (Blueprint $table)
+        {
             $table->id();
-            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+            // $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->foreignId('staff_id')->constrained('staff_members')->onDelete('cascade');//full_name
             $table->string('year');
             $table->string('month');

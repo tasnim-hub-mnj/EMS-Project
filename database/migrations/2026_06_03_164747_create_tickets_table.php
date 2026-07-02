@@ -13,7 +13,7 @@ return new class extends Migration {
         //تذكرة معرض
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->string('qr_code')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');

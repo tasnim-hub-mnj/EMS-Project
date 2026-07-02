@@ -10,71 +10,57 @@ class Event extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+    protected $fillable =
+    [
         'investor_id',
-        'booth_id',
+        'booth_booking_id',
         'name',
         'type',
+        'by',
         'date',
-        'time',
+        'start_time',
+        'end_time',
         'duration_days',
-        'max_participants',
-        'registered_count',
-        'status',
         'description',
-        'requires_booking',
-        'place',
-        'has_bookable_seats',
-        'total_seats',
-        'booked_seats',
-        'sold_tickets',
-        'ticket_price',
-        'is_general_invitation',
         'video_promo_url',
-        'company_images',
-        'current_day',
-        'total_event_days',
-        'daily_attendees',
+        'is_general_invitation',
+        'has_bookable_seats',
+        'max_participants',
+        'requires_booking',
+        'ticket_price',
+        'registered_count',
+        'total_seats',
         'scanned_count',
+        'status',
+        'current_day',
     ];
 
-    protected $casts = [
-        'date'              => 'date',
-        'time'              => 'datetime:H:i',
-        'requires_booking'  => 'boolean',
-        'has_bookable_seats'=> 'boolean',
-        'is_general_invitation' => 'boolean',
-        'company_images'    => 'array',
-        'daily_attendees'   => 'array',
-    ];
+    protected $table = 'events';
 
     // =================Relationships===================
-    // كل فعالية مرتبطة بمستثمر صاحب الجناح
-    public function investor()
+    // public function investor()
+    // {
+    //     return $this->belongsTo(Investor::class);
+    // }
+    //=====================================================
+    public function boothBooking()
     {
-        return $this->belongsTo(Investor::class);
+        return $this->belongsTo(BoothBooking::class);
     }
     //=====================================================
-    // كل فعالية تعود إلى جناح محدد
-    public function booth()
+    public function enventTickets()
     {
-        return $this->belongsTo(Booth::class);
+        return $this->hasMany(EventTicket::class, 'event_id');
     }
     //=====================================================
-    // كل فعالية يمكن أن يكون لها طلبات تذاكر متعددة
-    public function tickets()
-    {
-        return $this->hasMany(Ticket::class, 'event_id');
-    }
-    //=====================================================
-    // الفعالية يمكن أن تظهر في المفضلة
-    public function favorites()
+    public function favorites()//v
     {
         return $this->morphMany(Favorite::class, 'favoritable');
     }
     //=====================================================
-     public function schedule()
-    {
-        return $this->hasMany(VisitorSchedule::class);
-    }
+    // public function schedule()
+    // {
+    //     return $this->hasMany(VisitorSchedule::class);
+    // }
+    //=====================================================
 }

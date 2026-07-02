@@ -6,25 +6,34 @@ use Illuminate\Database\Eloquent\Model;
 
 class Ticket extends Model
 {
-    protected $fillable = [
-        'event_id',
-        'requester_name',
-        'requester_phone',
-        'requester_email',
+    protected $fillable =
+    [
+        'user_id',
+        'exhibition_id',
+        'qr_code',
         'status',
-        'ticket_number',
-        'qr_code_data',
-        'requested_at',
+        'amount',
+        'booked_at'
     ];
 
-    protected $casts = [
+    protected $table = 'tickets';
+
+    protected $casts =
+    [
         'requested_at' => 'datetime',
     ];
 
-    public function event()
+    //===============Relationships==================
+    public function visitor()
     {
-        return $this->belongsTo(Event::class, 'event_id');
+        return $this->belongsTo(Visitor::class, 'visitor_id');
     }
+    //=====================================================
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
 
 }
 

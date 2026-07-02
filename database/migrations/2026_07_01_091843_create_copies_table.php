@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('external_team_members', function (Blueprint $table) {
+        Schema::create('copies', function (Blueprint $table)
+        {
             $table->id();
-            $table->foreignId('external_teams_id')->constrained('external_teams')->onDelete('cascade');
-            $table->string('name');
-            $table->string('role');
-            $table->string('phone')->nullable();
-            $table->string('email')->nullable();
+            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+            $table->string('year', 4);
+            $table->date('start_date');
+            $table->date('end_date');
+            $table->enum('status', ['upcoming', 'ongoing', 'finished'])->default('upcoming');
             $table->timestamps();
         });
     }
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('external_team_members');
+        Schema::dropIfExists('copies');
     }
 };

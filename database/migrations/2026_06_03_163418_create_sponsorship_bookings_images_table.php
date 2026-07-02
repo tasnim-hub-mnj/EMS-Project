@@ -5,15 +5,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{//v
+{//i
     public function up(): void
     {
-        Schema::create('visitor_schedules', function (Blueprint $table)
+        Schema::create('sponsorship_bookings_images', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
-            $table->foreignId('event_id')->constrained('events')->cascadeOnDelete();
-            $table->timestamp('added_at')->nullable();
+            $table->foreignId('sponsorship_booking_id')->constrained('sponsorship_bookings')->onDelete('cascade');
+            $table->string('url');
+            $table->enum('type',['spo_event','poste']);
             $table->timestamps();
         });
     }
@@ -23,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('visitor_schedules');
+        Schema::dropIfExists('sponsorship_bookings_images');
     }
 };
