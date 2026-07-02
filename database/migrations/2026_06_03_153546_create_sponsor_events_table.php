@@ -15,7 +15,7 @@ return new class extends Migration {
         Schema::create('sponsor_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
+            // $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
             // $table->foreignId('created_by')->constrained('organizers')->onDelete('cascade');
             $table->string('name');
             $table->string('type')->nullable();
