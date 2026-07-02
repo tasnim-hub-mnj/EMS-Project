@@ -97,16 +97,6 @@ class User extends Authenticatable
     //=====================HANAN===========================
     //=====================================================
 
-    public function schecules()
-    {
-        return $this->hasMany(VisitorSchedule::class);
-    }
-    //=====================================================
-    public function collectedBooths()
-    {
-        return $this->hasMany(CollectedBooths::class);
-    }
-    //=====================================================
     public function otpCodes()
     {
         return $this->hasMany(OtpCode::class);

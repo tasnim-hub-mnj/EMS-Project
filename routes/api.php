@@ -124,18 +124,13 @@ Route::middleware('auth:sanctum')->group(function () {
 //التقييمات
 //*************/ 
 Route::middleware('auth:sanctum')->group(function () {
-    // إضافة تقييم لمعرض معيّن
+
     Route::post('/exhibition/review', [ExhibitionReviewController::class, 'addReviewExhibition']);
-    // عرض تقييمات معرض معيّن
     Route::get('/exhibition/{id}/reviews', [ExhibitionReviewController::class, 'showReviewsExhibition']);
-    // عرض كل تقييمات كل المعارض
     Route::get('/exhibitions/reviews', [ExhibitionReviewController::class, 'allExhibitionReviews']);
-    //___________________________________________________________________________________________
-// إضافة تقييم لجناح معيّن
+    //__________________________________________________________________________________________
     Route::post('/booth/review', [BoothReviewController::class, 'addReviewBooth']);
-    // عرض تقييمات جناح معيّن
     Route::get('/booth/{id}/reviews', [BoothReviewController::class, 'showReviewsBooth']);
-    // عرض كل تقييمات كل الأجنحة
     Route::get('/booths/reviews', [BoothReviewController::class, 'allBoothReviews']);
     //____________________________________________________________________________________________
 // عرض كل تقييمات زائر معيّن (معرض + جناح)
@@ -143,16 +138,25 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 //____________________________________________________________________________________________
 Route::middleware('auth:sanctum')->group(function () {
-    // عرض كل تذاكر الدعم الخاصة بالمستخدم
+
     Route::get('/support-tickets', [SupportTicketController::class, 'index']);
-    // عرض تذكرة دعم واحدة
     Route::get('/support-tickets/{id}', [SupportTicketController::class, 'show']);
-    // إنشاء تذكرة دعم من نوع رسالة
     Route::post('/support-tickets/message', [SupportTicketController::class, 'storeMessage']);
-    // إنشاء تذكرة دعم من نوع تقرير
     Route::post('/support-tickets/report', [SupportTicketController::class, 'storeReport']);
+    //__________________________________________________________________________________________
 
 });
+Route::middleware('auth:sanctum')->group(function () {
+    //تذاكر الزائر
+    Route::get('/tickets/my-bookings', [TicketController::class, 'myBookings']);
+    Route::post('/tickets/exhibition', [TicketController::class, 'bookExhibitionTicket']);
+    Route::post('/tickets/event', [TicketController::class, 'bookEventTicket']);
+    Route::post('/tickets/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
+
+});
+
+//___________________________________________________________________________________________
+
 
 
 
