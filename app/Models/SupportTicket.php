@@ -10,21 +10,23 @@ class SupportTicket extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'user_id',
-        'type',
-        'body',
-        //'latitude',
-        //'longitude',
-        'status'
-    ];
-    
+        [
+            'user_id',
+            'type',
+            'body',
+            //'latitude',
+            //'longitude',
+            'status'
+        ];
+
     protected $table = 'support_tickets';
 
     //===============Relationships==================
 
-    public function user()
+
+    public function visitor()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Visitor::class, 'visitor_id');
     }
+
 }

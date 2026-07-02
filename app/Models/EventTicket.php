@@ -2,15 +2,11 @@
 
 namespace App\Models;
 
-<<<<<<< HEAD
-=======
 use Illuminate\Database\Eloquent\Factories\HasFactory;
->>>>>>> 8df673a1e1d5d51d983c7999a80fbc47933e1272
 use Illuminate\Database\Eloquent\Model;
 
 class EventTicket extends Model
 {
-<<<<<<< HEAD
     protected $fillable = [
         'investor_id',
         'sponsorEvent_id',
@@ -35,11 +31,6 @@ class EventTicket extends Model
     |--------------------------------------------------------------------------
     */
 
-    // علاقة مع اليوزر (الزائر الحقيقي)
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 
     // علاقة مع المستثمر صاحب الجناح
     public function investor()
@@ -52,13 +43,7 @@ class EventTicket extends Model
     {
         return $this->belongsTo(SponsorEvent::class, 'sponsorEvent_id');
     }
-=======
-    use HasFactory;
 
-    protected $fillable =
-    [
-
-    ];
 
     protected $table = 'event_tickets';
     //===============Relationships==================
@@ -73,5 +58,4 @@ class EventTicket extends Model
     }
     //=====================================================
 
->>>>>>> 8df673a1e1d5d51d983c7999a80fbc47933e1272
 }

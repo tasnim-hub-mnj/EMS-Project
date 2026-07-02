@@ -27,7 +27,7 @@ class ExhibitionController extends Controller
         }
 
         // فلترة حسب الحالة
-        if ($request->has('status') && in_array($request->status, ['upcoming','ongoing','finished'])) {
+        if ($request->has('status') && in_array($request->status, ['upcoming', 'ongoing', 'finished'])) {
             $query->where('status', $request->status);
         }
 
@@ -56,8 +56,7 @@ class ExhibitionController extends Controller
             'favorites'
         ])->find($Exhibition_id);
 
-        if (!$exhibition)
-        {
+        if (!$exhibition) {
             return response()->json(['message' => 'Exhibition not found'], 404);
         }
 
@@ -206,4 +205,10 @@ class ExhibitionController extends Controller
             'exhibitions' => $exhibitions
         ], 200);
     }
+
+    //===============================================================
+    //===============================================================
+
+
+
 }

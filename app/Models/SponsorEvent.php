@@ -58,6 +58,11 @@ class SponsorEvent extends Model
         return $this->belongsTo(Exhibition::class);
     }
     //=====================================================
+    public function booth()
+    {
+        return $this->belongsTo(Booth::class);
+    }
+    //=====================================================
     public function sponsorshipBookings()
     {
         return $this->hasMany(SponsorshipBooking::class);
@@ -83,4 +88,15 @@ class SponsorEvent extends Model
         return $this->hasMany(Invitation::class);
     }
     //=====================================================
+    public function tickets()
+    {
+        return $this->hasMany(SponserEventTicket::class);
+    }
+    //=====================================================
+    public function eventTickets()
+    {
+        return $this->hasMany(EventTicket::class);
+    }
+
+
 }

@@ -8,6 +8,24 @@ use Illuminate\Support\Facades\Validator;
 
 class SupportTicketController extends Controller
 {
+    public function allTickets()
+    {
+        $tickets = SupportTicket::with('user')
+            ->orderByDesc('created_at')
+            ->get();
+
+        if ($tickets->isEmpty()) {
+            return response()->json([
+                'message' => 'لا يوجد أي رسائل دعم حالياً'
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'تم جلب جميع رسائل الدعم بنجاح',
+            'tickets' => $tickets
+        ]);
+    }
+    //==================================================
     // عرض تذاكر الدعم الخاصة بالمستخدم
     public function index(Request $request)
     {

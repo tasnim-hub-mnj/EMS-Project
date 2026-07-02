@@ -10,19 +10,19 @@ class CollectedBooths extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'user_id',
-        'booth_id',
-        'qr_data',
-        'scanned_at'
-    ];
+        [
+            'user_id',
+            'booth_id',
+            'qr_data',
+            'scanned_at'
+        ];
 
     protected $table = 'collected_booths';
 
     //===============Relationships==================
-    public function user()
+    public function visitor()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Visitor::class, 'user_id');
     }
 
     public function booth()

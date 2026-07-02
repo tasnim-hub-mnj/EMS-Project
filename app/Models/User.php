@@ -11,7 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory,Notifiable,HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -19,14 +19,14 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable =
-    [
-        'email',
-        'phone',
-        'password',
-        'role',
-        'status',
-        'token_fcm',
-    ];
+        [
+            'email',
+            'phone',
+            'password',
+            'role',
+            'status',
+            'token_fcm',
+        ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -92,7 +92,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(BoothReview::class, 'user_id');
     }
-    
+
     //=====================================================
     //=====================HANAN===========================
     //=====================================================
@@ -102,16 +102,17 @@ class User extends Authenticatable
         return $this->hasMany(VisitorSchedule::class);
     }
     //=====================================================
-     public function collectedBooths()
+    public function collectedBooths()
     {
         return $this->hasMany(CollectedBooths::class);
     }
     //=====================================================
-     public function otpCodes()
+    public function otpCodes()
     {
         return $this->hasMany(OtpCode::class);
     }
     //=====================================================
+
 
 
 }

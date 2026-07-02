@@ -14,12 +14,10 @@ return new class extends Migration {
         Schema::create('event_tickets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->foreignId('sponsorEvent_id')->constrained('sponsorEvents')->onDelete('cascade');
-            $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+            $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
+            $table->foreignId('visitor_id')->constrained('visitors')->OnDelete('cascade');
 
-            $table->string('name')->nullable();
-            $table->string('email')->nullable();
-            $table->string('phone')->nullable();
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->string('qr_code')->nullable();
             $table->decimal('amount', 12, 2)->nullable();

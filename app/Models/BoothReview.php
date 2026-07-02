@@ -18,9 +18,9 @@ class BoothReview extends Model
 
     protected $table = 'booth_reviews';
     //===============Relationships==================
-    public function user()
+    public function visitor()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(Visitor::class, 'visitor_id');
     }
     //=================================================
     public function booth()

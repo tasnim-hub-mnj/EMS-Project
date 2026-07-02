@@ -10,23 +10,23 @@ class Visitor extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'user_id',
-        'first_name',
-        'last_name',
-        'profession',
-        'city',
-        'hobby',
-        'interests',
-        'avatar_url',
-    ];
+        [
+            'user_id',
+            'first_name',
+            'last_name',
+            'profession',
+            'city',
+            'hobby',
+            'interests',
+            'avatar_url',
+        ];
 
     protected $table = 'visitors';
 
     protected $casts =
-    [
-        'interests' => 'array',
-    ];
+        [
+            'interests' => 'array',
+        ];
 
     // =================Relationships===================
     public function user()
@@ -86,6 +86,18 @@ class Visitor extends Model
     {
         return $this->hasMany(BoothReview::class);
     }
+    //=============================================
+    public function exhibitionReviews()
+    {
+        return $this->hasMany(ExhibitionReview::class);
+    }
+    //=============================================
+
+    public function sponsorEventTickets()
+    {
+        return $this->hasMany(SponserEventTicket::class);
+    }
+
 
 
 

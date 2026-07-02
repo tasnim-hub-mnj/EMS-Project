@@ -7,21 +7,21 @@ use Illuminate\Database\Eloquent\Model;
 class Ticket extends Model
 {
     protected $fillable =
-    [
-        'user_id',
-        'exhibition_id',
-        'qr_code',
-        'status',
-        'amount',
-        'booked_at'
-    ];
+        [
+            'user_id',
+            'exhibition_id',
+            'qr_code',
+            'status',
+            'amount',
+            'booked_at'
+        ];
 
     protected $table = 'tickets';
 
     protected $casts =
-    [
-        'requested_at' => 'datetime',
-    ];
+        [
+            'requested_at' => 'datetime',
+        ];
 
     //===============Relationships==================
     public function visitor()
@@ -34,6 +34,7 @@ class Ticket extends Model
         return $this->belongsTo(Exhibition::class);
     }
     //=====================================================
+
 
 }
 
