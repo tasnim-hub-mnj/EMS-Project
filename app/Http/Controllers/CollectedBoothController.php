@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 class CollectedBoothController extends Controller
 {
     //عرض كل الاجنحة المحفوظة
-
     public function index(Request $request)
     {
         return $request->user()
@@ -20,7 +19,6 @@ class CollectedBoothController extends Controller
     }
     //==============================================
     //حفظ جناح في المجموعة
-
     public function store(Request $request)
     {
         $data = $request->validate([

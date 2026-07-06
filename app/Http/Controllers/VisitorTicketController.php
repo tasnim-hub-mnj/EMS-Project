@@ -6,16 +6,7 @@ use Illuminate\Http\Request;
 
 class VisitorTicketController extends Controller
 {
-    public function myTickets()
-    {
-        $user = auth()->user();
 
-        if (!$user) {
-            return response()->json([
-                'message' => 'يجب تسجيل الدخول لعرض التذاكر'
-            ], 401);
-        }
-    }
 
     // 1) تذاكر فعاليات داخل جناح (تذهب للمستثمر)
     //     $boothEvents = EventTicket::with('sponsorEvent')

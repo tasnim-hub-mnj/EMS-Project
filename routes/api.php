@@ -3,6 +3,7 @@
 use App\Http\Controllers\BoothController;
 use App\Http\Controllers\BoothReviewController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CollectedBoothController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\DashboardInvestorController;
 use App\Http\Controllers\EventController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitorController;
+use App\Http\Controllers\VisitorScheduleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -148,7 +150,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 Route::middleware('auth:sanctum')->group(function () {
     //تذاكر الزائر
-    Route::get('/tickets/my-bookings', [TicketController::class, 'myBookings']);
+    Route::get('/visitor/tickets', [TicketController::class, 'myTickets']);
+    Route::get('/tickets/exhibition/{id}', [TicketController::class, 'showExhibitionTicket']);
+    Route::get('/tickets/event/{id}', [TicketController::class, 'showEventTicket']);
+    Route::get('/tickets/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
     Route::post('/tickets/exhibition', [TicketController::class, 'bookExhibitionTicket']);
     Route::post('/tickets/event', [TicketController::class, 'bookEventTicket']);
     Route::post('/tickets/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
@@ -156,6 +161,23 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 //___________________________________________________________________________________________
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/visitor/myschedule', [VisitorScheduleController::class, 'mySchedule']);
+    Route::post('/visitor/schedule', [VisitorScheduleController::class, 'storeSchedule']);
+    Route::delete('/visitor/schedule/{id}', [VisitorScheduleController::class, 'removeFromSchedule']);
+});
+//_____________________________________________________________________________________________
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/visitor/collected-booths', [CollectedBoothController::class, 'index']);
+    Route::post('/visitor/collected-booths', [CollectedBoothController::class, 'store']);
+    Route::post('/visitor/collected-booths/scan', [CollectedBoothController::class, 'scan']);
+    Route::delete('/visitor/collected-booths/{id}', [CollectedBoothController::class, 'destroy']);
+
+});
+
+
+
 
 
 
