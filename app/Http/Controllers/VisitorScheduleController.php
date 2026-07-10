@@ -4,65 +4,106 @@ namespace App\Http\Controllers;
 
 use App\Models\Booth;
 use App\Models\CollectedBooths;
+use App\Models\VisitorSchedule;
 use Illuminate\Http\Request;
 
 class VisitorScheduleController extends Controller
 {
-
-    public function index(Request $request)
+    //جلب مواعيد الزائر
+    public function mySchedule(Request $request)
     {
-        return $request->user()
-            ->collectedBooths()
-            ->with('booth.exhibition')
-            ->orderByDesc('scanned_at')
-            ->get();
-    }
-    //============================================
 
-    public function store(Request $request)
+        $visitor = $request->user()->visitor;
+        // today | week | all
+        $filter = $request->query('filter', 'all');
+
+        $query = VisitorSchedule::with([
+            'event.boothBooking.booth.exhibition'
+        ])
+            ->where('visitor_id', $visitor->id);
+
+        // فلترة حسب اليوم
+        if ($filter === 'today') {
+            $query->whereHas('event', function ($q) {
+                $q->where('date', now()->toDateString());
+            });
+        }
+
+        // فلترة حسب هذا الأسبوع
+        if ($filter === 'week') {
+            $start = now()->startOfWeek()->toDateString();
+            $end = now()->endOfWeek()->toDateString();
+
+            $query->whereHas('event', function ($q) use ($start, $end) {
+                $q->whereBetween('date', [$start, $end]);
+            });
+        }
+
+        // جلب النتائج
+        $schedule = $query->orderBy('added_at', 'asc')
+            ->get()
+            ->map(function ($item) {
+
+                $event = $item->event;
+                $booking = $event->boothBooking;
+                $booth = $booking?->booth;
+                $exhibition = $booth?->exhibition;
+
+                return [
+                    'id' => $item->id,
+                    'event_name' => $event->name,
+                    'organizer' => $event->by,
+                    'date' => $event->date,
+                    'start_time' => $event->start_time,
+                    'end_time' => $event->end_time,
+                    'type' => $event->type,
+                    'exhibition_name' => $exhibition?->name,
+                    'location' => $exhibition?->location,
+                    'city' => $exhibition?->city,
+                    'hall' => $booth?->hall_name ?? null,
+                    'added_at' => $item->added_at,
+                ];
+            });
+
+        return response()->json([
+            'message' => 'تم جلب المواعيد بنجاح',
+            'schedule' => $schedule
+        ]);
+    }
+    //====================================================
+    //==============================================
+    // إضافة فعالية إلى مواعيدي
+    public function storeSchedule(Request $request)
     {
         $data = $request->validate([
-            'booth_id' => 'required|exists:booths,id',
-            'qr_data' => 'nullable|string',
+            'event_id' => 'required|exists:events,id',
         ]);
 
-        $booth = Booth::findOrFail($data['booth_id']);
+        $visitor = $request->user()->visitor;
 
-        $collected = CollectedBooths::create([
-            'user_id' => $request->user()->id,
-            'booth_id' => $booth->id,
-            'qr_data' => $data['qr_data'] ?? null,
-            'scanned_at' => now(),
+        $schedule = VisitorSchedule::create([
+            'visitor_id' => $visitor->id,
+            'event_id' => $data['event_id'],
+            'added_at' => now(),
         ]);
 
-        return response()->json($collected, 201);
+        return response()->json([
+            'message' => 'تمت إضافة الفعالية إلى مواعيدك',
+            'schedule' => $schedule
+        ], 201);
     }
     //==============================================
-
-    public function scan(Request $request)
+    // حذف موعد
+    public function removeFromSchedule(Request $request, $id)
     {
-        $data = $request->validate([
-            'qr_data' => 'required|string',
-        ]);
+        $visitor = $request->user()->visitor;
 
-        $collected = CollectedBooths::create([
-            'user_id' => $request->user()->id,
-            'booth_id' => Booth::where('id', $data['qr_data'])->orWhereHas('collectedBooths', function ($query) use ($data) {
-                $query->where('qr_data', $data['qr_data']);
-            })->value('id') ?? null,
-            'qr_data' => $data['qr_data'],
-            'scanned_at' => now(),
-        ]);
+        $schedule = VisitorSchedule::where('visitor_id', $visitor->id)
+            ->findOrFail($id);
 
-        return response()->json($collected, 201);
+        $schedule->delete();
+
+        return response()->json(['message' => 'تم حذف الموعد']);
     }
-    //==============================================
 
-    public function destroy(Request $request, $id)
-    {
-        $collected = $request->user()->collectedBooths()->findOrFail($id);
-        $collected->delete();
-
-        return response()->json(['message' => 'تمت إزالة الكشك من المجموعات']);
-    }
 }

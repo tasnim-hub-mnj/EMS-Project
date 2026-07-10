@@ -13,10 +13,9 @@ use Illuminate\Support\Facades\Auth;
 class TicketController extends Controller
 {
     //طلب حجز تذكرة معرض 
-    public function bookExhibitionTicket(Request $request)
+    public function bookExhibitionTicket(Request $request, $exhibition_id)
     {
         $request->validate([
-            'exhibition_id' => 'required|exists:exhibitions,id',
             'amount' => 'nullable|numeric|min:1',
         ]);
 
@@ -24,7 +23,7 @@ class TicketController extends Controller
 
         $ticket = Ticket::create([
             'visitor_id' => $visitor->id,
-            'exhibition_id' => $request->exhibition_id,
+            'exhibition_id' => $exhibition_id,
             'status' => 'pending',
             'qr_code' => null,
             'amount' => $request->amount ?? 1,
@@ -38,20 +37,17 @@ class TicketController extends Controller
     }
     //===========================================================
     //طلب حجز تذكرة فعالية
-    public function bookEventTicket(Request $request)
+    public function bookEventTicket(Request $request, $event_id)
     {
         $request->validate([
-            'event_id' => 'required|exists:events,id',
             'amount' => 'nullable|numeric|min:1',
         ]);
 
         $visitor = auth()->user()->visitor;
 
-        $event = Event::find($request->event_id);
-
         $ticket = EventTicket::create([
             'visitor_id' => $visitor->id,
-            'event_id' => $event->id,
+            'event_id' => $event_id,
             'status' => 'pending',
             'qr_code' => null,
             'amount' => $request->amount ?? 1,
@@ -65,20 +61,17 @@ class TicketController extends Controller
     }
     //===========================================================
     //طلب حجز تذكرة فعالية راعي
-    public function bookSponsorEventTicket(Request $request)
+    public function bookSponsorEventTicket(Request $request, $sponsor_event_id)
     {
         $request->validate([
-            'sponsor_event_id' => 'required|exists:sponsor_events,id',
             'amount' => 'nullable|numeric|min:1',
         ]);
 
         $visitor = auth()->user()->visitor;
 
-        $event = SponsorEvent::find($request->sponsor_event_id);
-
-        $ticket = SponserEventTicket::create([
+        $ticket = SponsorEventTicket::create([
             'visitor_id' => $visitor->id,
-            'sponser_event_id' => $event->id,
+            'sponser_event_id' => $sponsor_event_id,
             'status' => 'pending',
             'qr_code' => null,
             'amount' => $request->amount ?? 1,
@@ -91,52 +84,123 @@ class TicketController extends Controller
         ]);
     }
     //=============================================================
+    public function showExhibitionTicket($id)
+    {
+        $ticket = Ticket::with('exhibition')->findOrFail($id);
 
+        return response()->json([
+            'id' => $ticket->id,
+            'exhibition_id' => $ticket->exhibition_id,
+            'name' => $ticket->exhibition->name,   // اسم المعرض من العلاقة
+            'status' => $ticket->status,
+            'qr_code' => $ticket->qr_code,
+            'booked_at' => $ticket->booked_at?->format('Y-m-d'),
+            'amount' => $ticket->amount,
+        ]);
+    }
+    //==========================================================
+    public function showEventTicket($id)
+    {
+        $ticket = EventTicket::with('event')->findOrFail($id);
+
+        return response()->json([
+            'id' => $ticket->id,
+            'event_id' => $ticket->event_id,
+            'name' => $ticket->event->title,   // اسم الفعالية من العلاقة
+            'status' => $ticket->status,
+            'qr_code' => $ticket->qr_code,
+            'booked_at' => $ticket->booked_at?->format('Y-m-d'),
+            'amount' => $ticket->amount,
+        ]);
+    }
+    //==========================================================
+    public function showSponsorEventTicket($id)
+    {
+        $ticket = SponserEventTicket::with('sponsorEvent')->findOrFail($id);
+
+        return response()->json([
+            'id' => $ticket->id,
+            'sponsor_event_id' => $ticket->sponser_event_id,
+            'name' => $ticket->sponsorEvent->title,   // اسم الفعالية الإعلانية
+            'status' => $ticket->status,
+            'qr_code' => $ticket->qr_code,
+            'booked_at' => $ticket->booked_at?->format('Y-m-d'),
+            'amount' => $ticket->amount,
+        ]);
+    }
+    //==========================================================
     //عرض حجوزات الزائر ككل 
-    public function myBookings()
+    public function myTickets()
     {
         $visitor = auth()->user()->visitor;
+
         if (!$visitor) {
             return response()->json(['message' => 'غير مصرح لك'], 403);
         }
 
-        $exhibitionTickets = Ticket::where('visitor_id', $visitor->id)
+        // تذاكر المعرض
+        $exhibitionTickets = Ticket::with('exhibition')
+            ->where('visitor_id', $visitor->id)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'exhibition_id' => $t->exhibition_id,
+                    'name' => $t->exhibition->name,   // اسم المعرض من العلاقة
+                    'status' => $t->status,
+                    'qr_code' => $t->qr_code,
+                    'booked_at' => $t->booked_at?->format('Y-m-d'),
+                    'amount' => $t->amount,
+                ];
+            });
 
-        $eventTickets = EventTicket::where('visitor_id', $visitor->id)
+        // تذاكر الفعاليات
+        $eventTickets = EventTicket::with('event')
+            ->where('visitor_id', $visitor->id)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'event_id' => $t->event_id,
+                    'name' => $t->event->title,   // اسم الفعالية من العلاقة
+                    'status' => $t->status,
+                    'qr_code' => $t->qr_code,
+                    'booked_at' => $t->booked_at?->format('Y-m-d'),
+                    'amount' => $t->amount,
+                ];
+            });
 
-        $sponsorEventTickets = SponserEventTicket::where('visitor_id', $visitor->id)
+        // تذاكر الفعاليات الإعلانية
+        $sponsorTickets = SponserEventTicket::with('sponsorEvent')
+            ->where('visitor_id', $visitor->id)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'sponsor_event_id' => $t->sponser_event_id,
+                    'name' => $t->sponsorEvent->title,   // اسم الفعالية الإعلانية
+                    'status' => $t->status,
+                    'qr_code' => $t->qr_code,
+                    'booked_at' => $t->booked_at?->format('Y-m-d'),
+                    'amount' => $t->amount,
+                ];
+            });
 
         return response()->json([
-            'message' => 'تم جلب جميع حجوزاتك بنجاح',
-
-            'pending' => [
-                'exhibition' => $exhibitionTickets->where('status', 'pending')->values(),
-                'event' => $eventTickets->where('status', 'pending')->values(),
-                'sponsor_event' => $sponsorEventTickets->where('status', 'pending')->values(),
-            ],
-
-            'confirmed' => [
-                'exhibition' => $exhibitionTickets->where('status', 'confirmed')->values(),
-                'event' => $eventTickets->where('status', 'confirmed')->values(),
-                'sponsor_event' => $sponsorEventTickets->where('status', 'confirmed')->values(),
-            ],
-
-            'cancelled' => [
-                'exhibition' => $exhibitionTickets->where('status', 'cancelled')->values(),
-                'event' => $eventTickets->where('status', 'cancelled')->values(),
-                'sponsor_event' => $sponsorEventTickets->where('status', 'cancelled')->values(),
-            ],
+            'exhibition_tickets' => $exhibitionTickets,
+            'event_tickets' => $eventTickets,
+            'sponsor_event_tickets' => $sponsorTickets,
         ]);
     }
 
-
-
-
-
 }
+
+
+
+
+
+
+
