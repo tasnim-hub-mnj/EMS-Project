@@ -77,9 +77,9 @@ class BoothBooking extends Model
         return $this->hasMany(Event::class,'booth_booking_id');
     }
     //=================================================
-    public function boothImages()
+    public function boothBokingImages()
     {
-        return $this->hasMany(BoothImage::class);
+        return $this->hasMany(BoothBookingImage::class);
     }
     //=================================================
     public function investorBoothReports()

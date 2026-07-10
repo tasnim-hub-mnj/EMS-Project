@@ -4,17 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\BoothReview;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class BoothReviewController extends Controller
 {
-    //عرض كل تقييمات الاجنحة
-    public function allBoothReviews()
+    public function allBoothReviews()//عرض كل تقييمات الاجنحة
     {
         $reviews = BoothReview::with(['visitor', 'booth'])
             ->orderBy('created_at', 'desc')
             ->get();
 
-        if ($reviews->isEmpty()) {
+        if ($reviews->isEmpty())
+        {
             return response()->json([
                 'message' => 'لا يوجد أي تقييمات للأجنحة حالياً'
             ]);
@@ -27,8 +28,7 @@ class BoothReviewController extends Controller
     }
 
     //================================================
-    // إضافة تقييم جناح
-    public function AddReviewBooth(Request $request)
+    public function AddReviewBooth(Request $request)// إضافة تقييم جناح
     {
         $request->validate([
             'booth_id' => 'required|exists:booths,id',
@@ -36,7 +36,7 @@ class BoothReviewController extends Controller
             'comment' => 'nullable|string',
         ]);
 
-        $visitor = auth()->user()->visitor;
+        $visitor = Auth::user()->visitor;
 
         if (!$visitor) {
             return response()->json(['message' => 'يجب أن يكون لديك ملف زائر لإضافة تقييم'], 403);

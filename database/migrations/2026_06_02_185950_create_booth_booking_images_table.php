@@ -6,13 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('booth_images', function (Blueprint $table)
-        {
+        Schema::create('booth_booking_images', function (Blueprint $table)
+        {//بالحجز فقط
             $table->id();
             $table->foreignId('booth_booking_id')->constrained('booth_bookings')->cascadeOnDelete();
             $table->string('url');
@@ -26,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('booth_images');
+        Schema::dropIfExists('booth_booking_images');
     }
 };

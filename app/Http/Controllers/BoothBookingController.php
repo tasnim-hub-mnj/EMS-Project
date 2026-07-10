@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BookingBoothRequest;
 use App\Models\Booth;
 use App\Models\BoothBooking;
 use App\Models\User;
@@ -11,28 +12,23 @@ use Illuminate\Support\Facades\Auth;
 
 class BoothBookingController extends Controller
 {
-      public function bookBooth(Request $request, $booth_id)//حجز
+    public function bookBooth(BookingBoothRequest $request, $booth_id)//حجز
     {
         $user_id = Auth::User()->id;
-
-        $request->validate([
-            'duration_days' => 'required|integer|min:1',
-            'notes' => 'nullable|string',
-            'services' => 'required|json'
-        ]);
+        $data=$request->validated();
 
         $investor = Auth::user()->investor;
         $booth = Booth::findOrfail($booth_id);
 
         //التحقق من توفر البوث
-        if ($booth->status !== 'available') {
+        if ($booth->status !== 'available')
+        {
             return response()->json([
                 'message' => 'This booth is not available for booking.'
             ], 400);
         }
 
         //التحقق من عدم وجود حجز سابق
-
         $existing = BoothBooking::where('investor_id', $investor->id)
             ->where('booth_id', $booth->id)
             ->whereIn('status', ['pending', 'approved'])

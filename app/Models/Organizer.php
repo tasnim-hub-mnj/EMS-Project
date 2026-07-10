@@ -30,9 +30,9 @@ class Organizer extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
     //===================================================
-    public function exhibitions()
+    public function exhibition()
     {
-        return $this->hasMany(Exhibition::class, 'organizer_id');
+        return $this->hasOne(Exhibition::class, 'organizer_id');
     }
     //=====================================================
 }

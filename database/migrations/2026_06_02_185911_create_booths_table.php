@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {//oi
         Schema::create('booths', function (Blueprint $table)
@@ -20,9 +17,10 @@ return new class extends Migration
             $table->enum('status_inv', ['available', 'booked', 'pending'])->default('available');
             $table->enum('status', ['available', 'unavailable', 'pending'])->default('available');
             $table->float('price');
-            $table->date('end_date')->nullable();
+            // $table->date('end_date')->nullable();
             $table->string('location')->nullable();//الموقع داخل المعرض
             $table->json('services');//الخدمة + السعر
+            $table->string('image');
             $table->integer('map_x')->nullable();
             $table->integer('map_y')->nullable();
             $table->integer('map_z')->nullable();

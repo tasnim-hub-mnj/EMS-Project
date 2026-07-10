@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+
     public function up(): void
     {//i
         Schema::create('booth_bookings', function (Blueprint $table)
@@ -18,7 +16,7 @@ return new class extends Migration
             $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
             // $table->string('offical_name')->nullable();//اسم المسؤوول
             $table->integer('duration_days');//عدد ايام الحجز(لا يتزاوج عدد ايام المعرض)
-            $table->string('notes')->nullable();//ملاحظات
+            $table->string('notes')->nullable();
             $table->float('total_price');
             $table->float('paid_amount');
             $table->text('services_products')->nullable();

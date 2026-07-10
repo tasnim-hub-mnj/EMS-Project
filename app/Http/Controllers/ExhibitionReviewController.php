@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\ExhibitionReview;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ExhibitionReviewController extends Controller
 {
 
-    //عرض كل تقييمات المعارض 
+    //عرض كل تقييمات المعارض
     public function allExhibitionReviews()
     {
         $reviews = ExhibitionReview::with(['visitor', 'exhibition'])
@@ -36,7 +37,7 @@ class ExhibitionReviewController extends Controller
             'comment' => 'nullable|string',
         ]);
 
-        $visitor = auth()->user()->visitor;
+        $visitor = Auth::user()->visitor;
 
         if (!$visitor) {
             return response()->json(['message' => 'يجب أن يكون لديك ملف زائر لإضافة تقييم'], 403);
