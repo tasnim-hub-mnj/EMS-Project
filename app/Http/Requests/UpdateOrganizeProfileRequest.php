@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdatedBoothProfileRequest extends FormRequest
+class UpdateOrganizeProfileRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,12 +22,11 @@ class UpdatedBoothProfileRequest extends FormRequest
     public function rules(): array
     {
         return
-        [
-            'company_nature'=>'sometimes|string',
-            'services_products'=>'sometimes|json',
-            'headquarters'=>'sometimes|string',
-            'social_links'=>'sometimes|json',
-            
+        [//UpdateOrganizeProfileRequest
+            'company_name'   => 'sometimes|string|max:200',
+            'email'          => 'sometimes|email|unique:users,email',
+            'phone'          => 'sometimes|string|unique:users,phone',
+            'logo'      =>  'sometimes|image|mimes:jpg,jpeg,png|max:2048',
         ];
     }
 }

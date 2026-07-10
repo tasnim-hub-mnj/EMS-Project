@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class InvestorRedisterRequest extends FormRequest
+class OrganizerRegisterRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,15 +22,19 @@ class InvestorRedisterRequest extends FormRequest
     public function rules(): array
     {
         return
-        [
+        [//OrganizerRegisterRequest
             'company_name'   => 'required|string|max:200',
-            'trade_name'     => 'nullable|string|max:200',
+            'category'     => 'required|json',
             'email'          => 'required|email|unique:users,email',
             'phone'          => 'required|string|unique:users,phone',
-            'website'        => 'nullable|url',
-            'activity_type'  => 'required|string|max:200',
             'password'       => 'required|string|min:6|confirmed',
-            'terms_accepted' => 'required|boolean|in:1',
+            'token_fcm'      => 'required|string|max:400',
+            'headquarters'       => 'required|string|max:200',
+            'reg_number'        => 'required|string|max:200',
+            'location'        => 'required|string|max:200',
+            'logo'      =>  'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'file'        => 'required|file',
+            'description'      => 'required|string|max:500',
         ];
     }
 }

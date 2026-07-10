@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreExhibitionRequest extends FormRequest
+class UpdateExhibitionRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,15 +23,15 @@ class StoreExhibitionRequest extends FormRequest
     {
         return
         [
-            'name' => 'required|string|max:255',
-            // 'type' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            // 'location' => 'required|string',
+            'name' => 'sometimes|required|string|max:255',
+            'type' => 'sometimes|required|string|max:255',
+            'start_date' => 'sometimes|required|date',
+            'end_date' => 'sometimes|required|date|after_or_equal:start_date',
+            'location' => 'sometimes|required|string',
             'description' => 'nullable|string',
             'city' => 'nullable|string',
-            'status' => 'nullable|string|in:far,upcoming,ongoing,finished',//00
-            'copy_status' => 'nullable|string|in:draft,active,archived',//00
+            'status' => 'nullable|string|in:far,upcoming,ongoing,finished',
+            'copy_status' => 'nullable|string|in:draft,active,archived',
             'available_booths' => 'nullable|integer|min:0',
             'total_booths' => 'nullable|integer|min:0',
             'total_sponser_events' => 'nullable|integer|min:0',
@@ -41,8 +41,7 @@ class StoreExhibitionRequest extends FormRequest
             'working_hours'=>'nullable|numeric|min:0',
             'is_paid'=>'nullable|boolean',
             'ticket_price'=>'nullable|numeric|min:0',
-            'map'=>'nullable|json|file'
-
+            // Add validation rules for other fields as needed
         ];
     }
 }

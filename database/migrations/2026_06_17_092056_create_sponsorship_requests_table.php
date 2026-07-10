@@ -25,14 +25,13 @@ return new class extends Migration
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->date('book_at')->nullable();//تلقائي
-            $table->string('contact_name')->nullable();//اسم المسؤول
+            // $table->string('contact_name')->nullable();//اسم المسؤول
             $table->text('offer_details')->nullable();
             $table->text('conditions')->nullable();
             $table->text('contract_terms')->nullable();
             $table->text('organizer_notes')->nullable();
             $table->integer('last_sponsor')->default(0);
             $table->text('reject_reason')->nullable();
-
 
             $table->string('website')->nullable();
             $table->string('contact_phone')->nullable();

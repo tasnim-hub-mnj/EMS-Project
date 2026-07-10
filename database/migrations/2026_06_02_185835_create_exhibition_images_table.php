@@ -12,8 +12,8 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('exhibition_id')->constrained()->cascadeOnDelete();
-            $table->string('url');
-            $table->integer('order')->default(0);
+            $table->string('image');
+            // $table->integer('order')->default(0);
             $table->timestamps();
         });
     }

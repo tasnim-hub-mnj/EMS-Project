@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
- 
+
     public function up(): void
     {//o
         Schema::create('exhibitions', function (Blueprint $table) {
@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->string('location');
             $table->text('description')->nullable();
             $table->string('city');
-            $table->enum('status', ['far', 'upcoming', 'ongoing', 'finished'])->default('upcoming');
+            $table->enum('status', ['far', 'upcoming', 'ongoing', 'finished','hidden'])->default('upcoming');
             $table->enum('copy_status', ['draft', 'active', 'archived'])->default('draft');
             $table->integer('available_booths')->default(0);
             $table->integer('total_booths')->default(0);
