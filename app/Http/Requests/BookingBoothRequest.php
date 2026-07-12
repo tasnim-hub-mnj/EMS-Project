@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class BookingBoothRequest extends FormRequest
 {
@@ -22,10 +23,17 @@ class BookingBoothRequest extends FormRequest
     public function rules(): array
     {
         return
-        [
+        [//BookingBoothRequest
+            'start_date' =>
+            [
+                'required',
+                'date',
+                Rule::afterOrEqual($this->exhibition_start),
+                Rule::beforeOrEqual($this->exhibition_end),
+            ],
             'duration_days' => 'required|integer|min:1',
+            'additional_services' => 'nullable|json',
             'notes' => 'nullable|string',
-            'services' => 'required|json',
             'services_products'=>'nullable|string|max:1000'
         ];
     }

@@ -22,7 +22,7 @@ class StoreExhibitionRequest extends FormRequest
     public function rules(): array
     {
         return
-        [
+        [//StoreExhibitionRequest
             'name' => 'required|string|max:255',
             // 'type' => 'required|string|max:255',
             'start_date' => 'required|date',
@@ -41,7 +41,7 @@ class StoreExhibitionRequest extends FormRequest
             'working_hours'=>'nullable|numeric|min:0',
             'is_paid'=>'nullable|boolean',
             'ticket_price'=>'nullable|numeric|min:0',
-            'map'=>'nullable|json|file'
+            'map'=>'nullable|json'
 
         ];
     }

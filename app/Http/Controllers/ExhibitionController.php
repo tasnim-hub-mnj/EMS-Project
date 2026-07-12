@@ -18,13 +18,14 @@ class ExhibitionController extends Controller
         $validate_data['organizer_id']= $organizer->id;
         $validate_data['type']= $organizer->category;
         $validate_data['location']= $organizer->location;
+        $validate_data['map'] = json_encode($validate_data['map']);
 
-        if ($request->hasFile('map'))
-        {
-            $map = $request->file('map');
-            $map_path = $map->store('maps', 'public');
-            $validate_data['map'] = $map_path;
-        }
+        // if ($request->hasFile('map'))
+        // {
+        //     $map = $request->file('map');
+        //     $map_path = $map->store('maps', 'public');
+        //     $validate_data['map'] = $map_path;
+        // }
 
         $exhibition = Exhibition::create($validate_data);
 
@@ -123,8 +124,9 @@ class ExhibitionController extends Controller
                 'available_booths' => $exhibition->available_booths,
                 'total_booths' => $exhibition->total_booths,
                 'visitors_count' => $exhibition->visitors_count,
-                'is_favorite' => Auth::user()->favorites->where('favoritable_id', $exhibition->id)
-                    ->where('favoritable_type', 'App\Models\Exhibition')
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $exhibition->id)
+                    ->where('favoritable_type', Exhibition::class)
                     ->exists()
             ];
 
@@ -138,13 +140,14 @@ class ExhibitionController extends Controller
         );
     }
     //===============================================================
-    public function getAllExhibitions()//عرض كل المعارض
+    public function getAllExhibitions()//عرض كل المعارض+الاجنحة
     {
         $exhibitions = Exhibition::orderBy('start_date', 'asc')
         ->where('copy_status', 'active')
         ->get();
-        
-        $exhibitions_data = $exhibitions->map(function ($exhibition) {
+
+        $exhibitions_data = $exhibitions->map(function ($exhibition)
+        {
             return [
                 'id' => $exhibition->id,
                 'name' => $exhibition->name,
@@ -159,14 +162,15 @@ class ExhibitionController extends Controller
                 'visitors_count' => $exhibition->visitors_count,
                 'is_favorite' => Auth::user()->favorites->where('favoritable_id', $exhibition->id)
                     ->where('favoritable_type', 'App\Models\Exhibition')
-                    ->exists()
+                    ->exists(),
+                'booths'=> $exhibition->booths,
             ];
 
         });
 
         return response()->json(
             [
-                'exhibitions' => $exhibitions_data
+                'exhibitions' => $exhibitions_data,
             ],
             200
         );
@@ -244,6 +248,35 @@ class ExhibitionController extends Controller
         ], 200);
     }
     //===============================================================
+    public function getMyExhibition($exhibition_id)//عرض المعرض الخاص بي
+    {
+        $organizer = Auth::user()->organizer;
+
+        $exhibition = Exhibition::where('organizer_id', $organizer->id)
+            ->with('booths')
+            ->findOrFail($exhibition_id);
+
+        return response()->json([
+            'exhibition' => $exhibition
+        ], 200);
+    }
+
+    //===============================================================
+    public function getMap($exhibition_id)//عرض خريطة معرض
+    {
+        $organizer = Auth::user()->organizer;
+
+        $exhibition = Exhibition::where('organizer_id', $organizer->id)
+        ->findOrFail($exhibition_id);
+        $map = json_decode($exhibition->map, true);
+
+        return response()->json([
+            'map' => $map,
+        ], 200);
+
+    }
+    //===============================================================
+    //===============================================================
     public function ongoing()//الجارية
     {
         $exhibitions = Exhibition::where('status', 'ongoing')
@@ -276,26 +309,13 @@ class ExhibitionController extends Controller
             'exhibitions' => $exhibitions
         ], 200);
     }
-    //===============================================================
-    // public function myExhibitions()//o
-    // {
-    //     $user = Auth::user();
 
-    //     $exhibitions = Exhibition::where('organizer_id', $user->id)
-    //         ->orderBy('start_date', 'asc')
-    //         ->get();
-
-    //     return response()->json([
-    //         'exhibitions' => $exhibitions
-    //     ], 200);
-    // }
-    //===============================================================
     //===============================================================
     //=========================الزائر===============================
 
     public function featuredExhibitionsForVisitor()
     {
-        $visitor = auth()->user()->visitor;
+        $visitor = Auth::user()->visitor;
         $interests = $visitor->interests ?? [];
         $city = $visitor->city;
 

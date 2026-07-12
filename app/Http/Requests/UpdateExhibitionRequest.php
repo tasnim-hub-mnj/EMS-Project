@@ -22,7 +22,7 @@ class UpdateExhibitionRequest extends FormRequest
     public function rules(): array
     {
         return
-        [
+        [//UpdateExhibitionRequest
             'name' => 'sometimes|required|string|max:255',
             'type' => 'sometimes|required|string|max:255',
             'start_date' => 'sometimes|required|date',

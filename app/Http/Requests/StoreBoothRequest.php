@@ -25,7 +25,7 @@ class StoreBoothRequest extends FormRequest
         [
             'number' => 'required|string|max:20',
             'area' => 'required|numeric',
-            'status' => 'nullable|string|in:available,unavailable,pending',
+            'status' => 'nullable|string|in:available,unavailable',
             'price' => 'required|numeric',
             'location' => 'required|string|max:200',
             'services' => 'nullable|array',
