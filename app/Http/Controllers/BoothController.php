@@ -19,29 +19,32 @@ class BoothController extends Controller
     public function store(StoreBoothRequest $request, $exhibition_id)
     {
         $exhibition = Exhibition::where('organizer_id', Auth::id())
-        ->findOrFail($exhibition_id);
+            ->findOrFail($exhibition_id);
 
-        $validate_data = $request->validated();
+        $data = $request->validated();
 
         $booth = Booth::create([
             'exhibition_id' => $exhibition->id,
-            'number'        => $validate_data['number'],
-            'area'          => $validate_data['area'],
-            'status'        => $validate_data['status'] ?? 'available',
-            'price'         => $validate_data['price'],
-            'location'      => $validate_data['location'],
-            'services'  => json_encode($validate_data['services']),//تحويل المصفوفة الى جيسن
-            'map_x'         => $validate_data['map_x'],
-            'map_y'         => $validate_data['map_y'],
-            'map_z'         => $validate_data['map_z'],
+            'number'        => $data['number'],
+            'area'          => $data['area'],
+            'status'        => $data['status'] ?? 'available',
+            'price'         => $data['price'],
+            'location'      => $data['location'],
+            'services'      => isset($data['services'])
+                                ? json_encode($data['services'])
+                                : json_encode([]),
+            'map_x'         => $data['map_x'] ?? null,
+            'map_y'         => $data['map_y'] ?? null,
+            'map_z'         => $data['map_z'] ?? null,
         ]);
+
         if ($request->hasFile('image'))
         {
             $path = $request->file('image')->store('booth_images', 'public');
-            $validate_data['image'] = $path;
+            $booth->update(['image' => $path]);
         }
 
-        $exhibition->increment('total_booths');
+        $exhibition->increment('total_booths');//+1
 
         return response()->json([
             'message' => 'Booth created successfully',
@@ -59,7 +62,7 @@ class BoothController extends Controller
 
         $data = $request->validated();
 
-        // إذا الخدمات مصفوفة → نحولها JSON
+        // تحويل الخدمات إلى JSON إذا كانت مصفوفة
         if (isset($data['services']) && is_array($data['services']))
         {
             $data['services'] = json_encode($data['services']);
@@ -71,9 +74,9 @@ class BoothController extends Controller
             {
                 Storage::disk('public')->delete($booth->image);
             }
+
             $path = $request->file('image')->store('booth_images', 'public');
-            $booth->image = $path;
-            $booth->update(['image' => $path]);
+            $data['image'] = $path;
         }
 
         $booth->update($data);
@@ -83,6 +86,7 @@ class BoothController extends Controller
             'booth' => $booth
         ], 200);
     }
+
     //=============================================================================
     public function index($exhibition_id)//عرض كل الاجنحة الخاصة بمعرض معين
     {

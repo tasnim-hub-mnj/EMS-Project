@@ -22,7 +22,7 @@ class StoreBoothRequest extends FormRequest
     public function rules(): array
     {
         return
-        [
+        [//StoreBoothRequest
             'number' => 'required|string|max:20',
             'area' => 'required|numeric',
             'status' => 'nullable|string|in:available,unavailable',

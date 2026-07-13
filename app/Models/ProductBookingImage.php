@@ -5,17 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class BoothBookingImage extends Model
+class ProductBookingImage extends Model
 {
     use HasFactory;
 
     protected $fillable =
     [
         'booth_booking_id',
-        'image_b',
+        'image_p',
     ];
 
-    protected $table = 'booth_booking_images';
+    protected $table = 'product_booking_image';
     //===============Relationships==================
     public function boothBooking()
     {

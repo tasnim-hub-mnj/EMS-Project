@@ -12,7 +12,7 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
-            $table->string('url');
+            $table->string('image');
             $table->timestamps();
         });
     }

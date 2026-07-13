@@ -35,7 +35,7 @@ class ExhibitionController extends Controller
         ], 201);
     }
     //===============================================================
-    public function StoreImages($request,$exhibition_id)//اضافة صورة للمعرض
+    public function StoreImages(Request $request,$exhibition_id)//اضافة صورة للمعرض
     {
         $request->validate([
             'image' => 'required',
@@ -223,7 +223,8 @@ class ExhibitionController extends Controller
             'sponsorEvents',
         ])->find($exhibition_id);
 
-        if (!$exhibition) {
+        if (!$exhibition)
+        {
             return response()->json(['message' => 'Exhibition not found'], 404);
         }
 
