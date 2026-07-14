@@ -10,6 +10,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\ExhibitionController;
 use App\Http\Controllers\ExhibitionReviewController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\ProfileVisitorController;
 use App\Http\Controllers\SponsorshipBookingController;
 use App\Http\Controllers\SponsorEventController;
 use App\Http\Controllers\SupportTicketController;
@@ -123,9 +124,25 @@ Route::middleware('auth:sanctum')->group(function () {
 //**********************************HANAN😁***********************************
 //*****************************************************************************
 
-//التقييمات
+Route::post('/auth/login', [VisitorController::class, 'login']);
+Route::post('/auth/register', [VisitorController::class, 'register']);
+
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/profile', [ProfileVisitorController::class, 'getProfile']);
+    Route::match(['put', 'post'], '/profile/update', [ProfileVisitorController::class, 'updateProfile']);
+    Route::post('/profile/delete-account', [ProfileVisitorController::class, 'deleteAccount']);
+    Route::post('/auth/logout', [VisitorController::class, 'logout']);
+});
+
 //*************/ 
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/exhibitions', [ExhibitionController::class, 'featuredExhibitionsForVisitor']);
+    Route::get('/exhibitions/{id}/events', [ExhibitionController::class, 'getEventsExh']);
+    Route::get('/exhibitions/{id}/booths', [ExhibitionController::class, 'getBoothsExh']);
+    Route::get('/exhibitions/{id}/map', [ExhibitionController::class, 'getFloorMap']);
 
     Route::post('/exhibition/review', [ExhibitionReviewController::class, 'addReviewExhibition']);
     Route::get('/exhibition/{id}/reviews', [ExhibitionReviewController::class, 'showReviewsExhibition']);
@@ -150,7 +167,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 Route::middleware('auth:sanctum')->group(function () {
     //تذاكر الزائر
-    Route::get('/visitor/tickets', [TicketController::class, 'myTickets']);
+    Route::get('/bookings/my-tickets', [TicketController::class, 'myTickets']);
     Route::get('/tickets/exhibition/{id}', [TicketController::class, 'showExhibitionTicket']);
     Route::get('/tickets/event/{id}', [TicketController::class, 'showEventTicket']);
     Route::get('/tickets/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
@@ -169,10 +186,10 @@ Route::middleware('auth:sanctum')->group(function () {
 //_____________________________________________________________________________________________
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/visitor/collected-booths', [CollectedBoothController::class, 'index']);
-    Route::post('/visitor/collected-booths', [CollectedBoothController::class, 'store']);
-    Route::post('/visitor/collected-booths/scan', [CollectedBoothController::class, 'scan']);
-    Route::delete('/visitor/collected-booths/{id}', [CollectedBoothController::class, 'destroy']);
+    Route::get('/collected-booths', [CollectedBoothController::class, 'index']);
+    Route::post('/collected-booths', [CollectedBoothController::class, 'store']);
+    Route::post('/collected-booths/scan', [CollectedBoothController::class, 'scan']);
+    Route::delete('/collected-booths/{id}', [CollectedBoothController::class, 'destroy']);
 
 });
 

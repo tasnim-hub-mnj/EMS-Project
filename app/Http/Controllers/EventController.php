@@ -13,18 +13,18 @@ class EventController extends Controller
     public function store(Request $request, $boothId = null)//إضافة فعالية داخل الجناح أو عبر body
     {
         $request->validate([
-            'name'              => 'required|string|max:255',
-            'type'              => 'nullable|string|max:255',
-            'date'              => 'required|date',
-            'time'              => 'required',
-            'duration_days'     => 'integer|min:1',
-            'max_participants'  => 'nullable|integer|min:1',
-            'description'       => 'nullable|string',
-            'place'             => 'nullable|string|max:255',
-            'requires_booking'  => 'boolean',
-            'has_bookable_seats'=> 'boolean',
-            'total_seats'       => 'nullable|integer|min:1',
-            'ticket_price'      => 'nullable|numeric|min:0',
+            'name' => 'required|string|max:255',
+            'type' => 'nullable|string|max:255',
+            'date' => 'required|date',
+            'time' => 'required',
+            'duration_days' => 'integer|min:1',
+            'max_participants' => 'nullable|integer|min:1',
+            'description' => 'nullable|string',
+            'place' => 'nullable|string|max:255',
+            'requires_booking' => 'boolean',
+            'has_bookable_seats' => 'boolean',
+            'total_seats' => 'nullable|integer|min:1',
+            'ticket_price' => 'nullable|numeric|min:0',
         ]);
 
         $investor = Auth::user()->investor;
@@ -40,33 +40,33 @@ class EventController extends Controller
 
         // تأكيد أن الجناح يخص هذا المستثمر
         BoothBooking::where('booth_id', $boothId)
-               ->where('investor_id', $investor->id)
-               ->where('status', 'approved')
-               ->firstOrFail();
+            ->where('investor_id', $investor->id)
+            ->where('status', 'approved')
+            ->firstOrFail();
 
         $event = Event::create([
-            'investor_id'       => $investor->id,
-            'booth_id'          => $boothId,
-            'name'              => $request->name,
-            'type'              => $request->type,
-            'date'              => $request->date,
-            'time'              => $request->time,
-            'duration_days'     => $request->duration_days ?? 1,
-            'max_participants'  => $request->max_participants,
-            'description'       => $request->description,
-            'place'             => $request->place,
-            'requires_booking'  => $request->requires_booking ?? false,
-            'has_bookable_seats'=> $request->has_bookable_seats ?? false,
-            'total_seats'       => $request->total_seats,
-            'ticket_price'      => $request->ticket_price ?? 0,
-            'company_images'    => [],
-            'daily_attendees'   => [],
-            'total_event_days'  => $request->duration_days ?? 1,
+            'investor_id' => $investor->id,
+            'booth_id' => $boothId,
+            'name' => $request->name,
+            'type' => $request->type,
+            'date' => $request->date,
+            'time' => $request->time,
+            'duration_days' => $request->duration_days ?? 1,
+            'max_participants' => $request->max_participants,
+            'description' => $request->description,
+            'place' => $request->place,
+            'requires_booking' => $request->requires_booking ?? false,
+            'has_bookable_seats' => $request->has_bookable_seats ?? false,
+            'total_seats' => $request->total_seats,
+            'ticket_price' => $request->ticket_price ?? 0,
+            'company_images' => [],
+            'daily_attendees' => [],
+            'total_event_days' => $request->duration_days ?? 1,
         ]);
 
         return response()->json([
             'message' => 'Event Added',
-            'event'   => $event
+            'event' => $event
         ], 201);
     }
     //===========================================================
@@ -80,7 +80,7 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'Event Updated',
-            'event'   => $event
+            'event' => $event
         ], 200);
     }
     //===========================================================
@@ -100,7 +100,7 @@ class EventController extends Controller
     public function show($id)//عرض فعالية واحدة
     {
         $event = Event::with(['booth.exhibition', 'investor'])
-                    ->findOrFail($id);
+            ->findOrFail($id);
 
         return response()->json([
             'event' => $event
@@ -110,9 +110,9 @@ class EventController extends Controller
     public function boothEvents($boothId)//عرض فعاليات الجناح
     {
         $events = Event::where('booth_id', $boothId)
-                       ->with(['booth.exhibition'])
-                       ->orderBy('date', 'asc')
-                       ->get();
+            ->with(['booth.exhibition'])
+            ->orderBy('date', 'asc')
+            ->get();
 
         return response()->json([
             'events' => $events
@@ -122,11 +122,11 @@ class EventController extends Controller
     public function exhibitionEvents($exhibitionId)//عرض فعاليات المعرض
     {
         $events = Event::whereHas('booth', function ($q) use ($exhibitionId) {
-                        $q->where('exhibition_id', $exhibitionId);
-                    })
-                    ->with(['booth.exhibition'])
-                    ->orderBy('date', 'asc')
-                    ->get();
+            $q->where('exhibition_id', $exhibitionId);
+        })
+            ->with(['booth.exhibition'])
+            ->orderBy('date', 'asc')
+            ->get();
 
         return response()->json([
             'events' => $events
@@ -138,9 +138,9 @@ class EventController extends Controller
         $investor = Auth::user()->investor;
 
         $events = Event::where('investor_id', $investor->id)
-                       ->with(['booth.exhibition'])
-                       ->orderBy('created_at', 'desc')
-                       ->get();
+            ->with(['booth.exhibition'])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json([
             'events' => $events
@@ -172,12 +172,10 @@ class EventController extends Controller
         $investor = Auth::user()->investor;
 
         $event = Event::where('id', $eventId)
-            ->whereHas('booth', function ($query) use ($investor)
-            {
-                $query->whereHas('bookings', function ($q) use ($investor)
-                {
+            ->whereHas('booth', function ($query) use ($investor) {
+                $query->whereHas('bookings', function ($q) use ($investor) {
                     $q->where('investor_id', $investor->id)
-                      ->where('status', 'approved');
+                        ->where('status', 'approved');
                 });
             })
             ->with(['booth.exhibition', 'tickets'])
@@ -205,7 +203,7 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'تمت إضافة الصورة بنجاح',
-            'images'  => $images
+            'images' => $images
         ], 200);
     }
 
@@ -236,7 +234,11 @@ class EventController extends Controller
 
         return response()->json([
             'message' => 'تم حذف الصورة بنجاح',
-            'images'  => $images
+            'images' => $images
         ], 200);
     }
+    //===============================================================
+    //===============================================================
+    //=====================الزائر======================================
+
 }

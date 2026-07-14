@@ -36,7 +36,7 @@ class Visitor extends Model
     //===================================================
     public function tickets()
     {
-        return $this->hasMany(Ticket::class, 'user_id');
+        return $this->hasMany(Ticket::class, 'visitor_id');
     }
     //===================================================
     public function eventTickets()
@@ -97,6 +97,8 @@ class Visitor extends Model
     {
         return $this->hasMany(SponserEventTicket::class);
     }
+
+
 
 
 

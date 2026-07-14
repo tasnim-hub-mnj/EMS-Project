@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreExhibitionRequest;
 use App\Http\Requests\UpdateExhibitionRequest;
+use App\Models\Booth;
+use App\Models\Event;
 use App\Models\Exhibition;
 use App\Models\ExhibitionImage;
 use Illuminate\Http\Request;
@@ -13,14 +15,13 @@ class ExhibitionController extends Controller
 {
     public function store(StoreExhibitionRequest $request)// اضافة معرض
     {
-        $organizer= Auth::user()->organizer;
+        $organizer = Auth::user()->organizer;
         $validate_data = $request->validated();
-        $validate_data['organizer_id']= $organizer->id;
-        $validate_data['type']= $organizer->category;
-        $validate_data['location']= $organizer->location;
+        $validate_data['organizer_id'] = $organizer->id;
+        $validate_data['type'] = $organizer->category;
+        $validate_data['location'] = $organizer->location;
 
-        if ($request->hasFile('map'))
-        {
+        if ($request->hasFile('map')) {
             $map = $request->file('map');
             $map_path = $map->store('maps', 'public');
             $validate_data['map'] = $map_path;
@@ -34,17 +35,15 @@ class ExhibitionController extends Controller
         ], 201);
     }
     //===============================================================
-    public function StoreImages($request,$exhibition_id)//اضافة صورة للمعرض
+    public function StoreImages($request, $exhibition_id)//اضافة صورة للمعرض
     {
         $request->validate([
             'image' => 'required',
             'image.*' => 'image|mimes:jpg,jpeg,png|max:2048'
         ]);
         $images = [];
-        if ($request->hasFile('image'))
-        {
-            foreach ($request->file('image') as $img)
-            {
+        if ($request->hasFile('image')) {
+            foreach ($request->file('image') as $img) {
                 $path = $img->store('exhibition_images', 'public');
 
                 $images[] = ExhibitionImage::create([
@@ -55,15 +54,15 @@ class ExhibitionController extends Controller
         }
 
         return response()->json([
-        'message' => 'Images Exhibition stored successfully',
-        'images' => $images
+            'message' => 'Images Exhibition stored successfully',
+            'images' => $images
         ], 201);
     }
     //===============================================================
-    public function update(UpdateExhibitionRequest $request,$exhibition_id)//تعديل معرض
+    public function update(UpdateExhibitionRequest $request, $exhibition_id)//تعديل معرض
     {
         $exhibition = Exhibition::where('organizer_id', Auth::id())
-        ->findOrFail($exhibition_id);
+            ->findOrFail($exhibition_id);
 
         $exhibition->update($request->validated());
 
@@ -76,7 +75,7 @@ class ExhibitionController extends Controller
     public function destroy($exhibition_id)//حذف معرض
     {
         $exhibition = Exhibition::where('organizer_id', Auth::id())
-        ->findOrFail($exhibition_id);
+            ->findOrFail($exhibition_id);
 
         $exhibition->delete();
 
@@ -87,14 +86,14 @@ class ExhibitionController extends Controller
     //===============================================================
     public function featurrdExhibitionsI()//عرض المعارض المميزة للمستثمر
     {
-        $invsetor_user=Auth::user()->investor;
+        $invsetor_user = Auth::user()->investor;
         $exhibitions = Exhibition::where('copy_status', 'active')
-        ->where('location', $invsetor_user->location)
-        ->where('type', $invsetor_user->activity_type)
-        ->whereIn('status', ['upcoming', 'ongoing'])
-        ->where('available_booths', '>', 0)
-        ->orderBy('start_date', 'asc')
-        ->get();
+            ->where('location', $invsetor_user->location)
+            ->where('type', $invsetor_user->activity_type)
+            ->whereIn('status', ['upcoming', 'ongoing'])
+            ->where('available_booths', '>', 0)
+            ->orderBy('start_date', 'asc')
+            ->get();
 
         return response()->json([
             'exhibitions' => $exhibitions
@@ -104,13 +103,12 @@ class ExhibitionController extends Controller
     //===============================================================
     public function latestExhibitions()//عرض احدث المعارض
     {
-        $exhibitions = Exhibition::whereIn('status',['upcoming','ongoing'])
-        ->where('copy_status', 'active')
-        ->orderBy('start_date', 'asc')
-        ->get();
+        $exhibitions = Exhibition::whereIn('status', ['upcoming', 'ongoing'])
+            ->where('copy_status', 'active')
+            ->orderBy('start_date', 'asc')
+            ->get();
 
-        $exhibitions_data = $exhibitions->map(function ($exhibition)
-        {
+        $exhibitions_data = $exhibitions->map(function ($exhibition) {
             return [
                 'id' => $exhibition->id,
                 'name' => $exhibition->name,
@@ -141,9 +139,9 @@ class ExhibitionController extends Controller
     public function getAllExhibitions()//عرض كل المعارض
     {
         $exhibitions = Exhibition::orderBy('start_date', 'asc')
-        ->where('copy_status', 'active')
-        ->get();
-        
+            ->where('copy_status', 'active')
+            ->get();
+
         $exhibitions_data = $exhibitions->map(function ($exhibition) {
             return [
                 'id' => $exhibition->id,
@@ -208,11 +206,11 @@ class ExhibitionController extends Controller
     //===============================================================
     public function show($exhibition_id)//عرض معرض معين
     {
-        $user=Auth::user();
+        $user = Auth::user();
         $is_favorite = $user->favorites()
-        ->where('favoritable_id', $exhibition_id)
-        ->where('favoritable_type', Exhibition::class)
-        ->exists();
+            ->where('favoritable_id', $exhibition_id)
+            ->where('favoritable_type', Exhibition::class)
+            ->exists();
 
         $exhibition = Exhibition::with([
             'booths',
@@ -232,7 +230,7 @@ class ExhibitionController extends Controller
     public function archive($exhibition_id)//ارشفة معرض
     {
         $exhibition = Exhibition::where('organizer_id', Auth::id())
-        ->findOrFail($exhibition_id);
+            ->findOrFail($exhibition_id);
 
         $exhibition->update([
             'copy_status' => 'archived'
@@ -293,35 +291,128 @@ class ExhibitionController extends Controller
     //===============================================================
     //=========================الزائر===============================
 
-    public function featuredExhibitionsForVisitor()
+    public function featuredExhibitionsForVisitor(Request $request)
     {
         $visitor = auth()->user()->visitor;
         $interests = $visitor->interests ?? [];
         $city = $visitor->city;
 
-        // المعارض المميزة حسب عدة عوامل
-        $exhibitions = Exhibition::where('copy_status', 'active') // المعرض منشور
-            ->whereIn('status', ['upcoming', 'ongoing']) // قريب أو جاري
-            ->when($interests, function ($query) use ($interests) {
-                // مطابقة الاهتمامات مع قطاعات المعرض
-                return $query->where(function ($q) use ($interests) {
+        $isFeatured = $request->query('featured', 0);
+        $perPage = $request->query('per_page', 4);
+
+        // 3. بناء الاستعلام الأساسي للمعارض النشطة
+        $query = Exhibition::where('copy_status', 'active')
+            ->whereIn('status', ['upcoming', 'ongoing']);
+
+        if ($isFeatured == 1) {
+            $query->when($interests, function ($q) use ($interests) {
+                return $q->where(function ($innerQuery) use ($interests) {
                     foreach ($interests as $interest) {
-                        $q->orWhereJsonContains('sectors', $interest);
+                        $innerQuery->orWhereJsonContains('sectors', $interest);
                     }
                 });
             })
-            ->when($city, function ($query) use ($city) {
-                // إعطاء أولوية للمعارض في نفس مدينة الزائر
-                return $query->orderByRaw("city = ? DESC", [$city]);
-            })
-            ->orderBy('visitors_count', 'desc') // الأكثر شعبية أولاً
-            ->take(10)
-            ->get();
+                ->when($city, function ($q) use ($city) {
+                    return $q->orderByRaw("city = ? DESC", [$city]);
+                })
+                ->orderBy('visitors_count', 'desc'); // الأكثر شعبية
+        }
+
+        $exhibitions = $query->limit($perPage)->get();
 
         return response()->json([
             'message' => 'تم جلب المعارض المميزة للزائر بنجاح',
             'exhibitions' => $exhibitions
-        ]);
+        ], 200);
+    }
+    //===============================================================
+    public function getEventsExh($id)
+    {
+        $exhibition = Exhibition::find($id);
+        if (!$exhibition) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المعرض غير موجود'
+            ], 404);
+        }
+        $events = Event::whereHas('boothBooking.booth', function ($query) use ($id) {
+            $query->where('exhibition_id', $id);
+        })->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم جلب فعاليات المعرض بنجاح',
+            'data' => $events
+        ], 200);
+    }
+    //===============================================================
+    public function getBoothsExh($id)
+    {
+        $exhibition = Exhibition::find($id);
+        if (!$exhibition) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المعرض غير موجود'
+            ], 404);
+        }
+        $booths = Booth::where('exhibition_id', $id)->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم جلب أجنحة المعرض بنجاح',
+            'data' => $booths
+        ], 200);
+    }
+    //===============================================================
+    public function getFloorMap($id)
+    {
+        $exhibition = Exhibition::with('booths')->find($id);
+
+        if (!$exhibition) {
+            return response()->json([
+                'status' => false,
+                'message' => 'المعرض غير موجود'
+            ], 404);
+        }
+
+        $boothsData = [];
+        if ($exhibition->booths) {
+            foreach ($exhibition->booths as $booth) {
+                $boothsData[] = [
+                    'id' => $booth->id,
+                    'number' => $booth->number,
+                    'col' => $booth->map_x ?? 0,
+                    'row' => $booth->map_y ?? 0,
+                    'width' => (int) $booth->area,
+                    'depth' => $booth->map_z ?? 2,
+                    'height' => 1.5,
+                    'status' => ($booth->status === 'available') ? 'available' : 'booked',
+                    'price' => (float) $booth->price,
+                    'area' => (float) $booth->area,
+                    'amenities' => is_string($booth->services) ? json_decode($booth->services) : ($booth->services ?? []), // حقل الخدمات من جدولك
+                ];
+            }
+        }
+
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم جلب مخطط المعرض بنجاح',
+            'data' => [
+                'exhibition_id' => $exhibition->id,
+                'exhibition_name' => $exhibition->name,
+                'grid_width' => 20,
+                'grid_depth' => 20,
+                'halls' => [
+                    [
+                        'id' => "1",
+                        'name' => "Main Hall",
+                        'color' => "FFFFFF",
+                        'booths' => $boothsData
+                    ]
+                ]
+            ]
+        ], 200);
     }
 
 
