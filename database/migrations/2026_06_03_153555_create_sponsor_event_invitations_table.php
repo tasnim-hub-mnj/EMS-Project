@@ -8,7 +8,7 @@ return new class extends Migration
 {//الدعواتo
     public function up(): void
     {
-        Schema::create('invitations', function (Blueprint $table)
+        Schema::create('sponsor_event_invitations', function (Blueprint $table)
         {
             $table->id();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('invitations');
+        Schema::dropIfExists('sponsor_event_invitations');
     }
 };

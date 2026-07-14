@@ -4,13 +4,12 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
+return new class extends Migration
+{
     public function up(): void
     {
-        Schema::create('sponser_event_tickets', function (Blueprint $table) {
+        Schema::create('sponser_event_tickets', function (Blueprint $table)
+        {
             $table->id();
             $table->foreignId('visitor_id')->constrained('visitors')->cascadeOnDelete();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->cascadeOnDelete();
