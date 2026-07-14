@@ -77,7 +77,8 @@ class BoothBookingController extends Controller
             'notes' => $data['notes'],
             'total_price' => $totalPrice,
             'services_products' => $data['services_products'],
-            'booked_at' => now(),
+            'booked_at' => now()->format('Y-m-d'),
+
         ]);
 
         $images_b = [];
@@ -256,7 +257,7 @@ class BoothBookingController extends Controller
     {
         $booking = BoothBooking::findOrFail($booking_id);
         $booth = $booking->booth;
-        
+
         if ($booking->status === 'approved')
         {
             $booking->booth->update(['status_inv' => 'available']);

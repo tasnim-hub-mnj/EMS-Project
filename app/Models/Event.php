@@ -38,17 +38,12 @@ class Event extends Model
     protected $table = 'events';
 
     // =================Relationships===================
-    // public function investor()
-    // {
-    //     return $this->belongsTo(Investor::class);
-    // }
-    //=====================================================
     public function boothBooking()
     {
         return $this->belongsTo(BoothBooking::class);
     }
     //=====================================================
-    public function enventTickets()
+    public function eventTickets()
     {
         return $this->hasMany(EventTicket::class, 'event_id');
     }
@@ -56,6 +51,11 @@ class Event extends Model
     public function favorites()//v
     {
         return $this->morphMany(Favorite::class, 'favoritable');
+    }
+    //=====================================================
+    public function eventImages()
+    {
+        return $this->hasMany(EventImage::class);
     }
     //=====================================================
     // public function schedule()

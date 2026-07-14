@@ -22,7 +22,7 @@ return new class extends Migration
             $table->float('paid_amount')->default(0.0);
             $table->text('services_products')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled','finished'])->default('pending');
-            $table->date('booked_at')->nullable();
+            $table->date('booked_at')->nullable();//now()->format('Y-m-d')
             // $table->json('images');//جدول لحال
             $table->timestamps();
         });
