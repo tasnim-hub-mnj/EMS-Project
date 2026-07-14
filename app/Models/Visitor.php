@@ -68,10 +68,7 @@ class Visitor extends Model
         return $this->hasMany(CollectedBooths::class);
     }
     //============================================
-    public function favorites()
-    {
-        return $this->hasMany(Favorite::class);
-    }
+    
 
     //التقييمات
     //============================================

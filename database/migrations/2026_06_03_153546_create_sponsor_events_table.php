@@ -12,20 +12,19 @@ return new class extends Migration {
      */
     public function up(): void
     {//o
-        Schema::create('sponsor_events', function (Blueprint $table) {
+        Schema::create('sponsor_events', function (Blueprint $table)
+        {
             $table->id();
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            // $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
-            // $table->foreignId('created_by')->constrained('organizers')->onDelete('cascade');
             $table->string('name');
-            $table->string('type')->nullable();
-            $table->string('by');//اسم المقدم/لجنة التحكيم
-            $table->string('place')->nullable();//الاماكن المتاحة فقط داخل المعرض
-            $table->timestamps('start_time')->nullable();//منع تضارب اكثر من فعالية في مكان ووقت واحد
-            $table->timestamps('end_time')->nullable();
+            $table->string('type');
+            $table->string('by')->nullable();//اسم المقدم/لجنة التحكيم
+            $table->string('place');//الاماكن المتاحة فقط داخل المعرض
+            $table->dateTime('start_time');//now()->format('Y-m-d H:i')
+            $table->dateTime('end_time');//now()->format('Y-m-d H:i')
             $table->text('description')->nullable();
             $table->boolean('is_general_invitation')->default(true);//هل مفتوح للجميع أم يتطلب دعوة خاصة
-            $table->float('ticket_price')->default(0)->nullable();
+            $table->float('ticket_price')->default(0);
             $table->integer('max_participants')->nullable();//عدد المقاعد الكلي
             // $table->string('image');//جدول لحال
 

@@ -12,7 +12,7 @@ class EventImage extends Model
     protected $fillable =
     [
         'event_id',
-        'url',
+        'image',
     ];
 
     protected $table = 'event_images';

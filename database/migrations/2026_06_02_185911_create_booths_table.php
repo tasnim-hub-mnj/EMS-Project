@@ -14,12 +14,12 @@ return new class extends Migration
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->string('number');
             $table->float('area');
-            $table->enum('status_inv', ['available', 'booked', 'pending'])->default('available');
-            $table->enum('status', ['available', 'unavailable', 'pending'])->default('available');
+            $table->enum('status_inv', ['available', 'booked'])->default('available');//تلقائي
+            $table->enum('status', ['available', 'unavailable'])->default('available');//يدوي/o
             $table->float('price');
             // $table->date('end_date')->nullable();
             $table->string('location')->nullable();//الموقع داخل المعرض
-            $table->json('services');//الخدمة + السعر
+            $table->json('services');//exhibition->some(extra_services)
             $table->string('image');
             $table->integer('map_x')->nullable();
             $table->integer('map_y')->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
         });
     }
 
-    /**
+    /*
      * Reverse the migrations.
      */
     public function down(): void

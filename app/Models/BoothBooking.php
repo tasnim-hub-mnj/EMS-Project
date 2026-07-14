@@ -29,38 +29,6 @@ class BoothBooking extends Model
         'total_price'      => 'float',
         'booked_at'        => 'date',
     ];
-    //=========================================================
-    protected static function booted()//حساب مجمل السعر
-    {
-        static::creating(function ($booking)
-        {
-            // جلب المعرض من خلال البوث
-            $exhibition = $booking->booth->exhibition;
-            $booth=$booking->booth;
-            // جلب الأسعار من JSON
-            $services = $booth->services ?? [];
-            $prices=$services->map(function($s) use ($services)
-            {
-
-            });
-
-            // سعر البوث
-            $boothPrice = $booking->booth->price;
-
-            // حساب السعر الكلي
-            $booking->total_price =
-                ($boothPrice * $booking->duration_days);
-                // +;
-
-
-            // تعبئة booked_at تلقائياً
-            if (empty($booking->booked_at))
-            {
-                $booking->booked_at = now();
-            }
-        });
-    }
-
     //=================Relationships===================
     public function investor()
     {
@@ -77,7 +45,12 @@ class BoothBooking extends Model
         return $this->hasMany(Event::class,'booth_booking_id');
     }
     //=================================================
-    public function boothBokingImages()
+    public function boothBookingImages()
+    {
+        return $this->hasMany(BoothBookingImage::class);
+    }
+    //=================================================
+    public function productBookingImages()
     {
         return $this->hasMany(BoothBookingImage::class);
     }

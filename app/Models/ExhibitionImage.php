@@ -12,8 +12,8 @@ class ExhibitionImage extends Model
     protected $fillable =
     [
         'exhibition_id',
-        'url',
-        'order'
+        'image',
+        // 'order'
     ];
 
     protected $table = 'exhibition_images';

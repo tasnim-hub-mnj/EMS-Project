@@ -39,11 +39,12 @@ class SponsorEvent extends Model
             'duration_options' => 'array',
         ];
 
-    //===============Relationships==================
+    //================================================
 
     public function getEndDateAttribute()
     {
-        if (!$this->date || !$this->listing_days) {
+        if (!$this->date || !$this->listing_days)
+        {
             return null;
         }
 
@@ -58,11 +59,6 @@ class SponsorEvent extends Model
         return $this->belongsTo(Exhibition::class);
     }
     //=====================================================
-    public function booth()
-    {
-        return $this->belongsTo(Booth::class);
-    }
-    //=====================================================
     public function sponsorshipBookings()
     {
         return $this->hasMany(SponsorshipBooking::class);
@@ -73,7 +69,7 @@ class SponsorEvent extends Model
         return $this->hasMany(SponsorEventImage::class);
     }
     //=====================================================
-    public function sponsorEventPrograms()
+    public function Programs()
     {
         return $this->hasMany(SponsorEventProgram::class);
     }
@@ -85,7 +81,7 @@ class SponsorEvent extends Model
     //=====================================================
     public function invitations()
     {
-        return $this->hasMany(Invitation::class);
+        return $this->hasMany(SponsorEventInvitation::class);
     }
     //=====================================================
     public function tickets()
@@ -93,10 +89,7 @@ class SponsorEvent extends Model
         return $this->hasMany(SponserEventTicket::class);
     }
     //=====================================================
-    public function eventTickets()
-    {
-        return $this->hasMany(EventTicket::class);
-    }
+
 
 
 }

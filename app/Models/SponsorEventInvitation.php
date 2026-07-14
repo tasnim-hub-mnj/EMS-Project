@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Invitation extends Model
+class SponsorEventInvitation extends Model
 {
     use HasFactory;
 
@@ -19,7 +19,7 @@ class Invitation extends Model
         'status',
     ];
 
-    protected $table = 'invitations';
+    protected $table = 'sponsor_event_invitations';
 
     //===============Relationships==================
     public function sponsorEvent()

@@ -12,7 +12,7 @@ class SponsorEventImage extends Model
     protected $fillable =
     [
         'sponsor_event_id',
-        'url',
+        'image',
     ];
 
     protected $table = 'sponsor_event_images';

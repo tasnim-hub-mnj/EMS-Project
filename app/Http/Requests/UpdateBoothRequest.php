@@ -22,10 +22,10 @@ class UpdateBoothRequest extends FormRequest
     public function rules(): array
     {
         return
-        [
+        [//UpdateBoothRequest
             'number'   => 'sometimes|string|max:20',
             'area'     => 'sometimes|numeric',
-            'status'   => 'sometimes|string|in:available,unavailable,pending',
+            'status'   => 'sometimes|string|in:available,unavailable',
             'price'    => 'sometimes|numeric',
             'location' => 'sometimes|string|max:200',
             'services' => 'sometimes|json',
