@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('reg_number')->unique()->nullable();
             $table->string('location');//EXHIBITION->LOCATION
             $table->string('logo');
-            $table->file('file');//العقد
+            $table->json('file');//العقد
             $table->string('description')->nullable();
             $table->timestamps();
         });

@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->string('qr_code')->nullable();
             $table->decimal('amount', 12, 2)->nullable();
-            $table->timestamp('booked_at')->nullable();
+            $table->dateTime('booked_at')->nullable();
             $table->timestamps();
         });
     }
