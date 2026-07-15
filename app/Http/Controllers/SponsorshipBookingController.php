@@ -156,7 +156,7 @@ class SponsorshipBookingController extends Controller
             'id' => $booking->id,
             'name' => $booking->sponsorEvent->name,
             'status' => $booking->status,
-            'day_rate' =>,
+            // 'day_rate' =>,
 
             'type' => $booking->sponsorEvent->type,
             'exhibition_name' => $booking->sponsorEvent->exhibition->name,
