@@ -100,7 +100,6 @@ class ExhibitionController extends Controller
         return response()->json([
             'exhibitions' => $exhibitions
         ], 200);
-
     }
     //===============================================================
     public function latestExhibitions()//عرض احدث المعارض

@@ -16,7 +16,9 @@ return new class extends Migration
             $table->string('email');
             $table->string('phone')->nullable();
             $table->enum('method_send',['electronic','printing','electronic+printing']);
-            $table->enum('status',['pending','confirmed','attended','cancelled']);
+            $table->enum('status',['pending','confirmed','attended','cancelled'])->default('pending');
+            $table->string('qr_code')->nullable();//عند الانشاء
+            $table->dateTime('attended_date')->nullable();//now()->format('Y-m-d h:i A')
             $table->timestamps();
         });
     }

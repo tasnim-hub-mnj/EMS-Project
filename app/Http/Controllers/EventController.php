@@ -190,8 +190,7 @@ class EventController extends Controller
     //===========================================================
     public function getBoothEvents($booth_booking_id)//عرض فعاليات حجز معين(الجناح)
     {
-        $booking = BoothBooking::with(['booth', 'booth.exhibition'])
-            ->find($booth_booking_id);
+        $booking = BoothBooking::findOrFail($booth_booking_id);
 
         if (!$booking)
         {
