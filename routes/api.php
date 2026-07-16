@@ -144,13 +144,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/exhibitions/{id}/booths', [ExhibitionController::class, 'getBoothsExh']);
     Route::get('/exhibitions/{id}/map', [ExhibitionController::class, 'getFloorMap']);
 
-    Route::post('/exhibition/review', [ExhibitionReviewController::class, 'addReviewExhibition']);
-    Route::get('/exhibition/{id}/reviews', [ExhibitionReviewController::class, 'showReviewsExhibition']);
-    Route::get('/exhibitions/reviews', [ExhibitionReviewController::class, 'allExhibitionReviews']);
+    //Route::post('/exhibition/review', [ExhibitionReviewController::class, 'addReviewExhibition']);
+    Route::get('/exhibitions/{id}/reviews', [ExhibitionReviewController::class, 'getExhibitionReviews']);
+    Route::get('/reviews/exhibitions/all', [ExhibitionReviewController::class, 'getAllExhibitionsReviews']);
+    Route::post('/reviews/exhibition', [ExhibitionReviewController::class, 'submitExhibitionReview']);
+    //Route::get('/exhibitions/reviews', [ExhibitionReviewController::class, 'allExhibitionReviews']);
     //__________________________________________________________________________________________
-    Route::post('/booth/review', [BoothReviewController::class, 'addReviewBooth']);
-    Route::get('/booth/{id}/reviews', [BoothReviewController::class, 'showReviewsBooth']);
-    Route::get('/booths/reviews', [BoothReviewController::class, 'allBoothReviews']);
+    // Route::post('/booth/review', [BoothReviewController::class, 'addReviewBooth']);
+    Route::get('/booths/{id}/reviews', [BoothReviewController::class, 'getBoothReviews']);
+    Route::get('/reviews/booths/all', [BoothReviewController::class, 'getAllBoothsReviews']);
+    Route::post('/reviews/booth', [BoothReviewController::class, 'submitBoothReview']);
+
+    // Route::get('/booths/reviews', [BoothReviewController::class, 'allBoothReviews']);
     //____________________________________________________________________________________________
 // عرض كل تقييمات زائر معيّن (معرض + جناح)
     Route::get('/visitor/{id}/reviews', [VisitorController::class, 'visitorReviews']);
@@ -158,10 +163,10 @@ Route::middleware('auth:sanctum')->group(function () {
 //____________________________________________________________________________________________
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/support-tickets', [SupportTicketController::class, 'index']);
-    Route::get('/support-tickets/{id}', [SupportTicketController::class, 'show']);
-    Route::post('/support-tickets/message', [SupportTicketController::class, 'storeMessage']);
-    Route::post('/support-tickets/report', [SupportTicketController::class, 'storeReport']);
+    Route::get('/support/tickets', [SupportTicketController::class, 'index']);
+    Route::get('/support/tickets/{id}', [SupportTicketController::class, 'show']);
+    Route::post('/support/messages', [SupportTicketController::class, 'storeMessage']);
+    Route::post('/support/report', [SupportTicketController::class, 'storeReport']);
     //__________________________________________________________________________________________
 
 });
@@ -179,9 +184,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
 //___________________________________________________________________________________________
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/visitor/myschedule', [VisitorScheduleController::class, 'mySchedule']);
-    Route::post('/visitor/schedule', [VisitorScheduleController::class, 'storeSchedule']);
-    Route::delete('/visitor/schedule/{id}', [VisitorScheduleController::class, 'removeFromSchedule']);
+    Route::get('/schedule', [VisitorScheduleController::class, 'mySchedule']);
+    Route::post('/schedule/{eventId}', [VisitorScheduleController::class, 'storeSchedule']);
+    Route::delete('/schedule/{eventId}', [VisitorScheduleController::class, 'removeFromSchedule']);
 });
 //_____________________________________________________________________________________________
 Route::middleware('auth:sanctum')->group(function () {
@@ -191,6 +196,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/collected-booths/scan', [CollectedBoothController::class, 'scan']);
     Route::delete('/collected-booths/{id}', [CollectedBoothController::class, 'destroy']);
 
+});
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/events/{id}', [EventController::class, 'getEventById']);
+    Route::get('/events', [EventController::class, 'getLatestEvents']);
 });
 
 

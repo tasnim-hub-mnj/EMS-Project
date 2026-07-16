@@ -345,5 +345,120 @@ class EventController extends Controller
     //     ], 200);
     // }
     //===========================================================
+    //===========================================================
+    //=====================الزائر===============================
+    public function getLatestEvents(Request $request)
+    {
+        $visitor = $request->user()->visitor;
+
+        $isLatest = $request->query('latest', 0);
+        $perPage = $request->query('per_page', 6);
+
+        $query = Event::with([
+            'boothBooking.booth.exhibition',
+            'images'
+        ]);
+
+        if ($isLatest == 1) {
+            $query->latest();
+        }
+
+        $events = $query->take($perPage)->get();
+
+        $formattedEvents = $events->map(function ($event) use ($visitor) {
+            $booking = $event->boothBooking;
+            $booth = $booking?->booth;
+            $exhibition = $booth?->exhibition;
+
+            $isRegistered = false;
+            if ($visitor) {
+                $isRegistered = \DB::table('event_tickets')
+                    ->where('visitor_id', $visitor->id)
+                    ->where('event_id', $event->id)
+                    ->exists();
+            }
+
+            $totalSeats = $event->total_seats ?? 0;
+            $registeredCount = $event->registered_count ?? 0;
+            $availableSeats = max(0, $totalSeats - $registeredCount);
+
+            return [
+                'id' => $event->id,
+                'exhibition_id' => $exhibition?->id,
+                'name' => $event->name,
+                'type' => $event->type,
+                'hall' => $booth?->hall_name ?? 'الرئيسية',
+                'booth' => $booth?->booth_number ?? 'غير محدد',
+                'company_name' => $booking?->company_name ?? $event->by ?? 'الجهة المنظمة',
+                'start_time' => $event->date && $event->start_time
+                    ? \Carbon\Carbon::parse($event->date . ' ' . $event->start_time)->toIso8601String()
+                    : null,
+                'end_time' => $event->date && $event->end_time
+                    ? \Carbon\Carbon::parse($event->date . ' ' . $event->end_time)->toIso8601String()
+                    : null,
+                'description' => $event->description,
+                'image_url' => $event->images?->first()?->image_url ?? $event->video_promo_url ?? null,
+                'speaker_name' => $event->by ?? 'متحدث رسمي',
+                'available_seats' => $availableSeats,
+                'total_seats' => $totalSeats,
+                'is_registered' => $isRegistered,
+                'exhibition_name' => $exhibition?->name ?? 'معرض غير محدد',
+            ];
+        });
+
+        return response()->json($formattedEvents, 200);
+    }
+    //=====================================================
+    public function getEventById(Request $request, $id)
+    {
+        $visitor = $request->user()->visitor;
+
+        $event = Event::with([
+            'boothBooking.booth.exhibition',
+            'images'
+        ])->findOrFail($id);
+
+        $booking = $event->boothBooking;
+        $booth = $booking?->booth;
+        $exhibition = $booth?->exhibition;
+
+        $isRegistered = false;
+        if ($visitor) {
+            $isRegistered = \DB::table('event_tickets')
+                ->where('visitor_id', $visitor->id)
+                ->where('event_id', $event->id)
+                ->exists();
+        }
+
+        $totalSeats = $event->total_seats ?? 0;
+        $registeredCount = $event->registered_count ?? 0;
+        $availableSeats = max(0, $totalSeats - $registeredCount);
+
+        $formattedEvent = [
+            'id' => $event->id,
+            'exhibition_id' => $exhibition?->id,
+            'name' => $event->name,
+            'type' => $event->type,
+            'hall' => $booth?->hall_name ?? 'الرئيسية',
+            'booth' => $booth?->booth_number ?? 'غير محدد',
+            'company_name' => $booking?->company_name ?? $event->by ?? 'الجهة المنظمة',
+            'start_time' => $event->date && $event->start_time
+                ? \Carbon\Carbon::parse($event->date . ' ' . $event->start_time)->toIso8601String()
+                : null,
+            'end_time' => $event->date && $event->end_time
+                ? \Carbon\Carbon::parse($event->date . ' ' . $event->end_time)->toIso8601String()
+                : null,
+            'description' => $event->description,
+            'image_url' => $event->images?->first()?->image_url ?? $event->video_promo_url ?? null,
+            'speaker_name' => $event->by ?? 'متحدث رسمي',
+            'available_seats' => $availableSeats,
+            'total_seats' => $totalSeats,
+            'is_registered' => $isRegistered,
+            'exhibition_name' => $exhibition?->name ?? 'معرض غير محدد',
+        ];
+
+        return response()->json($formattedEvent, 200);
+    }
+    //=====================================================
 
 }

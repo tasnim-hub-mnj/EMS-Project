@@ -10,40 +10,36 @@ class SupportTicketController extends Controller
 {
     public function allTickets()
     {
-        $tickets = SupportTicket::with('user')
+        $tickets = SupportTicket::with('visitor.user')
             ->orderByDesc('created_at')
             ->get();
-
-        if ($tickets->isEmpty()) {
-            return response()->json([
-                'message' => 'لا يوجد أي رسائل دعم حالياً'
-            ]);
-        }
 
         return response()->json([
             'message' => 'تم جلب جميع رسائل الدعم بنجاح',
             'tickets' => $tickets
-        ]);
+        ], 200);
     }
     //==================================================
     // عرض تذاكر الدعم الخاصة بالمستخدم
     public function index(Request $request)
     {
-        return $request->user()
-            ->supportTickets()
+        $visitor = $request->user()->visitor;
+
+        $tickets = SupportTicket::where('visitor_id', $visitor->id)
             ->orderByDesc('created_at')
             ->get();
-    }
-    //===========================================
 
-    // عرض تذكرة واحدة
+        return response()->json($tickets, 200);
+    }
+
     public function show(Request $request, $id)
     {
-        $ticket = $request->user()
-            ->supportTickets()
+        $visitor = $request->user()->visitor;
+
+        $ticket = SupportTicket::where('visitor_id', $visitor->id)
             ->findOrFail($id);
 
-        return response()->json($ticket);
+        return response()->json($ticket, 200);
     }
     //============================================
 
@@ -55,9 +51,9 @@ class SupportTicketController extends Controller
         ]);
 
         $data = $validator->validate();
-
+        $visitor = $request->user()->visitor;
         $ticket = SupportTicket::create([
-            'user_id' => $request->user()->id,
+            'visitor_id' => $visitor->id,
             'type' => 'message',
             'body' => $data['message'],
             'status' => 'open',
@@ -80,10 +76,21 @@ class SupportTicketController extends Controller
 
         $data = $validator->validate();
 
+        $visitor = $request->user()->visitor;
+
+        if (!$visitor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك، يجب تسجيل الدخول كزائر'
+            ], 403);
+        }
+
+        $formattedBody = "نوع المشكلة: " . $data['issue_type'] . "\nالوصف: " . $data['description'];
+
         $ticket = SupportTicket::create([
-            'user_id' => $request->user()->id,
+            'visitor_id' => $visitor->id,
             'type' => 'report',
-            'body' => $data['description'],
+            'body' => $formattedBody,
             'status' => 'open',
         ]);
 
@@ -93,3 +100,4 @@ class SupportTicketController extends Controller
         ], 201);
     }
 }
+
