@@ -4,11 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Booth;
 use App\Models\BoothBooking;
-use App\Models\Campaign;
 use App\Models\Event;
 use App\Models\Favorite;
 use App\Models\Investor;
-use App\Models\Report;
 use App\Models\SponsorshipBooking;
 use App\Models\Ticket;
 use Carbon\Carbon;
@@ -17,209 +15,145 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardInvestorController extends Controller
 {
-    private function getDateRange($filter)//فلترة المدة
+    private function getDateRanges($period)
     {
-        switch ($filter) {
-            case '3months':
-                return [
-                    'start' => now()->subMonths(3)->startOfDay(),
-                    'end'   => now()->endOfDay(),
-                ];
+        switch ($period)
+        {
+            case 'this_month':
+                $current_start = now()->startOfMonth();
+                $current_end   = now()->endOfMonth();
 
-            case 'year':
-                return [
-                    'start' => now()->startOfYear(),
-                    'end'   => now()->endOfDay(),
-                ];
+                $previous_start = now()->subMonth()->startOfMonth();
+                $previous_end   = now()->subMonth()->endOfMonth();
+                break;
 
-            default: // this_month
-                return [
-                    'start' => now()->startOfMonth(),
-                    'end'   => now()->endOfDay(),
-                ];
+            case 'last_3_months':
+                $current_start = now()->subMonths(3)->startOfDay();
+                $current_end   = now()->endOfDay();
+
+                $previous_start = now()->subMonths(6)->startOfDay();
+                $previous_end   = now()->subMonths(3)->endOfDay();
+                break;
+
+            case 'this_year':
+                $current_start = now()->startOfYear();
+                $current_end   = now()->endOfYear();
+
+                $previous_start = now()->subYear()->startOfYear();
+                $previous_end   = now()->subYear()->endOfYear();
+                break;
+
+            default:
+                $current_start = now()->startOfMonth();
+                $current_end   = now()->endOfMonth();
+
+                $previous_start = now()->subMonth()->startOfMonth();
+                $previous_end   = now()->subMonth()->endOfMonth();
         }
-    }
-    //=====================================================================
-    //الأجنحة النشطة
-    public function getActiveBoothsStats($investorId, $filter)
-    {
-        $range = $this->getDateRange($filter);
-
-        // الأجنحة النشطة ضمن الفترة الحالية
-        $currentActive = BoothBooking::where('investor_id', $investorId)
-            ->where('status', 'approved')
-            ->get()
-            ->filter(function ($booking) use ($range) {
-                $start = Carbon::parse($booking->booked_at);
-                $end   = $start->copy()->addDays($booking->duration_days);
-
-                return Carbon::now()->between($start, $end);
-            })
-            ->count();
-
-        // الفترة السابقة (نفس المدة لكن قبلها)
-        $previousRange = [
-            'start' => $range['start']->copy()->subMonths(1),
-            'end'   => $range['end']->copy()->subMonths(1),
-        ];
-
-        $previousActive = BoothBooking::where('investor_id', $investorId)
-            ->where('status', 'approved')
-            ->get()
-            ->filter(function ($booking) use ($previousRange)
-            {
-                $start = Carbon::parse($booking->booked_at);
-                $end   = $start->copy()->addDays($booking->duration_days);
-
-                return Carbon::now()->subMonth()->between($start, $end);
-            })->count();
-
-        $growth = $previousActive > 0
-            ? (($currentActive - $previousActive) / $previousActive) * 100
-            : 100;
 
         return [
-            'value'  => $currentActive,
-            'growth' => round($growth, 1),
+            $current_start,
+            $current_end,
+            $previous_start,
+            $previous_end
         ];
     }
     //=====================================================================
-    // إجمالي حجوزات البوثات
-    public function getTotalBookingsStats($investorId, $filter)
+    private function growthRate($current, $previous)
     {
-        $range = $this->getDateRange($filter);
+        if ($previous == 0)
+        {
+            return $current > 0 ? 100 : 0;
+        }
 
-        $current = BoothBooking::where('investor_id', $investorId)
-            ->whereBetween('created_at', [$range['start'], $range['end']])
-            ->count();
-
-        $previousRange = [
-            'start' => $range['start']->copy()->subMonths(1),
-            'end'   => $range['end']->copy()->subMonths(1),
-        ];
-
-        $previous = BoothBooking::where('investor_id', $investorId)
-            ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
-            ->count();
-
-        $growth = $previous > 0
-            ? (($current - $previous) / $previous) * 100
-            : 100;
-
-        return [
-            'value'  => $current,
-            'growth' => round($growth, 1),
-        ];
+        return round((($current - $previous) / $previous) * 100, 2);
     }
     //=====================================================================
-    //إجمالي التفاعل
-    public function getTotalInteractionStats($investorId, $filter)
+    public function investorPerformanceSummary($investor_id, $period)
     {
-        $range = $this->getDateRange($filter);
+        [$current_start, $current_end, $previous_start, $previous_end] = $this->getDateRanges($period);
 
-        $current =
-            Event::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$range['start'], $range['end']])
-                ->count()
-            +
-            Ticket::whereHas('event', fn($q) => $q->where('investor_id', $investorId))
-                ->whereBetween('requested_at', [$range['start'], $range['end']])
-                ->count()
-            +
-            Favorite::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$range['start'], $range['end']])
-                ->count()
-            +
-            SponsorshipBooking::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$range['start'], $range['end']])
-                ->count()
-            +
-            Campaign::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$range['start'], $range['end']])
-                ->count()
-            +
-            Report::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$range['start'], $range['end']])
-                ->count();
+        // ============================
+        // الحجوزات (الفترة الحالية)
+        $current_bookings = BoothBooking::where('investor_id', $investor_id)
+            ->whereNotNull('approved_at')
+            ->whereBetween('approved_at', [$current_start, $current_end])
+            ->get();
 
-        $previousRange = [
-            'start' => $range['start']->copy()->subMonths(1),
-            'end'   => $range['end']->copy()->subMonths(1),
-        ];
+        $current_total_bookings = $current_bookings->whereIn('status', ['approved', 'finished'])->count();
+        $current_active_booths  = $current_bookings->where('status', 'approved')->count();
 
-        $previous =
-            Event::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
-                ->count()
-            +
-            Ticket::whereHas('event', fn($q) => $q->where('investor_id', $investorId))
-                ->whereBetween('requested_at', [$previousRange['start'], $previousRange['end']])
-                ->count()
-            +
-            Favorite::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
-                ->count()
-            +
-            SponsorshipBooking::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
-                ->count()
-            +
-            Campaign::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
-                ->count()
-            +
-            Report::where('investor_id', $investorId)
-                ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
-                ->count();
+        $previous_bookings = BoothBooking::where('investor_id', $investor_id)
+            ->whereNotNull('approved_at')
+            ->whereBetween('approved_at', [$previous_start, $previous_end])
+            ->get();
 
-        $growth = $previous > 0
-            ? (($current - $previous) / $previous) * 100
-            : 100;
+        $previous_total_bookings = $previous_bookings->whereIn('status', ['approved', 'finished'])->count();
+        $previous_active_booths  = $previous_bookings->where('status', 'approved')->count();
 
-        return [
-            'value'  => $current,
-            'growth' => round($growth, 1),
-        ];
-    }
-    //=====================================================================
-    // الفعاليات المنشورة
-    public function getTotalEventsStats($investorId, $filter)
-    {
-        $range = $this->getDateRange($filter);
+        // ============================
+        // الفعاليات (الفترة الحالية)
+        $all_investor_bookings = BoothBooking::where('investor_id', $investor_id)->pluck('id');
 
-        $current = Event::where('investor_id', $investorId)
-            ->whereBetween('created_at', [$range['start'], $range['end']])
-            ->count();
+        $current_events = Event::whereIn('booth_booking_id', $all_investor_bookings)
+            ->whereBetween('created_at', [$current_start, $current_end])
+            ->get();
 
-        $previousRange = [
-            'start' => $range['start']->copy()->subMonths(1),
-            'end'   => $range['end']->copy()->subMonths(1),
-        ];
+        $current_published_events = $current_events->count();
+        $current_engagement = $current_events->sum('scanned_count') + $current_events->sum('registered_count');
 
-        $previous = Event::where('investor_id', $investorId)
-            ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
-            ->count();
 
-        $growth = $previous > 0
-            ? (($current - $previous) / $previous) * 100
-            : 100;
+        $previous_events = Event::whereIn('booth_booking_id', $all_investor_bookings)
+            ->whereBetween('created_at', [$previous_start, $previous_end])
+            ->get();
 
-        return [
-            'value'  => $current,
-            'growth' => round($growth, 1),
-        ];
-    }
-    //=====================================================================
-    public function getDashboardStats(Request $request)//التابع الرئيسي
-    {
-        $filter = $request->filter ?? 'month';
-        $investorId = Auth::id();
+        $previous_published_events = $previous_events->count();
+        $previous_engagement = $previous_events->sum('scanned_count') + $previous_events->sum('registered_count');
+        // ============================
+
+        // حساب نسب النمو
+        $growth_total_bookings   = $this->growthRate($current_total_bookings, $previous_total_bookings);
+        $growth_active_booths    = $this->growthRate($current_active_booths, $previous_active_booths);
+        $growth_published_events = $this->growthRate($current_published_events, $previous_published_events);
+        $growth_engagement       = $this->growthRate($current_engagement, $previous_engagement);
+
 
         return response()->json([
-            'active_booths'     => $this->getActiveBoothsStats($investorId, $filter),
-            'total_bookings'    => $this->getTotalBookingsStats($investorId, $filter),
-            'total_interaction' => $this->getTotalInteractionStats($investorId, $filter),
-            'total_events'      => $this->getTotalEventsStats($investorId, $filter),
+            'summary' =>
+            [
+                'total_bookings' =>
+                [
+                    'value' => $current_total_bookings,
+                    'growth' => $growth_total_bookings
+                ],
+                'active_booths' =>
+                [
+                    'value' => $current_active_booths,
+                    'growth' => $growth_active_booths
+                ],
+                'published_events' =>
+                [
+                    'value' => $current_published_events,
+                    'growth' => $growth_published_events
+                ],
+                'total_engagement' =>
+                [
+                    'value' => $current_engagement,
+                    'growth' => $growth_engagement
+                ],
+            ],
+
+            'period' => $period,
+            'current_range' =>
+            [
+                'start' => $current_start->format('Y-m-d'),
+                'end' => $current_end->format('Y-m-d'),
+            ],
+            'previous_range' =>
+            [
+                'start' => $previous_start->format('Y-m-d'),
+                'end' => $previous_end->format('Y-m-d'),
+            ]
         ], 200);
     }
     //=====================================================================

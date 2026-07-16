@@ -231,6 +231,7 @@ class BoothBookingController extends Controller
 
         $booking->update(['status' => 'approved']);
         $booth->update(['status_inv' => 'booked']);
+        $booking->update(['approved_at' => now()->format('Y-m-d')]);
 
         //رفض التضارب
         $approvedStart = $booking->start_date;
