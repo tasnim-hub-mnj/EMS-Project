@@ -22,14 +22,15 @@ return new class extends Migration
             $table->float('paid_amount')->default(0.0);
             $table->text('services_products')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled','finished'])->default('pending');
-            $table->date('booked_at')->nullable();//now()->format('Y-m-d')
+            $table->date('booked_at')->nullable();//now()->format('Y-m-d')//تاريخ طلب الحجز
+            $table->date('approved_at')->nullable();//now()->format('Y-m-d')//تاريخ الموافقة
             // $table->json('images');//جدول لحال
             $table->timestamps();
         });
     }
 
     /*
-     * Reverse the migrations
+     * Reverse the migrations.
      */
     public function down(): void
     {

@@ -5,27 +5,25 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+{//oi//i
     public function up(): void
     {
         Schema::create('sponsorship_bookings', function (Blueprint $table)
-        {//oi
+        {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
             // $table->string('selected_duration_label')->nullable();//مدة العرض المختارة
-            $table->integer('selected_days')->default(1);//عدد الأيام المختارة
-            $table->float('amount')->default(0);
-            $table->enum('status', ['pending', 'approved', 'rejected','cancelled','ended'])->default('pending');
-            $table->string('logo')->nullable();
+            $table->integer('days')->default(1);//عدد ايام المشاركة/string->default('1')/واذا كان كل الايام -> 'all Event'
+            $table->float('amount')->default(0);//الكلي
+            $table->text('description')->nullable();//00
+            $table->enum('status', ['pending', 'approved', 'rejected','ended'])->default('pending');
+            $table->string('logo')->nullable();//00
             $table->text('product_names')->nullable();
             // $table->json('images')->nullable();//جدول لحال
             // $table->json('postes')->nullable();
 
-            $table->date('booked_at')->nullable();
+            $table->date('booked_at')->nullable();//تاريخ الطلب
             $table->integer('total_visitors')->default(0);//عدد الزوار
             $table->integer('total_attendees')->default(0);//عدد الحضور
             $table->json('daily_visitors')->nullable();
