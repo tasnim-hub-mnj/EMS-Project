@@ -8,12 +8,16 @@ use Illuminate\Support\Facades\Auth;
 
 class FavoriteController extends Controller
 {
-    public function addToFavorite(Request $request)
+    public function addToFavorite(Request $request,$id)
     {
-        $request->validate([
-            'type' => 'required|in:exhibition,booth,sponsor_event,event',
-            'id'   => 'required|integer'
-        ]);
+        $type = $request->query('type');
+
+        if (!in_array($type, ['exhibition', 'booth', 'sponsor_event', 'event']))
+        {
+            return response()->json([
+                'message' => 'Invalid type'
+            ], 422);
+        }
 
         $models =
         [
@@ -23,12 +27,11 @@ class FavoriteController extends Controller
             'event' => \App\Models\Event::class,
         ];
 
-        $model = $models[$request->type];
-        $item  = $model::findOrFail($request->id);
+        $model = $models[$type];
 
         // منع التكرار
         $exists = Favorite::where('user_id', Auth::id())
-            ->where('favoritable_id', $item->id)
+            ->where('favoritable_id', $id)
             ->where('favoritable_type', $model)
             ->exists();
 
@@ -39,7 +42,7 @@ class FavoriteController extends Controller
 
         Favorite::create([
             'user_id' => Auth::id(),
-            'favoritable_id' => $item->id,
+            'favoritable_id' => $id,
             'favoritable_type' => $model,
         ]);
 
@@ -48,12 +51,16 @@ class FavoriteController extends Controller
         ], 201);
     }
     //==========================================================================
-    public function removeFromFavorite(Request $request)
+    public function removeFromFavorite(Request $request,$id)
     {
-        $request->validate([
-            'type' => 'required|in:exhibition,booth,sponsor_event,event',
-            'id'   => 'required|integer'
-        ]);
+        $type = $request->query('type');
+
+        if (!in_array($type, ['exhibition', 'booth', 'sponsor_event', 'event']))
+        {
+            return response()->json([
+                'message' => 'Invalid type'
+            ], 422);
+        }
 
         $models = [
             'exhibition' => \App\Models\Exhibition::class,
@@ -62,10 +69,10 @@ class FavoriteController extends Controller
             'event' => \App\Models\Event::class,
         ];
 
-        $model = $models[$request->type];
+        $model = $models[$type];
 
         Favorite::where('user_id', Auth::id())
-            ->where('favoritable_id', $request->id)
+            ->where('favoritable_id', $id)
             ->where('favoritable_type', $model)
             ->delete();
 

@@ -14,9 +14,9 @@ return new class extends Migration
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
             $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
             $table->date('start_date');
-            $table->integer('duration_days');//عدد ايام الحجز(من ضمن ايام المعرض)
-            $table->date('end_date');//start_date + duration_days - 1
-            $table->json('additional_services');//booth->some(services)
+            $table->date('end_date');
+            $table->integer('days');//start_date + end_date +1
+            $table->json('additional_services')->nullable();//booth->some(services)
             $table->string('notes')->nullable();
             $table->float('total_price');
             $table->float('paid_amount')->default(0.0);

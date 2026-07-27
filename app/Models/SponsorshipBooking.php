@@ -14,7 +14,7 @@ class SponsorshipBooking extends Model
         'investor_id',
         'sponsor_event_id',
         'selected_days',
-        'amount',
+        'total_price',
         'status',
         'logo',
         'product_names',
@@ -49,5 +49,9 @@ class SponsorshipBooking extends Model
         return $this->hasMany(SponsorshipBookingImage::class);
     }
     //=====================================================
+    public function sponsorshipBookingProductImages()
+    {
+        return $this->hasMany(SponsorshipBookingProductImage::class);
+    }
     //=====================================================
 }

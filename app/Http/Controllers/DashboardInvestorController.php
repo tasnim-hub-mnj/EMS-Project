@@ -51,7 +51,42 @@ class DashboardInvestorController extends Controller
                 $previous_end   = now()->subMonth()->endOfMonth();
         }
 
-        return [
+        // switch ($period)
+        // {
+        //     case 'week':
+        //         $current_start = now()->startOfWeek();
+        //         $current_end   = now()->endOfWeek();
+
+        //         $previous_start = now()->subWeek()->startOfWeek();
+        //         $previous_end   = now()->subWeek()->endOfWeek();
+        //         break;
+
+        //     case 'month':
+        //         $current_start = now()->startOfMonth();
+        //         $current_end   = now()->endOfMonth();
+
+        //         $previous_start = now()->subMonth()->startOfMonth();
+        //         $previous_end   = now()->subMonth()->endOfMonth();
+        //         break;
+
+        //     case 'year':
+        //         $current_start = now()->startOfYear();
+        //         $current_end   = now()->endOfYear();
+
+        //         $previous_start = now()->subYear()->startOfYear();
+        //         $previous_end   = now()->subYear()->endOfYear();
+        //         break;
+
+        //     default:
+        //         $current_start = now()->startOfMonth();
+        //         $current_end   = now()->endOfMonth();
+
+        //         $previous_start = now()->subMonth()->startOfMonth();
+        //         $previous_end   = now()->subMonth()->endOfMonth();
+        // }
+
+        return
+        [
             $current_start,
             $current_end,
             $previous_start,
@@ -155,6 +190,14 @@ class DashboardInvestorController extends Controller
                 'end' => $previous_end->format('Y-m-d'),
             ]
         ], 200);
+    }
+    //=====================================================================
+    public function dashboard(Request $request)
+    {
+        $period = $request->query('period', 'this_month'); // قيمة افتراضية
+        $investor_id = Auth::user()->investor->id;
+
+        return $this->investorPerformanceSummary($investor_id, $period);
     }
     //=====================================================================
     //o

@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BookingshipSponsorEventRequest;
 use App\Models\SponsorshipBooking;
 use App\Models\SponsorEvent;
+use App\Models\SponsorshipBookingImage;
+use App\Models\SponsorshipBookingProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +17,7 @@ class SponsorshipBookingController extends Controller
     {
         $sponsorship_bookings = SponsorshipBooking::where('sponsor_event_id', $sponsor_event_id)->get();
 
-        $revenue = $sponsorship_bookings->clone()->whereIn('status', ['approved','ended'])->sum('amount');
+        $revenue = $sponsorship_bookings->clone()->whereIn('status', ['approved','ended'])->sum('total_price');
 
         $sponsorship_bookings_data = $sponsorship_bookings->map(function ($sp_bo)
         {
@@ -24,7 +27,7 @@ class SponsorshipBookingController extends Controller
                 'status' => $sp_bo->status,
                 'company_email' => $sp_bo->investor->email,
                 'company_phone' => $sp_bo->investor->phone,
-                'amount' => $sp_bo->amount,
+                'total_price' => $sp_bo->total_price,
                 'description' => $sp_bo->description,
             ];
 
@@ -78,44 +81,124 @@ class SponsorshipBookingController extends Controller
     //===============================================================
     //i
     //===============================================================
-    //عرض تفاصيل الفعالية الاعلانية للحجز
-    //===============================================================
-    public function storeBooking(Request $request, $sponsor_event_id)//حجز رعاية/i
+    public function showSponsorEvent($sponsor_event_id)//عرض تفاصيل الفعالية الاعلانية للحجز
     {
-        $request->validate([
-            'company_name' => 'required|string|max:255',
-            'company_phone'=> 'nullable|string|max:255',
-            'company_website'=> 'nullable|string|max:255',
-            'product_names'=> 'nullable|string',
-            'selected_duration_label'=> 'nullable|string',
-            'selected_days'=> 'integer|min:1',
-        ]);
-
         $investor = Auth::user()->investor;
+        $sponsor_event = SponsorEvent::with('exhibition')->find($sponsor_event_id);
 
+        if (!$sponsor_event)
+        {
+            return response()->json(['message' => 'Sponsor event not found'], 404);
+        }
+
+
+        $options = [];
+        for ($day = 1; $day <= $sponsor_event->duration_days; $day++)
+        {
+
+            $label = $day == $sponsor_event->duration_days
+                ? "$day days (Full Event)"
+                : "$day day" . ($day > 1 ? "s" : "");
+
+            $options[] =
+            [
+                'days' => $day,
+                'label' => $label,
+                'total' => $sponsor_event->daily_price * $day,
+            ];
+        }
+
+
+        $sponsor_event_data =
+        [
+            'id' => $sponsor_event->id,
+            'name' => $sponsor_event->name,
+            'type' => $sponsor_event->type,
+            'exhibition_name' => $sponsor_event->exhibition->name,
+            'start_time' => Carbon::parse($sponsor_event->start_time)->format('Y-m-d'),
+            'place' => $sponsor_event->place,
+            'time' => Carbon::parse($sponsor_event->start_time)->format('h:i').' _ '.Carbon::parse($sponsor_event->end_time)->format('h:i'),
+            'duration_days' => $sponsor_event->duration_days,
+            'description' => $sponsor_event->description,
+
+            'participation_options' => $options,
+
+            'company_name' => $investor->company_name,
+            'company_website' => $investor->website,
+            'company_phone' => $investor->user->phone,
+
+        ];
+
+        return response()->json([
+            'sponsor_event' => $sponsor_event_data
+        ], 200);
+    }
+
+    //===============================================================
+    public function storeBooking(BookingshipSponsorEventRequest $request, $sponsor_event_id)//حجز رعاية/i
+    {
+        $investor = Auth::user()->investor;
+        $data = $request->validated();
         $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+
+        $total_price = $sponsor_event->daily_price * $request->days;
+
+        $logoPath = null;
+        if ($request->hasFile('logo'))
+        {
+            $logoPath = $request->file('logo')->store('sponsorship_company_logos', 'public');
+        }
+
 
         $booking = SponsorshipBooking::create([
             'investor_id' => $investor->id,
             'sponsor_event_id' => $sponsor_event->id,
-            'company_name' => $request->company_name,
-            'company_phone'=> $request->company_phone,
-            'company_website'=> $request->company_website,
-            'product_names'=> $request->product_names,
-            'selected_duration_label'=> $request->selected_duration_label,
-            'selected_days'=> $request->selected_days,
-            'price'=> 0,
-            'status'=> 'pending',
-            'booked_at'=> now()->format('Y-m-d'),
+            'days' => $request->days,
+            'total_price' => $total_price,
+            'description' => $request->description,
+            'logo' => $logoPath,
+            'booked_at' => now()->format('Y-m-d'),
+            'status' => 'pending',
         ]);
 
+        // ============================
+        if ($request->hasFile('materials'))
+        {
+            foreach ($request->file('materials') as $img)
+            {
+                $path = $img->store('sponsorship_materials', 'public');
+
+                SponsorshipBookingImage::create([
+                    'sponsorship_booking_id' => $booking->id,
+                    'image' => $path,
+                ]);
+            }
+        }
+        // ============================
+        if ($request->filled('product_images'))
+        {
+            foreach ($request->product_images as $item)
+            {
+                $path = $item['image']->store('sponsorship_product_images', 'public');
+
+                SponsorshipBookingProductImage::create([
+                    'sponsorship_booking_id' => $booking->id,
+                    'product_name' => $item['name'],
+                    'image' => $path,
+                ]);
+            }
+        }
+
         return response()->json([
-            'message' => '',
-            'booking' => $booking
+            'message' => 'Sponsorship booking created successfully.',
+            'booking' => $booking->load([
+                'sponsorshipBookingImages',
+                'sponsorshipBookingProductImages'
+            ])
         ], 201);
     }
     //===============================================================
-    public function myBookings()//رعاياتي/i
+    public function mySponsorshipBookings()//رعاياتي/i
     {
         $investor = Auth::user()->investor;
 
@@ -136,7 +219,7 @@ class SponsorshipBookingController extends Controller
 
                 'registered_count' => $bo->sponsorEvent->registered_count,
                 'scanned_count' => $bo->sponsorEvent->scanned_count,
-                'amount' => $bo->amount,
+                'total_price' => $bo->total_price,
             ];
         });
 
@@ -145,7 +228,7 @@ class SponsorshipBookingController extends Controller
         ], 200);
     }
     //===============================================================
-    public function showBooking($booking_id)//i
+    public function showSponsorshipBookings($booking_id)//i
     {
         $investor = Auth::user()->investor;
 
@@ -165,7 +248,7 @@ class SponsorshipBookingController extends Controller
             'place' => $booking->sponsorEvent->place,
 
             'days' => $booking->days,
-            'amount' => $booking->amount,
+            'total_price' => $booking->total_price,
             'booked_at' => $booking->booked_at,
 
             'registered_count' => $booking->sponsorEvent->registered_count,

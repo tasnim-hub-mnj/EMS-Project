@@ -102,14 +102,52 @@ class ExhibitionController extends Controller
         ], 200);
     }
     //===============================================================
-    public function latestExhibitions()//عرض احدث المعارض
+    public function getAllExhibitions(Request $request)
     {
-        $exhibitions = Exhibition::whereIn('status', ['upcoming', 'ongoing'])
-            ->where('copy_status', 'active')
-            ->orderBy('start_date', 'asc')
-            ->get();
+        $page  = $request->query('page', 1);
+        $limit = $request->query('limit', 20);
 
-        $exhibitions_data = $exhibitions->map(function ($exhibition) {
+        $search = $request->query('search');
+        $city   = $request->query('city');
+        $sector = $request->query('sector');
+        $latest = $request->query('latest'); // upcoming + ongoing
+        $status = $request->query('status');
+
+        $query = Exhibition::where('copy_status', 'active');
+
+        if ($search)
+        {
+            $query->where('name', 'LIKE', "%$search%");
+        }
+
+        if ($latest === 'true')
+        {
+            $query->whereIn('status', ['upcoming', 'ongoing']);
+        }
+
+        if ($sector)
+        {
+            $query->whereJsonContains('sectors', $sector);
+        }
+
+        if ($city)
+        {
+            $query->where('city', $city);
+        }
+
+        if ($status)
+        {
+            $query->where('status',$status);
+        }
+
+        //العرض الافتراضي قبل ما يفلتر اخونا المستثمر
+        $query->orderBy('created_at', 'desc');
+
+        // Pagination
+        $exhibitions = $query->paginate($limit, ['*'], 'page', $page);
+
+        $exhibitions_data = $exhibitions->map(function ($exhibition)
+        {
             return [
                 'id' => $exhibition->id,
                 'name' => $exhibition->name,
@@ -122,89 +160,22 @@ class ExhibitionController extends Controller
                 'available_booths' => $exhibition->available_booths,
                 'total_booths' => $exhibition->total_booths,
                 'visitors_count' => $exhibition->visitors_count,
-                'is_favorite' => Auth::user()->favorites()
+                'is_favorite' => Auth::user()->favorites
                     ->where('favoritable_id', $exhibition->id)
                     ->where('favoritable_type', Exhibition::class)
-                    ->exists()
-            ];
-
-        });
-
-        return response()->json(
-            [
-                'exhibitions' => $exhibitions_data
-            ],
-            200
-        );
-    }
-    //===============================================================
-    public function getAllExhibitions()//عرض كل المعارض+الاجنحة
-    {
-        $exhibitions = Exhibition::orderBy('start_date', 'asc')
-            ->where('copy_status', 'active')
-            ->get();
-
-        $exhibitions_data = $exhibitions->map(function ($exhibition) {
-            return [
-                'id' => $exhibition->id,
-                'name' => $exhibition->name,
-                'type' => $exhibition->type,
-                'start_date' => $exhibition->start_date,
-                'end_date' => $exhibition->end_date,
-                'location' => $exhibition->location,
-                'city' => $exhibition->city,
-                'status' => $exhibition->status,
-                'available_booths' => $exhibition->available_booths,
-                'total_booths' => $exhibition->total_booths,
-                'visitors_count' => $exhibition->visitors_count,
-                'is_favorite' => Auth::user()->favorites->where('favoritable_id', $exhibition->id)
-                    ->where('favoritable_type', 'App\Models\Exhibition')
                     ->exists(),
-                'booths' => $exhibition->booths,
             ];
-
         });
 
-        return response()->json(
-            [
-                'exhibitions' => $exhibitions_data,
-            ],
-            200
-        );
-    }
-    //===============================================================
-    public function filter(Request $request)//فلترة+بحث
-    {
-        $query = Exhibition::query();
-
-        // بحث بالاسم
-        if ($request->has('search') && $request->search != '') {
-            $query->where('name', 'LIKE', '%' . $request->search . '%');
-        }
-
-        // فلترة حسب الحالة
-        if ($request->has('status') && in_array($request->status, ['far', 'upcoming', 'ongoing', 'finished'])) {
-            $query->where('status', $request->status);
-        }
-
-        // فلترة حسب المدينة
-        if ($request->has('city') && $request->city != '') {
-            $query->where('city', $request->city);
-        }
-
-        // فلترة حسب القطاع
-        if ($request->has('sector') && $request->sector != '') {
-            $query->whereJsonContains('sectors', $request->sector);
-        }
-
-        $exhibitions = $query->orderBy('start_date', 'asc')->get();
-
-        return response()->json(
-            [
-                'exhibitions' => $exhibitions
-            ],
-            200
-        );
+        return response()->json([
+            'exhibitions' => $exhibitions_data,
+            'pagination' => [
+                'current_page' => $exhibitions->currentPage(),
+                'per_page' => $exhibitions->perPage(),
+                'total' => $exhibitions->total(),
+                'last_page' => $exhibitions->lastPage(),
+            ]
+        ], 200);
     }
     //===============================================================
     public function show($exhibition_id)//عرض معرض معين
@@ -434,6 +405,116 @@ class ExhibitionController extends Controller
         ], 200);
     }
 
+    //===============================================================
+    // public function latestExhibitions()//عرض احدث المعارض
+    // {
+    //     $exhibitions = Exhibition::whereIn('status', ['upcoming', 'ongoing'])
+    //         ->where('copy_status', 'active')
+    //         ->orderBy('start_date', 'asc')
+    //         ->get();
+
+    //     $exhibitions_data = $exhibitions->map(function ($exhibition) {
+    //         return [
+    //             'id' => $exhibition->id,
+    //             'name' => $exhibition->name,
+    //             'type' => $exhibition->type,
+    //             'start_date' => $exhibition->start_date,
+    //             'end_date' => $exhibition->end_date,
+    //             'location' => $exhibition->location,
+    //             'city' => $exhibition->city,
+    //             'status' => $exhibition->status,
+    //             'available_booths' => $exhibition->available_booths,
+    //             'total_booths' => $exhibition->total_booths,
+    //             'visitors_count' => $exhibition->visitors_count,
+    //             'is_favorite' => Auth::user()->favorites()
+    //                 ->where('favoritable_id', $exhibition->id)
+    //                 ->where('favoritable_type', Exhibition::class)
+    //                 ->exists()
+    //         ];
+
+    //     });
+
+    //     return response()->json(
+    //         [
+    //             'exhibitions' => $exhibitions_data
+    //         ],
+    //         200
+    //     );
+    // }
+    //===============================================================
+    // public function getAllExhibitions()//عرض كل المعارض
+    // {
+    //     $exhibitions = Exhibition::orderBy('start_date', 'asc')
+    //         ->where('copy_status', 'active')
+    //         ->get();
+
+    //     $exhibitions_data = $exhibitions->map(function ($exhibition)
+    //     {
+    //         return [
+    //             'id' => $exhibition->id,
+    //             'name' => $exhibition->name,
+    //             'type' => $exhibition->type,
+    //             'start_date' => $exhibition->start_date,
+    //             'end_date' => $exhibition->end_date,
+    //             'location' => $exhibition->location,
+    //             'city' => $exhibition->city,
+    //             'status' => $exhibition->status,
+    //             'available_booths' => $exhibition->available_booths,
+    //             'total_booths' => $exhibition->total_booths,
+    //             'visitors_count' => $exhibition->visitors_count,
+    //             'is_favorite' => Auth::user()->favorites->where('favoritable_id', $exhibition->id)
+    //                 ->where('favoritable_type', 'App\Models\Exhibition')
+    //                 ->exists(),
+    //             // 'booths' => $exhibition->booths,
+    //         ];
+
+    //     });
+
+    //     return response()->json(
+    //         [
+    //             'exhibitions' => $exhibitions_data,
+    //         ],
+    //         200
+    //     );
+    // }
+    // //===============================================================
+    // public function filter(Request $request)//فلترة+بحث
+    // {
+    //     $query = Exhibition::query();
+
+    //     if ($request->has('latest') && $request->latest != '') {
+
+    //     }
+
+    //     // بحث بالاسم
+    //     if ($request->has('search') && $request->search != '') {
+    //         $query->where('name', 'LIKE', '%' . $request->search . '%');
+    //     }
+
+    //     // فلترة حسب الحالة
+    //     if ($request->has('status') && in_array($request->status, ['far', 'upcoming', 'ongoing', 'finished'])) {
+    //         $query->where('status', $request->status);
+    //     }
+
+    //     // فلترة حسب المدينة
+    //     if ($request->has('city') && $request->city != '') {
+    //         $query->where('city', $request->city);
+    //     }
+
+    //     // فلترة حسب القطاع
+    //     if ($request->has('sector') && $request->sector != '') {
+    //         $query->whereJsonContains('sectors', $request->sector);
+    //     }
+
+    //     $exhibitions = $query->orderBy('start_date', 'asc')->get();
+
+    //     return response()->json(
+    //         [
+    //             'exhibitions' => $exhibitions
+    //         ],
+    //         200
+    //     );
+    // }
 
 
 

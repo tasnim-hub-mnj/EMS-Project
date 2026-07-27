@@ -32,8 +32,7 @@ class BookingBoothRequest extends FormRequest
                 Rule::afterOrEqual($this->exhibition_start),
                 Rule::beforeOrEqual($this->exhibition_end),
             ],
-
-            'duration_days' => 'required|integer|min:1',
+            'end_date' => 'required|date|after_or_equal:start_date',
             'additional_services' => 'nullable|json',
             'notes' => 'nullable|string',
             'services_products'=>'nullable|string|max:1000',

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 
 class EventController extends Controller
 {
-    public function store(StoreEventRequest $request, $exhibition_id, $booth_id)
+    public function store(StoreEventRequest $request, $exhibition_id, $booth_id)//i
     {
         $investor = Auth::user()->investor;
 
@@ -129,12 +129,14 @@ class EventController extends Controller
     {
         $investor = Auth::user()->investor;
 
-        $events = Event::whereHas('boothBooking', function ($q) use ($investor) {
+        $events = Event::whereHas('boothBooking', function ($q) use ($investor)
+        {
             $q->where('investor_id', $investor->id);
         })->orderBy('date', 'asc')
             ->get();
 
-        $events_data = $events->map(function ($event) {
+        $events_data = $events->map(function ($event)
+        {
             return
                 [
                     'name' => $event->name,
@@ -178,21 +180,23 @@ class EventController extends Controller
         ], 200);
     }
     //===========================================================
-    public function getBoothEvents($booth_booking_id)//عرض فعاليات حجز معين(الجناح)
+    public function getBoothEvents($boothId)//عرض فعاليات حجز معين(الجناح)
     {
-        $booking = BoothBooking::findOrFail($booth_booking_id);
+        $booking = BoothBooking::where('booth_id', $boothId)->first();
 
-        if (!$booking) {
+        if (!$booking)
+        {
             return response()->json([
                 'message' => 'Booth booking not found'
             ], 404);
         }
 
-        $events = Event::where('booth_booking_id', $booth_booking_id)
+        $events = Event::where('booth_booking_id', $booking->id)
             ->orderBy('date', 'asc')
             ->get();
 
-        $events_data = $events->map(function ($event) {
+        $events_data = $events->map(function ($event)
+        {
             return
                 [
                     'name' => $event->name,
@@ -236,7 +240,8 @@ class EventController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $tickets_data = $tickets->map(function ($ticket) {
+        $tickets_data = $tickets->map(function ($ticket)
+        {
             return
                 [
                     'visitor_name' => $ticket->visitor->first_name . ' ' . $ticket->visitor->last_name,

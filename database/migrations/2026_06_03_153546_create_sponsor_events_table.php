@@ -29,14 +29,15 @@ return new class extends Migration {
             // $table->string('image');//جدول لحال
 
             $table->integer('duration_days')->default(1);//عدد ايام عرض الحدث
-            $table->json('duration_options')->nullable();//o->i/خيارات مدة العرض (كل يوم مع السعر )
+            // $table->json('duration_options')->nullable();//o->i/خيارات مدة العرض (كل يوم مع السعر )
+            $table->double('daily_price')->nullable();//o->i/السعر اليومي للرعاية
 
             $table->integer('registered_count')->default(0);//المحجوز
             $table->integer('total_seats')->nullable();//المتبقي
             $table->integer('scanned_count')->default(0);//عدد الحضور
             $table->enum('status', ['upcoming', 'ongoing', 'finished'])->default('upcoming');
             $table->enum('copy_status', ['draft', 'active', 'archived'])->default('draft');
-            $table->date('publish_date')->nullable();//$event->publish_date = Carbon::now()->locale('en')->translatedFormat('l, j F Y');
+            $table->date('publish_date')->nullable();//Carbon::now()->locale('en')->translatedFormat('l, j F Y');
             $table->timestamps();
         });
     }

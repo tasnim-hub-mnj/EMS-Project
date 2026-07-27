@@ -5,13 +5,16 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{//i
+{
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('sponsorship_bookings_images', function (Blueprint $table)
-        {
+        Schema::create('sponsorship_booking_product_images', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sponsorship_booking_id')->constrained('sponsorship_bookings')->onDelete('cascade');
+            $table->string('product_name');
             $table->string('image');
             $table->timestamps();
         });
@@ -22,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('sponsorship_bookings_images');
+        Schema::dropIfExists('sponsorship_booking_product_images');
     }
 };
