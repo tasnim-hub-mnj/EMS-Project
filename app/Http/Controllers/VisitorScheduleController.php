@@ -73,37 +73,60 @@ class VisitorScheduleController extends Controller
     //====================================================
     //==============================================
     // إضافة فعالية إلى مواعيدي
-    public function storeSchedule(Request $request)
+    public function storeSchedule(Request $request, $eventId)
     {
-        $data = $request->validate([
+        $request->validate([
             'event_id' => 'required|exists:events,id',
         ]);
 
+        if ($request->input('event_id') != $eventId) {
+            return response()->json([
+                'message' => 'الفعالية المرسلة في الرابط لا تطابق الفعالية المرسلة في الـ Body'
+            ], 400);
+        }
+
         $visitor = $request->user()->visitor;
 
+        if (!$visitor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك، يجب تسجيل الدخول كزائر'
+            ], 403);
+        }
+
+        $exists = VisitorSchedule::where('visitor_id', $visitor->id)
+            ->where('event_id', $eventId)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'هذه الفعالية مضافة بالفعل إلى مواعيدك'
+            ], 409);
+        }
         $schedule = VisitorSchedule::create([
             'visitor_id' => $visitor->id,
-            'event_id' => $data['event_id'],
+            'event_id' => $eventId,
             'added_at' => now(),
         ]);
 
         return response()->json([
-            'message' => 'تمت إضافة الفعالية إلى مواعيدك',
+            'message' => 'تمت إضافة الفعالية إلى مواعيدك بنجاح',
             'schedule' => $schedule
         ], 201);
     }
     //==============================================
     // حذف موعد
-    public function removeFromSchedule(Request $request, $id)
+    public function removeFromSchedule(Request $request, $eventId)
     {
         $visitor = $request->user()->visitor;
-
         $schedule = VisitorSchedule::where('visitor_id', $visitor->id)
-            ->findOrFail($id);
+            ->where('event_id', $eventId)
+            ->firstOrFail();
 
         $schedule->delete();
 
-        return response()->json(['message' => 'تم حذف الموعد']);
+        return response()->json([
+            'message' => 'تم حذف الفعالية من مواعيدك بنجاح'
+        ], 200);
     }
-
 }
