@@ -2,29 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Booth;
 use App\Models\BoothReview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class BoothReviewController extends Controller
 {
-    // public function allBoothReviews()//عرض كل تقييمات الاجنحة
-    // {
-    //     $reviews = BoothReview::with(['visitor', 'booth'])
-    //         ->orderBy('created_at', 'desc')
-    //         ->get();
-
-    //     if ($reviews->isEmpty()) {
-    //         return response()->json([
-    //             'message' => 'لا يوجد أي تقييمات للأجنحة حالياً'
-    //         ]);
-    //     }
-
-    //     return response()->json([
-    //         'message' => 'تم جلب جميع تقييمات الأجنحة بنجاح',
-    //         'reviews' => $reviews
-    //     ]);
-    // }
     public function getAllBoothsReviews()
     {
         $reviews = BoothReview::with('visitor')
@@ -33,24 +18,26 @@ class BoothReviewController extends Controller
 
         $formattedReviews = $reviews->map(function ($r) {
             return [
-                'id' => $r->id,
-                'user_id' => $r->visitor?->user_id,
+                'id' => (int) $r->id,
+                'user_id' => (int) $r->visitor?->user_id,
                 'user_name' => trim(($r->visitor?->first_name ?? '') . ' ' . ($r->visitor?->last_name ?? '')),
-                'user_avatar' => $r->visitor?->avatar_url,
+                'user_avatar' => $r->visitor?->avatar_url ? asset($r->visitor?->avatar_url) : null,
                 'target_type' => 'booth',
-                'target_id' => $r->booth_id,
+                'target_id' => (int) $r->booth_id,
                 'rating' => (float) $r->rating,
-
                 'org_score' => null,
                 'content_score' => null,
                 'services_score' => null,
-
                 'comment' => $r->comment,
-                'created_at' => $r->created_at->toIso8601String(),
+                'created_at' => $r->created_at?->toIso8601String(),
             ];
         });
 
-        return response()->json($formattedReviews, 200);
+        return response()->json([
+            'status' => true,
+            'message' => 'تم جلب جميع تقييمات الأجنحة بنجاح',
+            'data' => $formattedReviews
+        ], 200);
     }
     //================================================
     // public function AddReviewBooth(Request $request)// إضافة تقييم جناح
@@ -98,13 +85,21 @@ class BoothReviewController extends Controller
     //=============================================================
     public function submitBoothReview(Request $request)
     {
-        $data = $request->validate([
+
+        $validator = Validator::make($request->all(), [
             'booth_id' => 'required|exists:booths,id',
             'rating' => 'required|numeric|min:0|max:5',
             'comment' => 'nullable|string',
         ]);
 
-        $visitor = auth()->user()->visitor;
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $visitor = $request->user()?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -113,66 +108,73 @@ class BoothReviewController extends Controller
             ], 403);
         }
 
-
         $review = BoothReview::create([
             'visitor_id' => $visitor->id,
-            'booth_id' => $data['booth_id'],
-            'rating' => $data['rating'],
-            'comment' => $data['comment'] ?? null,
+            'booth_id' => $request->booth_id,
+            'rating' => $request->rating,
+            'comment' => $request->comment,
         ]);
 
-        $formattedReview = BoothReview::with('visitor')
-            ->where('id', $review->id)
-            ->get()
-            ->map(function ($r) {
-                return [
-                    'id' => $r->id,
-                    'user_id' => $r->visitor?->user_id,
-                    'user_name' => trim(($r->visitor?->first_name ?? '') . ' ' . ($r->visitor?->last_name ?? '')), // الاسم الكامل
-                    'user_avatar' => $r->visitor?->avatar_url,
-                    'target_type' => 'booth',
-                    'target_id' => $r->booth_id,
-                    'rating' => (float) $r->rating,
-
-                    'org_score' => null,
-                    'content_score' => null,
-                    'services_score' => null,
-
-                    'comment' => $r->comment,
-                    'created_at' => $r->created_at->toIso8601String(),
-                ];
-            })
-            ->first();
-        return response()->json($formattedReview, 201);
+        return response()->json([
+            'status' => true,
+            'message' => 'تم إرسال تقييم الجناح بنجاح',
+            'data' => [
+                'id' => (int) $review->id,
+                'user_id' => (int) $visitor->user_id,
+                'user_name' => trim(($visitor->first_name ?? '') . ' ' . ($visitor->last_name ?? '')),
+                'user_avatar' => $visitor->avatar_url ? asset($visitor->avatar_url) : null,
+                'target_type' => 'booth',
+                'target_id' => (int) $review->booth_id,
+                'rating' => (float) $review->rating,
+                'org_score' => null,
+                'content_score' => null,
+                'services_score' => null,
+                'comment' => $review->comment,
+                'created_at' => $review->created_at?->toIso8601String(),
+            ]
+        ], 201);
     }
     //=======================================================
     public function getBoothReviews($boothId)
     {
 
+        $booth = Booth::find($boothId);
+        if (!$booth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'الجناح غير موجود'
+            ], 404);
+        }
         $reviews = BoothReview::with('visitor')
             ->where('booth_id', $boothId)
             ->latest()
             ->get();
 
         $formattedReviews = $reviews->map(function ($r) {
+            $visitor = $r->visitor;
+            $fullName = trim(($visitor?->first_name ?? '') . ' ' . ($visitor?->last_name ?? ''));
+
             return [
                 'id' => $r->id,
-                'user_id' => $r->visitor?->user_id,
-                'user_name' => trim(($r->visitor?->first_name ?? '') . ' ' . ($r->visitor?->last_name ?? '')), // الاسم الكامل
-                'user_avatar' => $r->visitor?->avatar_url,
+                'user_id' => $visitor?->user_id ?? $r->visitor_id,
+                'user_name' => $fullName !== '' ? $fullName : 'زائر',
+                'user_avatar' => $visitor?->avatar_url ?? null,
                 'target_type' => 'booth',
-                'target_id' => $r->booth_id,
-                'rating' => (float) $r->rating,
+                'target_id' => (int) $r->booth_id,
+                'rating' => (float) ($r->rating ?? 0),
 
                 'org_score' => null,
                 'content_score' => null,
                 'services_score' => null,
 
-                'comment' => $r->comment,
-                'created_at' => $r->created_at->toIso8601String(),
+                'comment' => $r->comment ?? '',
+                'created_at' => $r->created_at ? $r->created_at->toIso8601String() : null,
             ];
         });
 
-        return response()->json($formattedReviews, 200);
+        return response()->json([
+            'status' => true,
+            'data' => $formattedReviews
+        ], 200);
     }
 }

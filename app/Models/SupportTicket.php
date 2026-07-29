@@ -14,8 +14,8 @@ class SupportTicket extends Model
             'user_id',
             'type',
             'body',
-            //'latitude',
-            //'longitude',
+            // 'latitude',
+            // 'longitude',
             'status'
         ];
 

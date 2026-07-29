@@ -8,46 +8,146 @@ use Illuminate\Http\Request;
 
 class CollectedBoothController extends Controller
 {
-    //عرض كل الاجنحة المحفوظة
-    public function index(Request $request)
+    public function index(Request $request) //عرض كل الاجنحة المحفوظة
     {
-        return $request->user()
-            ->collectedBooths()
-            ->with('booth.exhibition')
-            ->orderByDesc('scanned_at')
+        $visitor = $request->user()?->visitor;
+
+        if (!$visitor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك، يجب تسجيل الدخول كزائر'
+            ], 403);
+        }
+
+        // جلب سجلات الأجنحة المجمعة للزائر مع بيانات الأكشاك المرتبطة بها
+        $collectedBooths = CollectedBooths::with('booth')
+            ->where('visitor_id', $visitor->id)
             ->get();
+
+        $boothsList = [];
+
+        foreach ($collectedBooths as $collected) {
+            $booth = $collected->booth;
+
+            if ($booth) {
+                $amenities = $booth->services;
+                if (is_string($amenities)) {
+                    $amenities = json_decode($amenities, true);
+                }
+
+                $boothsList[] = [
+                    'id' => (int) $booth->id,
+                    'number' => (string) $booth->number,
+                    'col' => (int) ($booth->map_x ?? 0),
+                    'row' => (int) ($booth->map_y ?? 0),
+                    'width' => (int) ($booth->area ?? 1),
+                    'depth' => (int) ($booth->map_z ?? 1),
+                    'height' => 1.5,
+                    'status' => ($booth->status === 'available') ? 'available' : 'booked',
+                    'price' => (float) $booth->price,
+                    'area' => (float) $booth->area,
+                    'amenities' => is_array($amenities) ? array_values($amenities) : [],
+                ];
+            }
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $boothsList
+        ], 200);
     }
     //==============================================
-    //حفظ جناح في المجموعة
+
     public function store(Request $request)
     {
         $data = $request->validate([
             'booth_id' => 'required|exists:booths,id',
-            'qr_data' => 'nullable|string',
         ]);
 
-        $booth = Booth::findOrFail($data['booth_id']);
+        $visitor = $request->user()?->visitor;
 
-        $collected = CollectedBooths::create([
-            'user_id' => $request->user()->id,
+        if (!$visitor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك، يجب تسجيل الدخول كزائر'
+            ], 403);
+        }
+
+        $exists = CollectedBooths::where('visitor_id', $visitor->id)
+            ->where('booth_id', $data['booth_id'])
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'status' => false,
+                'message' => 'هذا الجناح مضاف مسبقاً في قائمتك المجمعة',
+            ], 409);
+        }
+        $booth = Booth::find($data['booth_id']);
+
+        CollectedBooths::create([
+            'visitor_id' => $visitor->id,
             'booth_id' => $booth->id,
-            'qr_data' => $data['qr_data'] ?? null,
+            'qr_data' => (string) $booth->number, // أو كود QR التابع له
             'scanned_at' => now(),
         ]);
 
-        return response()->json($collected, 201);
+        $amenities = $booth->services;
+        if (is_string($amenities)) {
+            $amenities = json_decode($amenities, true);
+        }
+
+        $boothData = [
+            'id' => (int) $booth->id,
+            'number' => (string) $booth->number,
+            'col' => (int) ($booth->map_x ?? 0),
+            'row' => (int) ($booth->map_y ?? 0),
+            'width' => (int) ($booth->area ?? 1),
+            'depth' => (int) ($booth->map_z ?? 1),
+            'height' => 1.5,
+            'status' => ($booth->status === 'available') ? 'available' : 'booked',
+            'price' => (float) $booth->price,
+            'area' => (float) $booth->area,
+            'amenities' => is_array($amenities) ? array_values($amenities) : [],
+        ];
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم إضافة الجناح للقائمة المجمعة بنجاح',
+            'data' => $boothData
+        ], 201);
     }
+
+
     //================================================
     //مسح qr الجناح
 
     public function scan(Request $request)
     {
+
         $data = $request->validate([
             'qr_data' => 'required|string',
         ]);
 
-        $exists = CollectedBooths::where('user_id', $request->user()->id)
-            ->where('qr_data', $data['qr_data'])
+        $visitor = $request->user()?->visitor;
+
+        if (!$visitor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك، يجب تسجيل الدخول كزائر'
+            ], 403);
+        }
+
+        $booth = Booth::where('id', $data['qr_data'])
+            ->orWhere('number', $data['qr_data'])
+            ->first();
+        $exists = CollectedBooths::where('visitor_id', $visitor->id)
+            ->where(function ($query) use ($data, $booth) {
+                $query->where('qr_data', $data['qr_data']);
+                if ($booth) {
+                    $query->orWhere('booth_id', $booth->id);
+                }
+            })
             ->exists();
 
         if ($exists) {
@@ -58,22 +158,73 @@ class CollectedBoothController extends Controller
         }
 
         $collected = CollectedBooths::create([
-            'user_id' => $request->user()->id,
-            'booth_id' => null,
+            'visitor_id' => $visitor->id,
+            'booth_id' => $booth?->id,
             'qr_data' => $data['qr_data'],
             'scanned_at' => now(),
         ]);
 
-        return response()->json($collected, 201);
+        $amenities = $booth?->services;
+        if (is_string($amenities)) {
+            $amenities = json_decode($amenities, true);
+        }
+
+        $boothData = $booth ? [
+            'id' => (int) $booth->id,
+            'number' => (string) $booth->number,
+            'col' => (int) ($booth->map_x ?? 0),
+            'row' => (int) ($booth->map_y ?? 0),
+            'width' => (int) ($booth->area ?? 1),
+            'depth' => (int) ($booth->map_z ?? 1),
+            'height' => 1.5,
+            'status' => ($booth->status === 'available') ? 'available' : 'booked',
+            'price' => (float) $booth->price,
+            'area' => (float) $booth->area,
+            'amenities' => is_array($amenities) ? array_values($amenities) : [],
+        ] : null;
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تجميع الجناح بنجاح',
+            'data' => $boothData
+        ], 201);
     }
     //=================================================
-    //حذف الجناح من المجموعة 
 
+    //=================================================
+    //حذف الجناح من المجموعة 
     public function destroy(Request $request, $id)
     {
-        $collected = $request->user()->collectedBooths()->findOrFail($id);
+        $visitor = $request->user()?->visitor;
+
+        if (!$visitor) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك، يجب تسجيل الدخول كزائر'
+            ], 403);
+        }
+
+        // البحث عن السجل المجمع الخاص بالزائر بـ booth_id أو بـ id السجل نفسه
+        $collected = CollectedBooths::where('visitor_id', $visitor->id)
+            ->where(function ($query) use ($id) {
+                $query->where('booth_id', $id)
+                    ->orWhere('id', $id);
+            })
+            ->first();
+
+        if (!$collected) {
+            return response()->json([
+                'status' => false,
+                'message' => 'الجناح غير موجود ضمن قائمتك المجمعة'
+            ], 404);
+        }
+
         $collected->delete();
 
-        return response()->json(['message' => 'تمت إزالة الكشك من المجموعات']);
+        return response()->json([
+            'status' => true,
+            'message' => 'تم إزالة الجناح المجمّع بنجاح'
+        ], 200);
     }
 }
+
