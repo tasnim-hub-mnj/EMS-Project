@@ -6,13 +6,16 @@ use App\Http\Requests\BookingBoothRequest;
 use App\Models\Booth;
 use App\Models\BoothBooking;
 use App\Models\BoothBookingImage;
+use App\Models\Event;
 use App\Models\Exhibition;
 use App\Models\ProductBookingImage;
+use App\Models\SocialLink;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class BoothBookingController extends Controller
 {
@@ -50,6 +53,9 @@ class BoothBookingController extends Controller
         }
 
         //-----------------------------------
+        $startDate = Carbon::parse($data['start_date']);
+        $endDate   = Carbon::parse($data['end_date']);
+        $days = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
         $totalPrice = $booth->price;
         $boothServices = json_decode($booth->services, true) ?? [];
         $selectedServices = json_decode($data['additional_services'] ?? '[]', true);
@@ -62,17 +68,14 @@ class BoothBookingController extends Controller
                 $totalPrice += $service['price'];
             }
         }
-        $totalPrice *= $data['duration_days'];
+        $totalPrice *= $days;
         //-----------------------------------
-        $startDate = Carbon::parse($data['start_date']);
-        $endDate   = $startDate->copy()->addDays($data['duration_days'] - 1);
-
         $booking = BoothBooking::create([
             'investor_id' => $investor->id,
             'booth_id' => $booth->id,
             'start_date' => $startDate,
-            'duration_days' => $data['duration_days'],
             'end_date' => $endDate,
+            'days' => $days,
             'additional_services' => $data['additional_services'],
             'notes' => $data['notes'],
             'total_price' => $totalPrice,
@@ -125,7 +128,17 @@ class BoothBookingController extends Controller
     }
 
     //==============================================================
-    public function myBookings()//عرض كل الاجنحة يلي حجزها هاد المستثمر
+    public function cancelBooking($booking_id)
+    {
+        $booking = BoothBooking::findOrfail($booking_id);
+        $booking->status->update('canceled');
+        return response()->json([
+            'message' => 'Booking Booth canceled',
+            'booking' => $booking
+        ], 201);
+    }
+    //==============================================================
+    public function myBookings()//عرض كل الاجنحة يلي حجزها هاد المستثمر/حجوزاتي
     {
         $investor = Auth::user()->investor;
 
@@ -139,20 +152,12 @@ class BoothBookingController extends Controller
             [
                 'id' => $booking->id,
                 'booth_id' => $booking->booth_id,
-                'start_date' => $booking->start_date,
-                'duration_days' => $booking->duration_days,
-                'end_date' => $booking->end_date,
-                'additional_services' => $booking->additional_services,
-                'notes' => $booking->notes,
-                'total_price' => $booking->total_price,
-                'paid_amount' => $booking->paid_amount,
-                'services_products' => $booking->services_products,
                 'status' => $booking->status,
-                'booked_at' => $booking->booked_at,
-                'booth_BookingImages'=>$booking->boothBookingImages,
-                'product_BookingImages'=>$booking->productBookingImages,
-                'booth' => $booking->booth,
-                'exhibition'=>$booking->booth->exhibition,
+                'booth_number' => $booking->booth->number,
+                'exhibition_name'=>$booking->booth->exhibition->name,
+                'booth_area' => $booking->booth->area,
+                'booth_price' => $booking->booth->price,
+                'booth_image' => $booking->booth->image,
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $booking->booth_id)
                     ->where('favoritable_type', Booth::class)
@@ -166,7 +171,7 @@ class BoothBookingController extends Controller
         ], 200);
     }
     //==============================================================
-    public function showBooking($booking_id)//عرض تفاصيل الجناح المحجوز
+    public function getBoothProfile($boothId)//عرض تفاصيل الجناح المحجوز
     {
         $investor = Auth::user()->investor;
 
@@ -175,27 +180,187 @@ class BoothBookingController extends Controller
             'productBookingImages',
             'booth',
             'booth.exhibition',
+            'investor.user',
             'investor.socialLinks',
-            'booth.events',
         ])
             ->where('investor_id', $investor->id)
-            ->find($booking_id);
+            ->where('booth_id', $boothId)
+            ->first();
 
         if (!$booking)
         {
             return response()->json(['message' => 'Booking not found'], 404);
         }
 
-        $is_favorite = Auth::user()->favorites()
-        ->where('favoritable_id', $booking->booth_id)
-        ->where('favoritable_type', Booth::class)
-        ->exists();
+        $booking_data =
+        [
+            'id' => $booking->id,
+            'booth_id' => $booking->booth_id,
+            'status' => $booking->status,
+            'booth_number' => $booking->booth->number,
+            'exhibition_name'=>$booking->booth->exhibition->name,
+            'booth_area' => $booking->booth->area,
+            'booth_location' => $booking->booth->location,
+            'price' => $booking->total_price,
+            'end_date' => $booking->end_date,
+            'booth_image' => $booking->booth->image,
+
+            'company_name' => $booking->investor->company_name,
+            'company_email' => $booking->investor->user->email,
+            'activity_type' => $booking->investor->activity_type,
+            'services_products' => $booking->services_products,
+            'company_location' => $booking->investor->location,
+            'socialLinks' => $booking->investor->socialLinks,
+
+            'product_BookingImages'=>$booking->productBookingImages,
+            'booth_BookingImages'=>$booking->boothBookingImages,
+
+            'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $booking->booth_id)
+                    ->where('favoritable_type', Booth::class)
+                    ->exists()
+        ];
 
         return response()->json([
-            'booking' => $booking,
-            'is_favorite' => $is_favorite
+            'boothProfile' => $booking_data,
+        ], 200);
+
+    }
+    //==============================================================
+    public function updateBoothProfile(Request $request, $boothId)
+    {
+        $investor = Auth::user()->investor;
+
+        $booking = BoothBooking::with([
+            'boothBookingImages',
+            'productBookingImages',
+            'investor.socialLinks'
+        ])
+            ->where('investor_id', $investor->id)
+            ->where('booth_id', $boothId)
+            ->first();
+
+        if (!$booking)
+        {
+            return response()->json(['message' => 'Booking not found'], 404);
+        }
+
+        //تعديل بيانات الشركة
+        if ($request->filled('company_nature'))
+        {
+            $booking->investor->activity_type = $request->company_nature;
+            $booking->investor->save();
+        }
+
+        if ($request->filled('headquarters'))
+        {
+            $booking->investor->location = $request->headquarters;
+            $booking->investor->save();
+        }
+
+
+        if ($request->filled('services_products'))
+        {
+            $booking->services_products = $request->services_products;
+        }
+
+        //تعديل صور الجناح
+        if ($request->filled('delete_booth_images'))
+        {
+            foreach ($request->delete_booth_images as $imgId)
+            {
+                $img = BoothBookingImage::where('booth_booking_id', $booking->id)->find($imgId);
+                if ($img)
+                {
+                    Storage::disk('public')->delete($img->image_b);
+                    $img->delete();
+                }
+            }
+        }
+
+
+        if ($request->hasFile('booth_images'))
+        {
+            foreach ($request->file('booth_images') as $img)
+            {
+                $path = $img->store('booth_booking_images', 'public');
+
+                BoothBookingImage::create([
+                    'booth_booking_id' => $booking->id,
+                    'image_b' => $path,
+                ]);
+            }
+        }
+
+        //تعديل صور المنتجات
+        if ($request->filled('delete_product_images'))
+        {
+            foreach ($request->delete_product_images as $imgId)
+            {
+                $img = ProductBookingImage::where('booth_booking_id', $booking->id)->find($imgId);
+                if ($img)
+                {
+                    Storage::disk('public')->delete($img->image_p);
+                    $img->delete();
+                }
+            }
+        }
+
+
+        if ($request->hasFile('product_images'))
+        {
+            foreach ($request->file('product_images') as $img)
+            {
+                $path = $img->store('product_booking_images', 'public');
+
+                ProductBookingImage::create([
+                    'booth_booking_id' => $booking->id,
+                    'image_p' => $path,
+                ]);
+            }
+        }
+
+        //تعديل الروابط
+        if ($request->filled('delete_links'))
+        {
+            foreach ($request->delete_links as $linkId)
+            {
+                $link = SocialLink::where('investor_id', $investor->id)->find($linkId);
+                if ($link)
+                {
+                    $link->delete();
+                }
+            }
+        }
+
+
+        if ($request->filled('social_links'))
+        {
+            foreach ($request->social_links as $link)
+            {
+                if ($link)
+                {
+                    SocialLink::create([
+                        'investor_id' => $investor->id,
+                        'link' => $link,
+                    ]);
+                }
+            }
+        }
+
+        $booking->save();
+
+        return response()->json([
+            'message' => 'Booth profile updated successfully.',
+            'booking' => $booking->load([
+                'boothBookingImages',
+                'productBookingImages',
+                'investor.socialLinks'
+            ])
         ], 200);
     }
+    //==============================================================
+    //o
     //==============================================================
     public function getAllBooking($exhibition_id)//عرض كل الحجوزات الخاصة بمعرض ما//o
     {
@@ -324,14 +489,6 @@ class BoothBookingController extends Controller
     }
     //==============================================================
     //==============================================================
-    // public function cancelBooking($bookingId)
-    // {
-    //     $booking = BoothBooking::findOrfail($bookingId);
-    //     $booking->status->update('canceled');
-    //     return response()->json([
-    //         'message' => 'Booth canceled',
-    //         'booking' => $booking
-    //     ], 201);
-    // }
+
     //==============================================================
 }

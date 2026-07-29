@@ -14,10 +14,10 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('company_name');
             $table->string('trade_name')->nullable();//المجال التجاري//activity_type
-            $table->string('location');
+            $table->string('location');//المقر
             $table->string('website')->nullable();
             $table->enum('activity_type',['technology','food&hospitality','fashion','health','education','other'])->nullable();//نوع النشاط
-            $table->boolean('terms_accepted')->default(false);//الموافقة على الشروط
+            // $table->boolean('terms_accepted')->default(false);//الموافقة على الشروط
 
             $table->text('bio')->nullable();
             $table->string('logo')->nullable();
@@ -27,7 +27,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations
+     * Reverse the migrations.
      */
     public function down(): void
     {

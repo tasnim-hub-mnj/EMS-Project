@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\OrganizerRegisterRequest;
 use App\Http\Requests\UpdateOrganizeProfileRequest;
+use App\Mail\VerificationCodeMail;
 use App\Models\Organizer;
+use App\Models\OtpCode;
 use App\Models\User;
+use App\Models\VerifyOtp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class OrganizerController extends Controller
@@ -142,4 +146,79 @@ class OrganizerController extends Controller
         ], 200);
     }
     //================================================================
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        OtpCode::where('user_id', $user->id)->delete();
+
+        // إنشاء كود جديد
+        $code = rand(100000, 999999);
+        //منشان ما يتكرر
+        while (OtpCode::where('code', $code)->exists())
+        {
+            $code = rand(100000, 999999);
+        }
+
+        OtpCode::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'code' => $code,
+            'expires_at' => now()->addMinutes(10),
+            'is_used' => false,
+        ]);
+
+        Mail::to($user->email)->send(new VerificationCodeMail($code));
+
+        return response()->json([
+            'message' => 'Verification code sent to your email.'
+        ], 200);
+    }
+    //================================================================
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        // البحث عن المستخدم عبر التوكن
+        $otp = OtpCode::where('code', $request->token)
+            ->where('is_used', false)
+            ->where('expires_at', '>', now())
+            ->first();
+
+        if (!$otp)
+        {
+            return response()->json([
+                'message' => 'Invalid or expired token.'
+            ], 400);
+        }
+
+        // جلب المستخدم
+        $user = User::where('email', $otp->email)->first();
+
+        if (!$user)
+        {
+            return response()->json([
+                'message' => 'User not found.'
+            ], 404);
+        }
+
+        // تحديث كلمة المرور
+        $user->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        // وضع علامة أن التوكن تم استخدامه
+        $otp->update(['is_used' => true]);
+
+        return response()->json([
+            'message' => 'Password changed successfully.'
+        ], 200);
+    }
 }

@@ -15,11 +15,11 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('code');
+            $table->string('email');
+            $table->integer('code');
             $table->timestamp('expires_at')->nullable();//تاريخ ووقت انتهاء صلاحية الكود
             $table->boolean('is_used')->default(false);
             $table->timestamps();
-
         });
     }
     /*soon

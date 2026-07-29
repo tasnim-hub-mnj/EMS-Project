@@ -15,19 +15,20 @@ return new class extends Migration
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
             // $table->string('selected_duration_label')->nullable();//مدة العرض المختارة
             $table->integer('days')->default(1);//عدد ايام المشاركة/string->default('1')/واذا كان كل الايام -> 'all Event'
-            $table->float('amount')->default(0);//الكلي
-            $table->text('description')->nullable();//00
+            $table->float('total_price')->default(0);//الكلي
+            $table->text('description')->nullable();//وصف الرعاية /شروط
             $table->enum('status', ['pending', 'approved', 'rejected','ended'])->default('pending');
-            $table->string('logo')->nullable();//00
-            $table->text('product_names')->nullable();
+            $table->string('logo')->nullable();//شعار الشركة
             // $table->json('images')->nullable();//جدول لحال
-            // $table->json('postes')->nullable();
+            // $table->json('products')->nullable();//جدول لحال
 
             $table->date('booked_at')->nullable();//تاريخ الطلب
-            $table->integer('total_visitors')->default(0);//عدد الزوار
-            $table->integer('total_attendees')->default(0);//عدد الحضور
-            $table->json('daily_visitors')->nullable();
-            $table->integer('current_day')->default(1);
+
+            // $table->integer('total_visitors')->default(0);//عدد الزوار
+            // $table->integer('total_attendees')->default(0);//عدد الحضور
+
+            // $table->json('daily_visitors')->nullable();
+            // $table->integer('current_day')->default(1);
             // $table->integer('total_days')->default(1);//selected_days
             $table->timestamps();
         });

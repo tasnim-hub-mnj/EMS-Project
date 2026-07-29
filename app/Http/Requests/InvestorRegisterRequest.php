@@ -27,12 +27,14 @@ class InvestorRegisterRequest extends FormRequest
             'trade_name'     => 'required|string|max:200',
             'email'          => 'required|email|unique:users,email',
             'phone'          => 'required|string|unique:users,phone',
-            'token_fcm'      => 'required|string|max:400',
+            'fcm_token'      => 'required|string|max:400',
             'location'       => 'required|string|max:200',
             'website'        => 'nullable|url',
             'activity_type' => 'required|in:technology,food&hospitality,fashion,health,education,other',
             'password'       => 'required|string|min:6|confirmed',
-            'terms_accepted' => 'required|boolean|in:1',
+
+
+            // 'terms_accepted' => 'required|boolean|in:1',
 
             // 'bio' =>     'nullable|string|max:500',
             // 'logo'=>     'nullable|image|mimes:jpg,jpeg,png|max:2048',

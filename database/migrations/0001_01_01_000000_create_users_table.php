@@ -18,8 +18,9 @@ return new class extends Migration
             $table->string('phone')->unique()->nullable();
             $table->string('password')->nullable();
             $table->enum('role',['organizer','investor','visitor','staff','admin'])->default('visitor');
-            $table->enum('status', ['pending','approved','rejected'])->default('pending');
-            $table->string('token_fcm');
+            $table->enum('status', ['pending','approved','rejected'])->default('approved');//approve admin
+            $table->boolean('is_verified')->default(false);
+            $table->string('fcm_token');
             $table->rememberToken();
             $table->timestamps();
         });
@@ -42,7 +43,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

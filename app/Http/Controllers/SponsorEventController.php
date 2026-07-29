@@ -340,7 +340,7 @@ class SponsorEventController extends Controller
         $rejected_ticket = $tickets->clone()->where('status', 'rejected')->count();
 
         // الإيرادات (مجموع المبالغ للتذاكر الموافق عليها)
-        $revenue = $tickets->clone()->where('status', 'approved')->sum('amount');
+        $revenue = $tickets->clone()->where('status', 'approved')->sum('total_price');
 
         $statistics =
         [
@@ -483,6 +483,10 @@ class SponsorEventController extends Controller
             'invitation' => $invitation
         ], 200);
     }
+    //===============================================================
+    //التذاكر
+    //===============================================================
+    
     //===============================================================
     //i
     //===============================================================
