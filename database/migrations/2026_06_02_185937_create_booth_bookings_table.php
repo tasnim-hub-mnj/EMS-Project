@@ -24,6 +24,7 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled','finished'])->default('pending');
             $table->date('booked_at')->nullable();//now()->format('Y-m-d')//تاريخ طلب الحجز
             $table->date('approved_at')->nullable();//now()->format('Y-m-d')//تاريخ الموافقة
+            $table->string('cover_image')->nullable();
             // $table->json('images');//جدول لحال
             $table->timestamps();
         });

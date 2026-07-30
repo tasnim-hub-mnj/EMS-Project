@@ -12,8 +12,8 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->string('link')->nullable(); 
-            // $table->string('type')->nullable();
+            $table->string('link')->nullable();
+            $table->enum('type',['linkedin','twitter','instagram','facebook'])->nullable();
             $table->timestamps();
         });
     }

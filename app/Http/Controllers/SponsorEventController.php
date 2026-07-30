@@ -8,6 +8,7 @@ use App\Http\Requests\StoreSponsorEventProgramRequest;
 use App\Http\Requests\StoreSponsorEventRequest;
 use App\Http\Requests\UpdateSponsorEventRequest;
 use App\Models\Exhibition;
+use Illuminate\Http\Request;
 use App\Models\SponserEventTicket;
 use App\Models\SponsorEvent;
 use App\Models\SponsorEventImage;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class SponsorEventController extends Controller
-{
+{//o
     public function store(StoreSponsorEventRequest $request)
     {
         $organizer = Auth::user()->organizer;
@@ -367,7 +368,7 @@ class SponsorEventController extends Controller
         ], 200);
     }
     //===============================================================
-    //دعوات
+    //دعوات//o
     //===============================================================
     public function statisticsSponsorEventInvitations($sponsor_event_id)//احصائيات الدعوات في فعالية ما
     {
@@ -484,62 +485,68 @@ class SponsorEventController extends Controller
         ], 200);
     }
     //===============================================================
-    //التذاكر
+    //التذاكر//o
     //===============================================================
-    
+
     //===============================================================
     //i
     //===============================================================
-    public function featurrdSponsorEventsI()//عرض الفعاليات الاعلانية المميزة للمستثمر
-    {
-        $invsetor_user=Auth::user()->investor;
-        $sponsor_events = SponsorEvent::where('copy_status', 'active')
-        ->where('type', $invsetor_user->activity_type)
-        ->whereIn('status', ['upcoming', 'ongoing'])
-        ->orderBy('start_date', 'asc')
-        ->get();
-
-        return response()->json([
-            'sponsor_events' => $sponsor_events
-        ], 200);
-
-    }
+    
     //===============================================================
-    public function getUpcomingSponsorEvents()//للمعارض القادمة
-    {
-        $exhibitions_id = Exhibition::where('status', 'upcoming')
-        ->pluck('id');
+    //===============================================================
+    //===============================================================
+    //===============================================================
+    //===============================================================
+     // public function getUpcomingSponsorEvents()//للمعارض القادمة
+    // {
+    //     $exhibitions_id = Exhibition::where('status', 'upcoming')
+    //     ->pluck('id');
 
-        $sponsor_events = SponsorEvent::whereIn('exhibition_id', $exhibitions_id)
-            ->where('copy_status', 'active')
-            ->orderBy('start_time', 'asc')
-            ->get();
+    //     $sponsor_events = SponsorEvent::whereIn('exhibition_id', $exhibitions_id)
+    //         ->where('copy_status', 'active')
+    //         ->orderBy('start_time', 'asc')
+    //         ->get();
 
-        $sponsor_events_data = $sponsor_events->map(function ($sp_ev)
-        {
-            return
-            [
-                'id' => $sp_ev->id,
-                'name' => $sp_ev->name,
-                'type' => $sp_ev->type,
-                'exhibition_name' => $sp_ev->exhibition->name,
-                'start_date' => Carbon::parse($sp_ev->start_time)->format('Y-m-d'),
-                'time' => Carbon::parse($sp_ev->start_time)->format('h:i A').' _ '.Carbon::parse($sp_ev->end_time)->format('h:i A'),
-                'place' => $sp_ev->place,
-                'description' => $sp_ev->description,
-                /*هون في مدة الادراج + عدد خيارات المشاركة + اقل مبلغ للمشاركة*/
-                'images' => $sp_ev->sponsorEventImages,
-                'is_favorite' => Auth::user()->favorites()
-                    ->where('favoritable_id', $sp_ev->id)
-                    ->where('favoritable_type', SponsorEvent::class)
-                    ->exists()
-            ];
-        });
+    //     $sponsor_events_data = $sponsor_events->map(function ($sp_ev)
+    //     {
+    //         return
+    //         [
+    //             'id' => $sp_ev->id,
+    //             'name' => $sp_ev->name,
+    //             'type' => $sp_ev->type,
+    //             'exhibition_name' => $sp_ev->exhibition->name,
+    //             'start_date' => Carbon::parse($sp_ev->start_time)->format('Y-m-d'),
+    //             'time' => Carbon::parse($sp_ev->start_time)->format('h:i A').' _ '.Carbon::parse($sp_ev->end_time)->format('h:i A'),
+    //             'place' => $sp_ev->place,
+    //             'description' => $sp_ev->description,
+    //             /*هون في مدة الادراج + عدد خيارات المشاركة + اقل مبلغ للمشاركة*/
+    //             'images' => $sp_ev->sponsorEventImages,
+    //             'is_favorite' => Auth::user()->favorites()
+    //                 ->where('favoritable_id', $sp_ev->id)
+    //                 ->where('favoritable_type', SponsorEvent::class)
+    //                 ->exists()
+    //         ];
+    //     });
 
-        return response()->json([
-            'upcoming_sponsor_events' => $sponsor_events_data
-        ], 200);
-    }
+    //     return response()->json([
+    //         'upcoming_sponsor_events' => $sponsor_events_data
+    //     ], 200);
+    // }
+    //===============================================================
+    // public function featurrdSponsorEventsI()//عرض الفعاليات الاعلانية المميزة للمستثمر
+    // {
+    //     $invsetor_user=Auth::user()->investor;
+    //     $sponsor_events = SponsorEvent::where('copy_status', 'active')
+    //     ->where('type', $invsetor_user->activity_type)
+    //     ->whereIn('status', ['upcoming', 'ongoing'])
+    //     ->orderBy('start_date', 'asc')
+    //     ->get();
+
+    //     return response()->json([
+    //         'sponsor_events' => $sponsor_events
+    //     ], 200);
+
+    // }
     //===============================================================
 
 }

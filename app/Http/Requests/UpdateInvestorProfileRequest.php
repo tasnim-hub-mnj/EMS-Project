@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class UpdateInvestorProfileRequest extends FormRequest
 {
@@ -21,20 +23,38 @@ class UpdateInvestorProfileRequest extends FormRequest
      */
     public function rules(): array
     {
+        $userId = Auth::id();
+
         return
         [
-            'bio' =>     'nullable|string|max:500',
-            'logo'=>     'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            // USER fields
+            'email' =>
+            [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($userId)
+            ],
 
-            'links' => 'nullable|array',
-            'links.*.link' => 'required|string|max:300',
-            'links.*.type' => 'required|string|max:50',
-            'links.*.id' => 'nullable|integer|exists:social_links,id',
+            'phone' =>
+            [
+                'required',
+                'string',
+                Rule::unique('users', 'phone')->ignore($userId)
+            ],
 
-            'location'       => 'sometimes|string|max:200',
-            'website'        => 'sometimes|url',
-            'email'          => 'sometimes|email|unique:users,email',
-            'phone'          => 'sometimes|string|unique:users,phone',
+            // INVESTOR fields
+            'company_name' => 'required|string|max:255',
+            'location'     => 'required|string|max:255',
+            'website'      => 'nullable|string|max:255',
+            'bio'          => 'nullable|string|max:2000',
+
+            // SOCIAL object
+            'social' => 'nullable|array',
+
+            'social.linkedin'  => 'nullable|string|max:255',
+            'social.twitter'   => 'nullable|string|max:255',
+            'social.instagram' => 'nullable|string|max:255',
+            'social.facebook'  => 'nullable|string|max:255',
         ];
     }
 }

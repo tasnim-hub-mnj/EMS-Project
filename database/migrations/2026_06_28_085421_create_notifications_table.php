@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('notifications', function (Blueprint $table)
         {
             $table->uuid('id')->primary();
-            $table->string('type');
-            $table->morphs('notifiable');
-            $table->text('data');//body
+            $table->string('type');//اسم فئة الاشعارات bookingNotification
+            $table->morphs('notifiable');//لتحديد من يتلقى الاشعار/علاقة مورف
+            $table->text('data');//body/محتوى الاشعار
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

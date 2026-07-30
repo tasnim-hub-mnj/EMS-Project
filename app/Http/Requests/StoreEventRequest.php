@@ -21,26 +21,23 @@ class StoreEventRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            
-        'name'            => 'required|string|max:255',
-        'type'            => 'required|string|max:255',
-        'date'            => 'required|date',
-        'time'            => 'required',
-        'duration_days'   => 'required|integer|min:1',
-        'description'     => 'nullable|string|max:500',
-
-        'image'           => 'nullable|array',
-        'image.*'         => 'image|mimes:jpg,jpeg,png|max:2048',
-
-        'video_promo_url' => 'nullable|string|max:500',
-
-        'is_general_invitation' => 'nullable|boolean',
-        'has_bookable_seats'    => 'nullable|boolean',
-        'requires_booking'      => 'nullable|boolean',
-
-        'max_participants' => 'required|integer|min:1',
-        'ticket_price'     => 'nullable|numeric|min:0',
+        return
+        [//✅
+            'name' => 'required|string|max:255',
+            'type' => 'nullable|string|max:255',
+            'booth_id' => 'required|integer|exists:booths,id',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'time' => 'required|string',
+            'max_participants' => 'nullable|integer|min:0',
+            'description' => 'nullable|string',
+            'requires_booking' => 'boolean',
+            'has_bookable_seats' => 'boolean',
+            'total_seats' => 'nullable|integer|min:0',
+            'ticket_price' => 'nullable|numeric|min:0',
+            'is_general_invitation' => 'boolean',
+            'video_promo_url' => 'nullable|string',
+            'images.*' => 'image|mimes:jpg,jpeg,png|max:4096'
         ];
     }
 }

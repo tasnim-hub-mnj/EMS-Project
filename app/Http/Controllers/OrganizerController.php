@@ -25,8 +25,8 @@ class OrganizerController extends Controller
             'phone' => $data['phone'],
             'password' => Hash::make($data['password']),
             'role' => 'organizer',
-            'status' => 'pending',
-            'token_fcm'=> $data['token_fcm'],
+            'status' => 'approved',
+            // 'token_fcm'=> $data['token_fcm'],
         ]);
 
         $organizer_data =

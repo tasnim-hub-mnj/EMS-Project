@@ -60,11 +60,15 @@ class Investor extends Model
         return $this->hasMany(SocialLink::class);
     }
     //=====================================================
-    public function investorPerformanceReports()
-    {
-        return $this->hasOne(InvestorPerformanceReports::class);
-    }
+    // public function investorPerformanceReports()
+    // {
+    //     return $this->hasOne(InvestorPerformanceReports::class);
+    // }
     //=================================================
+    public function Reports()
+    {
+        return $this->hasMany(ReportInvestor::class);
+    }
 
 
 }

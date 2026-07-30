@@ -22,18 +22,33 @@ class BookingshipSponsorEventRequest extends FormRequest
     public function rules(): array
     {
         return
-        [//BookingshipSponsorEventRequest
-            'days' => 'required|integer|min:1',
-            'description' => 'nullable|string|max:2000',
+        [
+            'event_id' => 'required|integer|exists:sponsor_events,id',
 
-            'logo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'selected_duration_label' => 'nullable|string|max:255',
+            'selected_days' => 'required|integer|min:1',
+            'price' => 'required|numeric|min:0',
 
+            'company_name' => 'required|string|max:255',
+            'company_website' => 'nullable|url|max:255',
+            'company_phone' => 'nullable|string|max:20',
+            'product_names' => 'nullable|string|max:2000',
+
+            // logo
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png|max:4096',
+
+            // ad images
+            'ad_images' => 'nullable|array',
+            'ad_images.*' => 'image|mimes:jpg,jpeg,png|max:4096',
+
+            // poster images
+            'poster_images' => 'nullable|array',
+            'poster_images.*' => 'image|mimes:jpg,jpeg,png|max:4096',
+
+            // product images
             'product_images' => 'nullable|array',
             'product_images.*.name' => 'required|string|max:255',
             'product_images.*.image' => 'required|image|mimes:jpg,jpeg,png|max:4096',
-
-            'materials' => 'nullable|array',
-            'materials.*' => 'image|mimes:jpg,jpeg,png|max:4096',
         ];
     }
 }

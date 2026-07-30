@@ -15,8 +15,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('type')->nullable();//ندوة/مسابقة/عرض تقديمي/ورشة/بث مباشر
             // $table->string('by');//اسم المقدم/لجنة التحكيم
-            $table->date('date')->nullable();
-            $table->time('time')->nullable();
+            $table->date('date')->nullable();//البداية
+            $table->time('time')->nullable();//البداية
             $table->string('place')->nullable();//موقع الفعالية هو موقع الجناح
             $table->integer('duration_days')->default(1);//مدة الحدث بالأيام(ايام الحجز)
             $table->text('description')->nullable();
@@ -31,12 +31,13 @@ return new class extends Migration
             $table->integer('scanned_count')->default(0);//عدد الحضور
             $table->enum('status',['upcoming', 'ongoing', 'finished'])->default('upcoming');
             $table->integer('current_day')->default(1);//اليوم الحالي من الفعالية
+            $table->json('daily_attendees')->nullable();
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

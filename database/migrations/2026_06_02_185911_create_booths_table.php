@@ -20,6 +20,7 @@ return new class extends Migration
             // $table->date('end_date')->nullable();
             $table->string('location')->nullable();//الموقع داخل المعرض
             $table->json('services');//exhibition->some(extra_services)
+            $table->json('amenities');//الخدمات الاساسية
             $table->string('image');
             $table->integer('map_x')->nullable();
             $table->integer('map_y')->nullable();
@@ -29,7 +30,7 @@ return new class extends Migration
     }
 
     /*
-     * Reverse the migrations
+     * Reverse the migrations.
      */
     public function down(): void
     {

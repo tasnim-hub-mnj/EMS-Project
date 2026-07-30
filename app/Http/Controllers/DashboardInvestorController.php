@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Booth;
 use App\Models\BoothBooking;
 use App\Models\Event;
+use App\Models\Exhibition;
 use App\Models\Favorite;
 use App\Models\Investor;
+use App\Models\SponsorEvent;
 use App\Models\SponsorshipBooking;
 use App\Models\Ticket;
 use Carbon\Carbon;
@@ -15,32 +17,164 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardInvestorController extends Controller
 {
+    public function featuredExhibitions(Request $request)//✅
+    {
+        $investor = Auth::user()->investor;
+
+        $page     = $request->query('page', 1);
+        $per_page = $request->query('per_page', 5);
+
+        $query = Exhibition::where('copy_status', 'active')
+            ->where('location', $investor->location)
+            ->where('type', $investor->activity_type)
+            ->whereIn('status', ['upcoming', 'ongoing'])
+            ->where('available_booths', '>', 0)
+            ->orderBy('start_date', 'asc');
+
+        $exhibitions = $query->paginate($per_page, ['*'], 'page', $page);
+
+        $data = $exhibitions->map(function ($ex)
+        {
+            return
+            [
+                'id'               => $ex->id,
+                'name'             => $ex->name,
+                'images'           => $ex->exhibitionImages ?? [],
+                'start_date'       => $ex->start_date,
+                'end_date'         => $ex->end_date,
+                'location'         => $ex->location,
+                'city'             => $ex->city,
+                'status'           => $ex->status,
+                'available_booths' => $ex->available_booths,
+                'sectors'          => $ex->sectors ?? [],
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $exhibitions->currentPage(),
+                'last_page'    => $exhibitions->lastPage(),
+                'per_page'     => $exhibitions->perPage(),
+                'total'        => $exhibitions->total(),
+            ]
+        ], 200);
+    }
+    //=====================================================================
+    public function featuredSponsorEvents(Request $request)//✅
+    {
+        $investor = Auth::user()->investor;
+
+        $page     = $request->query('page', 1);
+        $per_page = $request->query('per_page', 5);
+
+        $query = SponsorEvent::where('copy_status', 'active')
+            ->where('type', $investor->activity_type)
+            ->whereIn('status', ['upcoming', 'ongoing'])
+            ->orderBy('start_time', 'asc');
+
+        $events = $query->paginate($per_page, ['*'], 'page', $page);
+
+        $data = $events->map(function ($ev)
+        {
+            $ex = $ev->exhibition;
+
+            return
+            [
+                'id'                    => $ev->id,
+                'name'                  => $ev->name,
+                'type'                  => $ev->type,
+                'exhibition_id'         => $ev->exhibition_id,
+                'exhibition_name'       => $ex->name ?? null,
+                'exhibition_image_url'  => $ex->exhibitionImages->pluck('image')->first() ?? null,
+                'date'                  => $ev->start_time->format('Y-m-d'),
+                'start_time'            => $ev->start_time->format('H:i'),
+                'end_time'              => $ev->end_time->format('H:i'),
+                'place'                 => $ev->place,
+                'listing_days'          => $ev->duration_days,
+                'description'           => $ev->description,
+                'duration_options'      => $this->buildDurationOptions($ev),
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $ev->id)
+                    ->where('favoritable_type', SponsorEvent::class)
+                    ->exists()
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $events->currentPage(),
+                'last_page'    => $events->lastPage(),
+                'per_page'     => $events->perPage(),
+                'total'        => $events->total(),
+            ]
+        ], 200);
+    }
+    //=====================================================================
+    private function buildDurationOptions($event)
+    {
+        $options = [];
+
+        $daily = $event->daily_price;
+        $totalDays = $event->duration_days;
+
+        // Always add: One day
+        $options[] =
+        [
+            'label' => 'One day',
+            'days'  => 1,
+            'price' => $daily,
+        ];
+
+        // Add: Two days ONLY if event duration > 2
+        if ($totalDays > 2)
+        {
+            $options[] =
+            [
+                'label' => 'Two days',
+                'days'  => 2,
+                'price' => $daily * 2,
+            ];
+        }
+
+        // Always add: Full event
+        $options[] =
+        [
+            'label' => "Full event ($totalDays days)",
+            'days'  => $totalDays,
+            'price' => $daily * $totalDays,
+        ];
+
+        return $options;
+    }
+    //=====================================================================
     private function getDateRanges($period)
     {
         switch ($period)
         {
-            case 'this_month':
+            case 'day':
+                $current_start = now()->startOfDay();
+                $current_end   = now()->endOfDay();
+
+                $previous_start = now()->subDay()->startOfDay();
+                $previous_end   = now()->subDay()->endOfDay();
+                break;
+
+            case 'week':
+                $current_start = now()->startOfWeek();
+                $current_end   = now()->endOfWeek();
+
+                $previous_start = now()->subWeek()->startOfWeek();
+                $previous_end   = now()->subWeek()->endOfWeek();
+                break;
+
+            case 'month':
                 $current_start = now()->startOfMonth();
                 $current_end   = now()->endOfMonth();
 
                 $previous_start = now()->subMonth()->startOfMonth();
                 $previous_end   = now()->subMonth()->endOfMonth();
-                break;
-
-            case 'last_3_months':
-                $current_start = now()->subMonths(3)->startOfDay();
-                $current_end   = now()->endOfDay();
-
-                $previous_start = now()->subMonths(6)->startOfDay();
-                $previous_end   = now()->subMonths(3)->endOfDay();
-                break;
-
-            case 'this_year':
-                $current_start = now()->startOfYear();
-                $current_end   = now()->endOfYear();
-
-                $previous_start = now()->subYear()->startOfYear();
-                $previous_end   = now()->subYear()->endOfYear();
                 break;
 
             default:
@@ -51,42 +185,7 @@ class DashboardInvestorController extends Controller
                 $previous_end   = now()->subMonth()->endOfMonth();
         }
 
-        // switch ($period)
-        // {
-        //     case 'week':
-        //         $current_start = now()->startOfWeek();
-        //         $current_end   = now()->endOfWeek();
-
-        //         $previous_start = now()->subWeek()->startOfWeek();
-        //         $previous_end   = now()->subWeek()->endOfWeek();
-        //         break;
-
-        //     case 'month':
-        //         $current_start = now()->startOfMonth();
-        //         $current_end   = now()->endOfMonth();
-
-        //         $previous_start = now()->subMonth()->startOfMonth();
-        //         $previous_end   = now()->subMonth()->endOfMonth();
-        //         break;
-
-        //     case 'year':
-        //         $current_start = now()->startOfYear();
-        //         $current_end   = now()->endOfYear();
-
-        //         $previous_start = now()->subYear()->startOfYear();
-        //         $previous_end   = now()->subYear()->endOfYear();
-        //         break;
-
-        //     default:
-        //         $current_start = now()->startOfMonth();
-        //         $current_end   = now()->endOfMonth();
-
-        //         $previous_start = now()->subMonth()->startOfMonth();
-        //         $previous_end   = now()->subMonth()->endOfMonth();
-        // }
-
-        return
-        [
+        return [
             $current_start,
             $current_end,
             $previous_start,
@@ -94,111 +193,317 @@ class DashboardInvestorController extends Controller
         ];
     }
     //=====================================================================
-    private function growthRate($current, $previous)
+    public function dashboard(Request $request)//✅
     {
-        if ($previous == 0)
-        {
-            return $current > 0 ? 100 : 0;
-        }
+        $period = $request->query('period', 'month');
+        $investor = Auth::user()->investor;
 
-        return round((($current - $previous) / $previous) * 100, 2);
-    }
-    //=====================================================================
-    public function investorPerformanceSummary($investor_id, $period)
-    {
-        [$current_start, $current_end, $previous_start, $previous_end] = $this->getDateRanges($period);
+        [$current_start, $current_end] = $this->getDateRanges($period);
+
 
         // ============================
-        // الحجوزات (الفترة الحالية)
-        $current_bookings = BoothBooking::where('investor_id', $investor_id)
-            ->whereNotNull('approved_at')
+        // Total bookings
+        $total_bookings = BoothBooking::where('investor_id', $investor->id)
             ->whereBetween('approved_at', [$current_start, $current_end])
-            ->get();
-
-        $current_total_bookings = $current_bookings->whereIn('status', ['approved', 'finished'])->count();
-        $current_active_booths  = $current_bookings->where('status', 'approved')->count();
-
-        $previous_bookings = BoothBooking::where('investor_id', $investor_id)
-            ->whereNotNull('approved_at')
-            ->whereBetween('approved_at', [$previous_start, $previous_end])
-            ->get();
-
-        $previous_total_bookings = $previous_bookings->whereIn('status', ['approved', 'finished'])->count();
-        $previous_active_booths  = $previous_bookings->where('status', 'approved')->count();
+            ->count();
 
         // ============================
-        // الفعاليات (الفترة الحالية)
-        $all_investor_bookings = BoothBooking::where('investor_id', $investor_id)->pluck('id');
+        // Total visitors
+        $bookingIds = BoothBooking::whereIn('investor_id', $investor->id)
+        ->whereBetween('approved_at', [$current_start, $current_end])
+        ->pluck('id');
 
-        $current_events = Event::whereIn('booth_booking_id', $all_investor_bookings)
+        $total_visitors = Event::where('booth_booking_id', $bookingIds)
+            ->whereBetween('created_at', [$current_start, $current_end])
+            ->sum('scanned_count');
+
+        // ============================
+        // Total campaigns (sponsor events)
+        $total_campaigns = SponsorshipBooking::where('investor_id', $investor->id)
+            ->whereBetween('created_at', [$current_start, $current_end])
+            ->count();
+
+        // ============================
+        // Total revenue (from event tickets)
+        $current_events = Event::whereIn('booth_booking_id', $bookingIds)
             ->whereBetween('created_at', [$current_start, $current_end])
             ->get();
 
-        $current_published_events = $current_events->count();
-        $current_engagement = $current_events->sum('scanned_count') + $current_events->sum('registered_count');
+        $total_revenue = $current_events->sum(function ($event) {
+            $attendees = $event->scanned_count + $event->registered_count;
+            return $event->ticket_price * $attendees;
+        });
 
-
-        $previous_events = Event::whereIn('booth_booking_id', $all_investor_bookings)
-            ->whereBetween('created_at', [$previous_start, $previous_end])
-            ->get();
-
-        $previous_published_events = $previous_events->count();
-        $previous_engagement = $previous_events->sum('scanned_count') + $previous_events->sum('registered_count');
         // ============================
+        // Visitors trend (last 7 days)
+        $visitors_trend = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = now()->subDays($i);
+            $visitors_trend[] = Event::where('investor_id', $investor->id)
+                ->whereDate('created_at', $day)
+                ->sum('scanned_count');
+        }
 
-        // حساب نسب النمو
-        $growth_total_bookings   = $this->growthRate($current_total_bookings, $previous_total_bookings);
-        $growth_active_booths    = $this->growthRate($current_active_booths, $previous_active_booths);
-        $growth_published_events = $this->growthRate($current_published_events, $previous_published_events);
-        $growth_engagement       = $this->growthRate($current_engagement, $previous_engagement);
+        // ============================
+        // Top booths (based on event visitors)
+        $events = Event::whereIn('booth_booking_id', $bookingIds)->get();
+
+        // Sum visitors per booth
+        $boothVisitors = $events->groupBy('booth_booking_id')->map(function ($group)
+        {
+            return $group->sum('scanned_count');
+        });
+
+        // Build top booths list
+        $top_booths = BoothBooking::whereIn('id', $boothVisitors->keys())
+            ->get()
+            ->map(function ($booking) use ($boothVisitors)
+            {
+                return
+                [
+                    'booth_number' => $booking->booth->number,
+                    'visitors'     => $boothVisitors[$booking->id] ?? 0
+                ];
+            })
+            ->sortByDesc('visitors')
+            ->take(5)
+            ->values();
 
 
         return response()->json([
-            'summary' =>
-            [
-                'total_bookings' =>
-                [
-                    'value' => $current_total_bookings,
-                    'growth' => $growth_total_bookings
-                ],
-                'active_booths' =>
-                [
-                    'value' => $current_active_booths,
-                    'growth' => $growth_active_booths
-                ],
-                'published_events' =>
-                [
-                    'value' => $current_published_events,
-                    'growth' => $growth_published_events
-                ],
-                'total_engagement' =>
-                [
-                    'value' => $current_engagement,
-                    'growth' => $growth_engagement
-                ],
-            ],
-
-            'period' => $period,
-            'current_range' =>
-            [
-                'start' => $current_start->format('Y-m-d'),
-                'end' => $current_end->format('Y-m-d'),
-            ],
-            'previous_range' =>
-            [
-                'start' => $previous_start->format('Y-m-d'),
-                'end' => $previous_end->format('Y-m-d'),
-            ]
+            'total_visitors'  => $total_visitors,
+            'total_bookings'  => $total_bookings,
+            'total_campaigns' => $total_campaigns,
+            'total_revenue'   => $total_revenue,
+            'visitors_trend'  => $visitors_trend,
+            'top_booths'      => $top_booths
         ], 200);
     }
-    //=====================================================================
-    public function dashboard(Request $request)
-    {
-        $period = $request->query('period', 'this_month'); // قيمة افتراضية
-        $investor_id = Auth::user()->investor->id;
 
-        return $this->investorPerformanceSummary($investor_id, $period);
+    //=====================================================================
+    public function latestExhibitions()//✅
+    {
+        $exhibitions = Exhibition::whereIn('status', ['upcoming', 'ongoing'])
+            ->where('copy_status', 'active')
+            ->orderBy('start_date', 'asc')
+            ->get();
+
+        $exhibitions_data = $exhibitions->map(function ($exhibition)
+        {
+            return
+            [
+                'id' => $exhibition->id,
+                'name' => $exhibition->name,
+                'description' => $exhibition->description,
+                'images' => $exhibition->exhibitionImages ?? [],
+                'services' => $exhibition->extra_services
+                    ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
+                    : [],
+                'start_date' => $exhibition->start_date,
+                'end_date' => $exhibition->end_date,
+                'location' => $exhibition->location,
+                'city' => $exhibition->city,
+                'status' => $exhibition->status,
+                'available_booths' => $exhibition->available_booths,
+                'sectors' => $exhibition->sectors ?? [],
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $exhibition->id)
+                    ->where('favoritable_type', Exhibition::class)
+                    ->exists()
+            ];
+        });
+
+        return response()->json($exhibitions_data, 200);
     }
+    //=====================================================================
+    //=====================================================================
+    // private function getDateRanges($period)
+    // {
+    //     // switch ($period)
+    //     // {
+    //     //     case 'this_month':
+    //     //         $current_start = now()->startOfMonth();
+    //     //         $current_end   = now()->endOfMonth();
+
+    //     //         $previous_start = now()->subMonth()->startOfMonth();
+    //     //         $previous_end   = now()->subMonth()->endOfMonth();
+    //     //         break;
+
+    //     //     case 'last_3_months':
+    //     //         $current_start = now()->subMonths(3)->startOfDay();
+    //     //         $current_end   = now()->endOfDay();
+
+    //     //         $previous_start = now()->subMonths(6)->startOfDay();
+    //     //         $previous_end   = now()->subMonths(3)->endOfDay();
+    //     //         break;
+
+    //     //     case 'this_year':
+    //     //         $current_start = now()->startOfYear();
+    //     //         $current_end   = now()->endOfYear();
+
+    //     //         $previous_start = now()->subYear()->startOfYear();
+    //     //         $previous_end   = now()->subYear()->endOfYear();
+    //     //         break;
+
+    //     //     default:
+    //     //         $current_start = now()->startOfMonth();
+    //     //         $current_end   = now()->endOfMonth();
+
+    //     //         $previous_start = now()->subMonth()->startOfMonth();
+    //     //         $previous_end   = now()->subMonth()->endOfMonth();
+    //     // }
+
+    //     switch ($period)
+    //     {
+
+    //     case 'day':
+
+    //             break;
+
+    //         case 'week':
+    //             $current_start = now()->startOfWeek();
+    //             $current_end   = now()->endOfWeek();
+
+    //             $previous_start = now()->subWeek()->startOfWeek();
+    //             $previous_end   = now()->subWeek()->endOfWeek();
+    //             break;
+
+    //         case 'month':
+    //             $current_start = now()->startOfMonth();
+    //             $current_end   = now()->endOfMonth();
+
+    //             $previous_start = now()->subMonth()->startOfMonth();
+    //             $previous_end   = now()->subMonth()->endOfMonth();
+    //             break;
+
+
+    //         default:
+    //             $current_start = now()->startOfMonth();
+    //             $current_end   = now()->endOfMonth();
+
+    //             $previous_start = now()->subMonth()->startOfMonth();
+    //             $previous_end   = now()->subMonth()->endOfMonth();
+    //     }
+
+    //     return
+    //     [
+    //         $current_start,
+    //         $current_end,
+    //         $previous_start,
+    //         $previous_end
+    //     ];
+    // }
+    // //=====================================================================
+    // private function growthRate($current, $previous)
+    // {
+    //     if ($previous == 0)
+    //     {
+    //         return $current > 0 ? 100 : 0;
+    //     }
+
+    //     return round((($current - $previous) / $previous) * 100, 2);
+    // }
+    // //=====================================================================
+    // public function investorPerformanceSummary($investor_id, $period)
+    // {
+    //     [$current_start, $current_end, $previous_start, $previous_end] = $this->getDateRanges($period);
+
+    //     // ============================
+    //     // الحجوزات (الفترة الحالية)
+    //     $current_bookings = BoothBooking::where('investor_id', $investor_id)
+    //         ->whereNotNull('approved_at')
+    //         ->whereBetween('approved_at', [$current_start, $current_end])
+    //         ->get();
+
+    //     $current_total_bookings = $current_bookings->whereIn('status', ['approved', 'finished'])->count();
+    //     $current_active_booths  = $current_bookings->where('status', 'approved')->count();
+
+    //     $previous_bookings = BoothBooking::where('investor_id', $investor_id)
+    //         ->whereNotNull('approved_at')
+    //         ->whereBetween('approved_at', [$previous_start, $previous_end])
+    //         ->get();
+
+    //     $previous_total_bookings = $previous_bookings->whereIn('status', ['approved', 'finished'])->count();
+    //     $previous_active_booths  = $previous_bookings->where('status', 'approved')->count();
+
+    //     // ============================
+    //     // الفعاليات (الفترة الحالية)
+    //     $all_investor_bookings = BoothBooking::where('investor_id', $investor_id)->pluck('id');
+
+    //     $current_events = Event::whereIn('booth_booking_id', $all_investor_bookings)
+    //         ->whereBetween('created_at', [$current_start, $current_end])
+    //         ->get();
+
+    //     $current_published_events = $current_events->count();
+    //     $current_engagement = $current_events->sum('scanned_count') + $current_events->sum('registered_count');
+
+
+    //     $previous_events = Event::whereIn('booth_booking_id', $all_investor_bookings)
+    //         ->whereBetween('created_at', [$previous_start, $previous_end])
+    //         ->get();
+
+    //     $previous_published_events = $previous_events->count();
+    //     $previous_engagement = $previous_events->sum('scanned_count') + $previous_events->sum('registered_count');
+    //     // ============================
+
+    //     // حساب نسب النمو
+    //     $growth_total_bookings   = $this->growthRate($current_total_bookings, $previous_total_bookings);
+    //     $growth_active_booths    = $this->growthRate($current_active_booths, $previous_active_booths);
+    //     $growth_published_events = $this->growthRate($current_published_events, $previous_published_events);
+    //     $growth_engagement       = $this->growthRate($current_engagement, $previous_engagement);
+
+
+    //     return response()->json([
+    //         'summary' =>
+    //         [
+    //             'total_bookings' =>
+    //             [
+    //                 'value' => $current_total_bookings,
+    //                 'growth' => $growth_total_bookings
+    //             ],
+    //             'active_booths' =>
+    //             [
+    //                 'value' => $current_active_booths,
+    //                 'growth' => $growth_active_booths
+    //             ],
+    //             'published_events' =>
+    //             [
+    //                 'value' => $current_published_events,
+    //                 'growth' => $growth_published_events
+    //             ],
+    //             'total_engagement' =>
+    //             [
+    //                 'value' => $current_engagement,
+    //                 'growth' => $growth_engagement
+    //             ],
+    //         ],
+
+    //         'period' => $period,
+    //         'current_range' =>
+    //         [
+    //             'start' => $current_start->format('Y-m-d'),
+    //             'end' => $current_end->format('Y-m-d'),
+    //         ],
+    //         'previous_range' =>
+    //         [
+    //             'start' => $previous_start->format('Y-m-d'),
+    //             'end' => $previous_end->format('Y-m-d'),
+    //         ]
+    //     ], 200);
+    // }
+    //=====================================================================
+    // public function dashboard(Request $request)
+    // {
+    //     $period = $request->query('period', 'this_month'); // قيمة افتراضية
+    //     $investor_id = Auth::user()->investor->id;
+
+    //     return $this->investorPerformanceSummary($investor_id, $period);
+    // }
+
+
+
+
+
     //=====================================================================
     //o
     //=====================================================================
@@ -277,7 +582,6 @@ class DashboardInvestorController extends Controller
             'companies' => $companies_data
         ], 200);
     }
-
     //=====================================================================
 
 }

@@ -81,184 +81,187 @@ class SponsorshipBookingController extends Controller
     //===============================================================
     //i
     //===============================================================
-    public function showSponsorEvent($sponsor_event_id)//عرض تفاصيل الفعالية الاعلانية للحجز
-    {
-        $investor = Auth::user()->investor;
-        $sponsor_event = SponsorEvent::with('exhibition')->find($sponsor_event_id);
+    
+    //===============================================================
 
-        if (!$sponsor_event)
-        {
-            return response()->json(['message' => 'Sponsor event not found'], 404);
-        }
+    // public function showSponsorEvent($sponsor_event_id)//عرض تفاصيل الفعالية الاعلانية للحجز
+    // {
+    //     $investor = Auth::user()->investor;
+    //     $sponsor_event = SponsorEvent::with('exhibition')->find($sponsor_event_id);
 
-
-        $options = [];
-        for ($day = 1; $day <= $sponsor_event->duration_days; $day++)
-        {
-
-            $label = $day == $sponsor_event->duration_days
-                ? "$day days (Full Event)"
-                : "$day day" . ($day > 1 ? "s" : "");
-
-            $options[] =
-            [
-                'days' => $day,
-                'label' => $label,
-                'total' => $sponsor_event->daily_price * $day,
-            ];
-        }
+    //     if (!$sponsor_event)
+    //     {
+    //         return response()->json(['message' => 'Sponsor event not found'], 404);
+    //     }
 
 
-        $sponsor_event_data =
-        [
-            'id' => $sponsor_event->id,
-            'name' => $sponsor_event->name,
-            'type' => $sponsor_event->type,
-            'exhibition_name' => $sponsor_event->exhibition->name,
-            'start_time' => Carbon::parse($sponsor_event->start_time)->format('Y-m-d'),
-            'place' => $sponsor_event->place,
-            'time' => Carbon::parse($sponsor_event->start_time)->format('h:i').' _ '.Carbon::parse($sponsor_event->end_time)->format('h:i'),
-            'duration_days' => $sponsor_event->duration_days,
-            'description' => $sponsor_event->description,
+    //     $options = [];
+    //     for ($day = 1; $day <= $sponsor_event->duration_days; $day++)
+    //     {
 
-            'participation_options' => $options,
+    //         $label = $day == $sponsor_event->duration_days
+    //             ? "$day days (Full Event)"
+    //             : "$day day" . ($day > 1 ? "s" : "");
 
-            'company_name' => $investor->company_name,
-            'company_website' => $investor->website,
-            'company_phone' => $investor->user->phone,
+    //         $options[] =
+    //         [
+    //             'days' => $day,
+    //             'label' => $label,
+    //             'total' => $sponsor_event->daily_price * $day,
+    //         ];
+    //     }
 
-        ];
 
-        return response()->json([
-            'sponsor_event' => $sponsor_event_data
-        ], 200);
-    }
+    //     $sponsor_event_data =
+    //     [
+    //         'id' => $sponsor_event->id,
+    //         'name' => $sponsor_event->name,
+    //         'type' => $sponsor_event->type,
+    //         'exhibition_name' => $sponsor_event->exhibition->name,
+    //         'start_time' => Carbon::parse($sponsor_event->start_time)->format('Y-m-d'),
+    //         'place' => $sponsor_event->place,
+    //         'time' => Carbon::parse($sponsor_event->start_time)->format('h:i').' _ '.Carbon::parse($sponsor_event->end_time)->format('h:i'),
+    //         'duration_days' => $sponsor_event->duration_days,
+    //         'description' => $sponsor_event->description,
+
+    //         'participation_options' => $options,
+
+    //         'company_name' => $investor->company_name,
+    //         'company_website' => $investor->website,
+    //         'company_phone' => $investor->user->phone,
+
+    //     ];
+
+    //     return response()->json([
+    //         'sponsor_event' => $sponsor_event_data
+    //     ], 200);
+    // }
 
     //===============================================================
-    public function storeBooking(BookingshipSponsorEventRequest $request, $sponsor_event_id)//حجز رعاية/i
-    {
-        $investor = Auth::user()->investor;
-        $data = $request->validated();
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+    // public function storeBooking(BookingshipSponsorEventRequest $request, $sponsor_event_id)//حجز رعاية/i
+    // {
+    //     $investor = Auth::user()->investor;
+    //     $data = $request->validated();
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
 
-        $total_price = $sponsor_event->daily_price * $request->days;
+    //     $total_price = $sponsor_event->daily_price * $request->days;
 
-        $logoPath = null;
-        if ($request->hasFile('logo'))
-        {
-            $logoPath = $request->file('logo')->store('sponsorship_company_logos', 'public');
-        }
+    //     $logoPath = null;
+    //     if ($request->hasFile('logo'))
+    //     {
+    //         $logoPath = $request->file('logo')->store('sponsorship_company_logos', 'public');
+    //     }
 
 
-        $booking = SponsorshipBooking::create([
-            'investor_id' => $investor->id,
-            'sponsor_event_id' => $sponsor_event->id,
-            'days' => $request->days,
-            'total_price' => $total_price,
-            'description' => $request->description,
-            'logo' => $logoPath,
-            'booked_at' => now()->format('Y-m-d'),
-            'status' => 'pending',
-        ]);
+    //     $booking = SponsorshipBooking::create([
+    //         'investor_id' => $investor->id,
+    //         'sponsor_event_id' => $sponsor_event->id,
+    //         'days' => $request->days,
+    //         'total_price' => $total_price,
+    //         'description' => $request->description,
+    //         'logo' => $logoPath,
+    //         'booked_at' => now()->format('Y-m-d'),
+    //         'status' => 'pending',
+    //     ]);
 
-        // ============================
-        if ($request->hasFile('materials'))
-        {
-            foreach ($request->file('materials') as $img)
-            {
-                $path = $img->store('sponsorship_materials', 'public');
+    //     // ============================
+    //     if ($request->hasFile('materials'))
+    //     {
+    //         foreach ($request->file('materials') as $img)
+    //         {
+    //             $path = $img->store('sponsorship_materials', 'public');
 
-                SponsorshipBookingImage::create([
-                    'sponsorship_booking_id' => $booking->id,
-                    'image' => $path,
-                ]);
-            }
-        }
-        // ============================
-        if ($request->filled('product_images'))
-        {
-            foreach ($request->product_images as $item)
-            {
-                $path = $item['image']->store('sponsorship_product_images', 'public');
+    //             SponsorshipBookingImage::create([
+    //                 'sponsorship_booking_id' => $booking->id,
+    //                 'image' => $path,
+    //             ]);
+    //         }
+    //     }
+    //     // ============================
+    //     if ($request->filled('product_images'))
+    //     {
+    //         foreach ($request->product_images as $item)
+    //         {
+    //             $path = $item['image']->store('sponsorship_product_images', 'public');
 
-                SponsorshipBookingProductImage::create([
-                    'sponsorship_booking_id' => $booking->id,
-                    'product_name' => $item['name'],
-                    'image' => $path,
-                ]);
-            }
-        }
+    //             SponsorshipBookingProductImage::create([
+    //                 'sponsorship_booking_id' => $booking->id,
+    //                 'product_name' => $item['name'],
+    //                 'image' => $path,
+    //             ]);
+    //         }
+    //     }
 
-        return response()->json([
-            'message' => 'Sponsorship booking created successfully.',
-            'booking' => $booking->load([
-                'sponsorshipBookingImages',
-                'sponsorshipBookingProductImages'
-            ])
-        ], 201);
-    }
+    //     return response()->json([
+    //         'message' => 'Sponsorship booking created successfully.',
+    //         'booking' => $booking->load([
+    //             'sponsorshipBookingImages',
+    //             'sponsorshipBookingProductImages'
+    //         ])
+    //     ], 201);
+    // }
     //===============================================================
-    public function mySponsorshipBookings()//رعاياتي/i
-    {
-        $investor = Auth::user()->investor;
+    // public function mySponsorshipBookings()//رعاياتي/i
+    // {
+    //     $investor = Auth::user()->investor;
 
-        $bookings = SponsorshipBooking::where('investor_id', $investor->id)->get();
+    //     $bookings = SponsorshipBooking::where('investor_id', $investor->id)->get();
 
-        $bookings_data = $bookings->map(function($bo)
-        {
-            return
-            [
-                'id' => $bo->id,
-                'name' => $bo->sponsorEvent->name,
-                'type' => $bo->sponsorEvent->type,
-                'exhibition_name' => $bo->sponsorEvent->exhibition->name,
-                'start_date' => Carbon::parse($bo->sponsorEvent->start_time)->format('Y-m-d'),
-                'place' => $bo->sponsorEvent->place,
-                'status' => $bo->status,
-                'days' => $bo->days,
+    //     $bookings_data = $bookings->map(function($bo)
+    //     {
+    //         return
+    //         [
+    //             'id' => $bo->id,
+    //             'name' => $bo->sponsorEvent->name,
+    //             'type' => $bo->sponsorEvent->type,
+    //             'exhibition_name' => $bo->sponsorEvent->exhibition->name,
+    //             'start_date' => Carbon::parse($bo->sponsorEvent->start_time)->format('Y-m-d'),
+    //             'place' => $bo->sponsorEvent->place,
+    //             'status' => $bo->status,
+    //             'days' => $bo->days,
 
-                'registered_count' => $bo->sponsorEvent->registered_count,
-                'scanned_count' => $bo->sponsorEvent->scanned_count,
-                'total_price' => $bo->total_price,
-            ];
-        });
+    //             'registered_count' => $bo->sponsorEvent->registered_count,
+    //             'scanned_count' => $bo->sponsorEvent->scanned_count,
+    //             'total_price' => $bo->total_price,
+    //         ];
+    //     });
 
-        return response()->json([
-            'bookings' => $bookings_data
-        ], 200);
-    }
+    //     return response()->json([
+    //         'bookings' => $bookings_data
+    //     ], 200);
+    // }
     //===============================================================
-    public function showSponsorshipBookings($booking_id)//i
-    {
-        $investor = Auth::user()->investor;
+    // public function showSponsorshipBookings($booking_id)//i
+    // {
+    //     $investor = Auth::user()->investor;
 
-        $booking = SponsorshipBooking::where('investor_id', $investor->id)->findOrFail($booking_id);
+    //     $booking = SponsorshipBooking::where('investor_id', $investor->id)->findOrFail($booking_id);
 
-        $booking_data =
-        [
-            'id' => $booking->id,
-            'name' => $booking->sponsorEvent->name,
-            'status' => $booking->status,
-            // 'day_rate' =>,
+    //     $booking_data =
+    //     [
+    //         'id' => $booking->id,
+    //         'name' => $booking->sponsorEvent->name,
+    //         'status' => $booking->status,
+    //         // 'day_rate' =>,
 
-            'type' => $booking->sponsorEvent->type,
-            'exhibition_name' => $booking->sponsorEvent->exhibition->name,
-            'start_date' => Carbon::parse($booking->sponsorEvent->start_time)->format('Y-m-d'),
-            'time' => Carbon::parse($booking->sponsorEvent->start_time)->format('h:i'),
-            'place' => $booking->sponsorEvent->place,
+    //         'type' => $booking->sponsorEvent->type,
+    //         'exhibition_name' => $booking->sponsorEvent->exhibition->name,
+    //         'start_date' => Carbon::parse($booking->sponsorEvent->start_time)->format('Y-m-d'),
+    //         'time' => Carbon::parse($booking->sponsorEvent->start_time)->format('h:i'),
+    //         'place' => $booking->sponsorEvent->place,
 
-            'days' => $booking->days,
-            'total_price' => $booking->total_price,
-            'booked_at' => $booking->booked_at,
+    //         'days' => $booking->days,
+    //         'total_price' => $booking->total_price,
+    //         'booked_at' => $booking->booked_at,
 
-            'registered_count' => $booking->sponsorEvent->registered_count,
-            'scanned_count' => $booking->sponsorEvent->scanned_count,
-        ];
+    //         'registered_count' => $booking->sponsorEvent->registered_count,
+    //         'scanned_count' => $booking->sponsorEvent->scanned_count,
+    //     ];
 
-        return response()->json([
-            'booking' => $booking_data
-        ], 200);
-    }
+    //     return response()->json([
+    //         'booking' => $booking_data
+    //     ], 200);
+    // }
     //===============================================================
     // public function showSponsorshipAdDetails($bookingId)//عرض تفاصيل حجز فعالية إعلانية معيّنة
     // {

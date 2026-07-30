@@ -86,48 +86,41 @@ class ExhibitionController extends Controller
         ], 200);
     }
     //===============================================================
-    public function featurrdExhibitionsI()//عرض المعارض المميزة للمستثمر
-    {
-        $invsetor_user = Auth::user()->investor;
-        $exhibitions = Exhibition::where('copy_status', 'active')
-            ->where('location', $invsetor_user->location)
-            ->where('type', $invsetor_user->activity_type)
-            ->whereIn('status', ['upcoming', 'ongoing'])
-            ->where('available_booths', '>', 0)
-            ->orderBy('start_date', 'asc')
-            ->get();
+    // public function featurrdExhibitionsI()//عرض المعارض المميزة للمستثمر
+    // {
+    //     $invsetor_user = Auth::user()->investor;
+    //     $exhibitions = Exhibition::where('copy_status', 'active')
+    //         ->where('location', $invsetor_user->location)
+    //         ->where('type', $invsetor_user->activity_type)
+    //         ->whereIn('status', ['upcoming', 'ongoing'])
+    //         ->where('available_booths', '>', 0)
+    //         ->orderBy('start_date', 'asc')
+    //         ->get();
 
-        return response()->json([
-            'exhibitions' => $exhibitions
-        ], 200);
-    }
+    //     return response()->json([
+    //         'exhibitions' => $exhibitions
+    //     ], 200);
+    // }
     //===============================================================
-    public function getAllExhibitions(Request $request)
+    public function getAllExhibitions(Request $request)//✅
     {
-        $page  = $request->query('page', 1);
-        $limit = $request->query('limit', 20);
+        $page     = $request->query('page', 1);
+        $per_page = $request->query('per_page', 15);
 
         $search = $request->query('search');
         $city   = $request->query('city');
         $sector = $request->query('sector');
-        $latest = $request->query('latest'); // upcoming + ongoing
-        $status = $request->query('status');
+        $status = $request->query('status'); // upcoming | active | ended
 
         $query = Exhibition::where('copy_status', 'active');
 
         if ($search)
         {
-            $query->where('name', 'LIKE', "%$search%");
-        }
-
-        if ($latest === 'true')
-        {
-            $query->whereIn('status', ['upcoming', 'ongoing']);
-        }
-
-        if ($sector)
-        {
-            $query->whereJsonContains('sectors', $sector);
+            $query->where(function ($q) use ($search)
+            {
+                $q->where('name', 'LIKE', "%$search%")
+                ->orWhere('city', 'LIKE', "%$search%");
+            });
         }
 
         if ($city)
@@ -135,32 +128,50 @@ class ExhibitionController extends Controller
             $query->where('city', $city);
         }
 
-        if ($status)
+        if ($sector)
         {
-            $query->where('status',$status);
+            $query->whereJsonContains('sectors', $sector);
         }
 
-        //العرض الافتراضي قبل ما يفلتر اخونا المستثمر
-        $query->orderBy('created_at', 'desc');
+        // Status filter (mapping API → DB)
+        if ($status)
+        {
+            $statusMap =
+            [
+                'upcoming' => 'upcoming',
+                'active'   => 'ongoing',
+                'ended'    => 'finished'
+            ];
 
-        // Pagination
-        $exhibitions = $query->paginate($limit, ['*'], 'page', $page);
+            if (isset($statusMap[$status]))
+            {
+                $query->where('status', $statusMap[$status]);
+            }
+        }
+
+        $query->orderBy('start_date', 'asc');
+
+        $exhibitions = $query->paginate($per_page, ['*'], 'page', $page);
 
         $exhibitions_data = $exhibitions->map(function ($exhibition)
         {
-            return [
+            return
+            [
                 'id' => $exhibition->id,
                 'name' => $exhibition->name,
-                'type' => $exhibition->type,
+                'description' => $exhibition->description,
+                'images' => $exhibition->images ?? [],
+                'services' => $exhibition->extra_services
+                    ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
+                    : [],
                 'start_date' => $exhibition->start_date,
                 'end_date' => $exhibition->end_date,
                 'location' => $exhibition->location,
                 'city' => $exhibition->city,
                 'status' => $exhibition->status,
                 'available_booths' => $exhibition->available_booths,
-                'total_booths' => $exhibition->total_booths,
-                'visitors_count' => $exhibition->visitors_count,
-                'is_favorite' => Auth::user()->favorites
+                'sectors' => $exhibition->sectors ?? [],
+                'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $exhibition->id)
                     ->where('favoritable_type', Exhibition::class)
                     ->exists(),
@@ -168,36 +179,69 @@ class ExhibitionController extends Controller
         });
 
         return response()->json([
-            'exhibitions' => $exhibitions_data,
-            'pagination' => [
+            'data' => $exhibitions_data,
+            'pagination' =>
+            [
                 'current_page' => $exhibitions->currentPage(),
-                'per_page' => $exhibitions->perPage(),
-                'total' => $exhibitions->total(),
-                'last_page' => $exhibitions->lastPage(),
+                'per_page'     => $exhibitions->perPage(),
+                'total'        => $exhibitions->total(),
+                'last_page'    => $exhibitions->lastPage(),
             ]
         ], 200);
     }
     //===============================================================
-    public function show($exhibition_id)//عرض معرض معين
+    public function show($exhibition_id)//✅
     {
         $user = Auth::user();
+
+        $exhibition = Exhibition::with([
+            'sponsorEvents'
+        ])->find($exhibition_id);
+
+        if (!$exhibition)
+        {
+            return response()->json(['message' => 'Exhibition not found'], 404);
+        }
+
         $is_favorite = $user->favorites()
             ->where('favoritable_id', $exhibition_id)
             ->where('favoritable_type', Exhibition::class)
             ->exists();
 
-        $exhibition = Exhibition::with([
-            'booths',
-            'sponsorEvents',
-        ])->find($exhibition_id);
+        $services = $exhibition->extra_services
+            ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
+            : [];
 
-        if (!$exhibition) {
-            return response()->json(['message' => 'Exhibition not found'], 404);
-        }
+        $images = $exhibition->exhibitionImages ?? [];
+
+        $map_data = json_decode($exhibition->map, true);
+
+        $sponsor_events = $exhibition->sponsorEvents->map(function ($event)
+        {
+            return
+            [
+                'id' => $event->id,
+                'name' => $event->name,
+                'type' => $event->type,
+            ];
+        });
 
         return response()->json([
-            'exhibition' => $exhibition,
-            'is_favorite' => $is_favorite
+            'id' => $exhibition->id,
+            'name' => $exhibition->name,
+            'description' => $exhibition->description,
+            'images' => $images,
+            'services' => $services,
+            'start_date' => $exhibition->start_date,
+            'end_date' => $exhibition->end_date,
+            'location' => $exhibition->location,
+            'city' => $exhibition->city,
+            'status' => $exhibition->status,
+            'available_booths' => $exhibition->available_booths,
+            'sectors' => $exhibition->sectors ?? [],
+            'is_favorite' => $is_favorite,
+            'map_data' => $map_data,
+            'sponsor_events' => $sponsor_events,
         ], 200);
     }
     //===============================================================

@@ -29,7 +29,7 @@ return new class extends Migration {
             // $table->string('image');//جدول لحال
 
             $table->integer('duration_days')->default(1);//عدد ايام عرض الحدث
-            // $table->json('duration_options')->nullable();//o->i/خيارات مدة العرض (كل يوم مع السعر )
+            $table->json('duration_options')->nullable();//o->i/خيارات مدة العرض (كل يوم مع السعر )
             $table->double('daily_price')->nullable();//o->i/السعر اليومي للرعاية
 
             $table->integer('registered_count')->default(0);//المحجوز
@@ -43,7 +43,7 @@ return new class extends Migration {
     }
 
     /**
-     * Reverse the migrations
+     * Reverse the migrations.
      */
     public function down(): void
     {

@@ -12,6 +12,7 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('sponsorship_booking_id')->constrained('sponsorship_bookings')->onDelete('cascade');
+            $table->enum('type',['ad','poster']);
             $table->string('image');
             $table->timestamps();
         });

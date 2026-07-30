@@ -1,16 +1,23 @@
 <?php
 
+use App\Http\Controllers\BoothBookingController;
 use App\Http\Controllers\BoothController;
+use App\Http\Controllers\BoothManagementController;
 use App\Http\Controllers\BoothReviewController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CollectedBoothController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\DashboardInvestorController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventsController;
 use App\Http\Controllers\ExhibitionController;
 use App\Http\Controllers\ExhibitionReviewController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\FavoritesController;
+use App\Http\Controllers\InvestorController;
+use App\Http\Controllers\ProfileCompanyController;
 use App\Http\Controllers\ProfileVisitorController;
+use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SponsorshipBookingController;
 use App\Http\Controllers\SponsorEventController;
 use App\Http\Controllers\SupportTicketController;
@@ -21,103 +28,106 @@ use App\Http\Controllers\VisitorScheduleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+//================================================================
+//***********************Investor*********************************
+//================================================================
+//RegisterController
+Route::post('/auth/register', [InvestorController::class, 'register']);// تسجيل حساب جديد
+//AuthController
+Route::post('/auth/verify-otp', [InvestorController::class, 'verifyOtp']);// التحقق من OTP بعد التسجيل
+Route::post('/auth/resend-otp', [InvestorController::class, 'resendOtp']);// إعادة إرسال OTP بعد التسجيل
+//LoginController
+Route::post('/auth/login', [InvestorController::class, 'login']);// تسجيل الدخول
 
-//-----------Rrgister/Login/Logout----------
-Route::post('/register', [UserController::class, 'register']);
-Route::post('/login', [UserController::class, 'login']);
-Route::post('/logout', [UserController::class, 'logout'])->middleware('auth:sanctum');
+//ForgotPasswordController
+Route::post('/auth/forgot-password', [InvestorController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
+Route::post('/auth/forgot-password/verify-otp', [InvestorController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
+Route::post('/auth/reset-password', [InvestorController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
 
-//----------DashboardInvestor----------
-Route::get('/dashboardinv', [DashboardInvestorController::class, 'getDashboardStats']);
-//___________________________________________________________________________________
-Route::middleware('auth:sanctum')->group(function () {
-    // Organizer routes
-    Route::get('/organizer/exhibitions', [ExhibitionController::class, 'organizerIndex']);
-    Route::post('/organizer/exhibitions', [ExhibitionController::class, 'store']);
-    Route::put('/organizer/exhibitions/{id}', [ExhibitionController::class, 'update']);
-    Route::delete('/organizer/exhibitions/{id}', [ExhibitionController::class, 'destroy']);
-    Route::post('/organizer/exhibitions/{id}/archive', [ExhibitionController::class, 'archive']);
+Route::middleware('auth:sanctum')->group(function ()
+{
+    //ChangePasswordController
+    Route::post('/auth/change-password', [InvestorController::class, 'updatePassword']);// تغيير كلمة المرور داخل التطبيق
 
-    // Investor profile routes
-    Route::post('/company-profile', [CompanyProfileController::class, 'store']);
-    Route::put('/company-profile', [CompanyProfileController::class, 'update']);
-    Route::get('/company-profile', [CompanyProfileController::class, 'show']);
+    Route::post('/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);// حفظ FCM Token
+    ////SettingsController
+    Route::post('/auth/delete-account', [InvestorController::class, 'deleteAccount']);// حذف الحساب
+    Route::post('/auth/logout', [InvestorController::class, 'logout']);// تسجيل الخروج
 
-    // Investor dashboard / analytics
-    Route::get('/investor/dashboard', [DashboardInvestorController::class, 'getDashboardStats']);
+    //HomeBillboardController
+    Route::get('/exhibitions/featured', [DashboardInvestorController::class, 'featuredExhibitions']);
+    Route::get('/investor/sponsor-events/featured', [DashboardInvestorController::class, 'featuredSponsorEvents']);
+    //DashboardController
+    Route::get('/investor/dashboard', [DashboardInvestorController::class, 'dashboard']);
+    //LatestExhibitionsController
+    Route::get('/exhibitions/latest', [DashboardInvestorController::class, 'latestExhibitions']);
 
-    // Booth booking routes
-    Route::get('/investor/booths', [BoothController::class, 'myBookings']);
-    Route::post('/investor/booths/{booth_id}/book', [BoothController::class, 'bookBooth']);
-    Route::get('/investor/booths/{bookingId}', [BoothController::class, 'boothDetails']);
+    //AnalyticsController
+    //00
 
-    // Event routes for investor
-    Route::post('/events', [EventController::class, 'store']);
-    Route::put('/events/{id}', [EventController::class, 'update']);
-    Route::get('/events/{id}', [EventController::class, 'show']);
-    Route::delete('/events/{id}', [EventController::class, 'destroy']);
-    Route::get('/events/my-booths', [EventController::class, 'myBoothEvents']);
-    Route::get('/events/my-booths/{eventId}', [EventController::class, 'showEventDetails']);
-    Route::get('/events/booth/{boothId}', [EventController::class, 'boothEvents']);
-    Route::get('/events/exhibition/{exhibitionId}', [EventController::class, 'exhibitionEvents']);
-    Route::get('/events/my', [EventController::class, 'myEvents']);
+    //ExhibitionsController
+    Route::get('/exhibitions', [ExhibitionController::class, 'getAllExhibitions']);
+    //ExhibitionDetailController
+    Route::get('/exhibitions/{id}', [ExhibitionController::class, 'show']);
 
-    // Campaign routes
-    Route::get('/investor/campaigns', [CampaignController::class, 'index']);
-    Route::post('/investor/campaigns', [CampaignController::class, 'store']);
-    Route::delete('/investor/campaigns/{id}', [CampaignController::class, 'destroy']);
+    //BoothController
+    Route::get('/booths', [BoothController::class, 'getAvailableBooths']);//الاجنحة المتاحة
+    //ExhibitionDetailController
+    Route::get('/booths', [BoothController::class, 'getExhibitionBooths']);
+    //BoothDetailController
+    Route::get('/booths/{id}', [BoothController::class, 'getBoothDetail']);
 
-    // Sponsorship booking routes
-    Route::get('/investor/sponsorships', [SponsorshipBookingController::class, 'myBookings']);
-    Route::post('/investor/sponsorships/{eventId}', [SponsorshipBookingController::class, 'store']);
-    Route::get('/investor/sponsorships/{id}', [SponsorshipBookingController::class, 'show']);
-    Route::patch('/investor/sponsorships/{id}/cancel', [SponsorshipBookingController::class, 'cancel']);
-});
-//___________________________________________________________________________________
-Route::middleware('auth:sanctum')->group(function () {
+    //BookingController
+    Route::post('/booths/book', [BoothBookingController::class, 'bookBooth']);//حجز
+    Route::patch('/investor/bookings/{id}/cancel', [BoothBookingController::class, 'cancelBooking']);
+    Route::get('/investor/bookings/{id}', [BoothBookingController::class, 'getBookingDetail']);
+    //BoothController
+    Route::get('/investor/bookings', [BoothBookingController::class, 'myBookings']);//حجوزاتي
 
-    // قبول طلب تذكرة + توليد QR
-    Route::post('/tickets/{ticketId}/approve', [TicketController::class, 'approvTicket']);
+    //Booth Profile
+    Route::get('/investor/booths/{boothId}/profile', [BoothManagementController::class, 'getBoothProfile']);
+    Route::put('/investor/booths/{boothId}/profile', [BoothManagementController::class, 'updateBoothProfile']);
+    Route::post('/investor/booths/{boothId}/cover', [BoothManagementController::class, 'uploadBoothCover']);
+    Route::get('/investor/events', [BoothManagementController::class, 'getBoothEvents']);
 
-    // رفض طلب تذكرة
-    Route::post('/tickets/{ticketId}/reject', [TicketController::class, 'rejectTicket']);
+    //Event
+    Route::post('/investor/events', [EventsController::class, 'createEvent']);
+    Route::get('/investor/events', [EventsController ::class, 'getInvestorEvents']);
+    Route::get('/investor/events/{id}/ticket-requests', [EventsController::class, 'getTicketRequests']);
+    Route::patch('/investor/events/{eventId}/ticket-requests/{requestId}', [EventsController::class, 'ticketRequestAction']);
+    //SponsorEvent
+    Route::get('/investor/sponsor-events', [EventsController::class, 'getSponsorEvents']);
+    Route::get('/investor/sponsorships', [EventsController::class, 'getMySponsorships']);
+    Route::post('/investor/sponsorships', [EventsController::class, 'createSponsorship']);
+    Route::patch('/investor/sponsorships/{id}/cancel', [EventsController::class, 'cancelSponsorship']);
 
-    // عرض التذاكر المعلقة
-    Route::get('/events/{eventId}/tickets/pending', [TicketController::class, 'pendingTickets']);
+    //Reports
+    Route::get('/investor/reports', [ReportsController::class, 'getReports']);
+    Route::get('/investor/reports/{id}', [ReportsController::class, 'getReportDetail']);
+    Route::get('/investor/reports/{id}/download', [ReportsController::class, 'downloadReport']);
 
-    // عرض التذاكر المقبولة
-    Route::get('/events/{eventId}/tickets/accepted', [TicketController::class, 'acceptedTickets']);
+    //Favorites
+    Route::get('/investor/favorites', [FavoritesController::class, 'getFavoritesInvestor']);
+    Route::post('/investor/favorites/{id}', [FavoritesController::class, 'addFavorite']);
+    Route::delete('/investor/favorites/{id}', [FavoritesController::class, 'removeFavorite']);
 
-    // عرض التذاكر المرفوضة
-    Route::get('/events/{eventId}/tickets/rejected', [TicketController::class, 'rejectedTickets']);
+    //Profile
+    Route::get('/investor/profile', [ProfileCompanyController::class, 'getProfile']);
+    Route::put('/investor/profile', [ProfileCompanyController::class, 'updateProfile']);
+    Route::post('/investor/profile/avatar', [ProfileCompanyController::class, 'uploadAvatar']);
 
-});
-//___________________________________________________________________________________
-Route::middleware('auth:sanctum')->group(function () {
 
-    Route::post('/favorites/add', [FavoriteController::class, 'addToFavorite']);
-    Route::post('/favorites/remove', [FavoriteController::class, 'removeFromFavorite']);
 
-    Route::get('/favorites/exhibitions', [FavoriteController::class, 'favoriteExhibitions']);
-    Route::get('/favorites/booths', [FavoriteController::class, 'favoriteBooths']);
-    Route::get('/favorites/events', [FavoriteController::class, 'favoriteEvents']);
-
-});
-
-// public exhibition routes
-Route::get('/exhibitions', [ExhibitionController::class, 'getAllExhibitions']);
-Route::get('/exhibitions/filter', [ExhibitionController::class, 'filter']);
-Route::get('/exhibitions/{id}', [ExhibitionController::class, 'show']);
-Route::get('/exhibitions/ongoing', [ExhibitionController::class, 'ongoing']);
-Route::get('/exhibitions/finished', [ExhibitionController::class, 'finished']);
-Route::get('/exhibitions/upcoming', [ExhibitionController::class, 'upcoming']);
-//___________________________________________________________________________________
-Route::middleware('auth:sanctum')->group(function () {
-
-    Route::get('/ads', [SponsorEventController::class, 'getMySponsorshipAll']);
-    Route::get('/ads/{bookingId}', [SponsorEventController::class, 'showSponsorshipAdDetails']);
 
 });
+
+
+//================================================================
+//***********************Organizer*********************************
+//================================================================
+
+
+
 //___________________________________________________________________________________
 //___________________________________________________________________________________
 //*****************************************************************************
@@ -136,7 +146,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [VisitorController::class, 'logout']);
 });
 
-//*************/ 
+//*************/
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/exhibitions', [ExhibitionController::class, 'featuredExhibitionsForVisitor']);

@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Storage;
 
 class InvestorController extends Controller
 {
-    public function register(InvestorRegisterRequest $request)
+    public function register(InvestorRegisterRequest $request)//✅
     {
         $data = $request->validated();
         $user = User::create([
@@ -29,8 +29,7 @@ class InvestorController extends Controller
             'phone' => $data['phone'],
             'password' => Hash::make($data['password']),
             'role' => 'investor',
-            'status' => 'pending',
-            // 'fcm_token'=> $data['fcm_token'],
+            'status' => 'approved',
         ]);
 
         $investor_data =
@@ -49,12 +48,8 @@ class InvestorController extends Controller
         $data=
         [
             'id'     => $user->id,
-            'company_name'=> $investor->company_name,
             'email'  => $user->email,
-            'phone' => $user->phone,
-            'trade_name' => $investor->trade_name,
-            'location' => $investor->location,
-            'website' => $investor->website,
+            'company_name'=> $investor->company_name,
             'avatar_url'=> $investor->logo,
         ];
 
@@ -73,16 +68,13 @@ class InvestorController extends Controller
         ]);
         Mail::to($user->email)->send(new VerificationCodeMail($newOtp));
         //----------------------------------
-
         return response()->json([
             'message' => 'Investor registered successfully',
             'data' => $data,
-            // 'user' => $user,
-            // 'investor' => $investor,
         ], 201);
     }
     //================================================================
-    public function login(Request $request)
+    public function login(Request $request)//✅
     {
         $request->validate([
             'email'    => 'required|email|exists:users,email',
@@ -128,14 +120,10 @@ class InvestorController extends Controller
         return response()->json([
             'message'  => 'Login successful',
             'data' => $data,
-            // 'token'    => $token,
-            // 'user'     => $user,
-            // 'investor' => $investor,
-            // 'social_links'=> $investor->socialLinks,
         ], 200);
     }
     //================================================================
-    public function logout(Request $request)
+    public function logout(Request $request)//✅
     {
         $request->user()->currentAccessToken()->delete();
 
@@ -145,16 +133,13 @@ class InvestorController extends Controller
     }
 
     //================================================================
-    public function verifyOtp(Request $request)//التحقق من ملكية الايميل
+    public function verifyOtp(Request $request)//التحقق من ملكية الايميل//✅
     {
         $request->validate([
             'otp' => 'required|string'
         ]);
 
-        $user = Auth::user();
-
-        // جلب آخر OTP للمستخدم
-        $otp = OtpCode::where('user_id', $user->id)
+        $otp = OtpCode::where('code', $request->otp)
             ->where('is_used', false)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -169,10 +154,7 @@ class InvestorController extends Controller
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
-        if ($request->otp !== $otp->code)
-        {
-            return response()->json(['message' => 'Invalid OTP'], 400);
-        }
+        $user = User::where('id',$otp->user_id)->first();
 
         $otp->update(['is_used' => true]);
         $user->update(['is_verified' => true]);
@@ -183,9 +165,15 @@ class InvestorController extends Controller
         ], 200);
     }
     //================================================================
-    public function resendOtp()//اعادة ارسال كود التحقق
+    public function resendOtp(Request $request)//اعادة ارسال كود التحقق//✅
     {
-        $user = Auth::user();
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+        // $user = Auth::user();
+        $user = User::where('email', $request->email)->first();
+
+        OtpCode::where('user_id', $user->id)->delete();
 
         $newOtp = rand(100000, 999999);
         while (OtpCode::where('code', $newOtp)->exists())
@@ -208,7 +196,7 @@ class InvestorController extends Controller
         ], 200);
     }
     //================================================================
-    public function forgotPassword(Request $request)
+    public function forgotPassword1(Request $request)//1//✅
     {
         $request->validate([
             'email' => 'required|email|exists:users,email',
@@ -241,17 +229,17 @@ class InvestorController extends Controller
     }
 
     //================================================================
-    public function resetPassword(Request $request)
+    public function forgotPassword2(Request $request)//2-التحقق من الكود//✅
     {
         $request->validate([
-            // 'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|exists:users,email',
             'otp' => 'required|string',
-            'password' => 'required|string|min:6|confirmed',
         ]);
 
-        $user = Auth::user();
+        $user = User::where('email', $request->email)->first();
 
-        $otp = OtpCode::where('user_id', $user->id)
+        $otp = OtpCode::where('email', $request->email)
+            ->where('code', $request->otp)
             ->where('is_used', false)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -266,23 +254,44 @@ class InvestorController extends Controller
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
-        if ($request->otp !== $otp->code)
+        $otp->update(['is_used' => true]);
+
+        return response()->json([
+            'message' => 'OTP verified successfully'
+        ], 200);
+    }
+    //================================================================
+    public function resetPassword(Request $request)//3//✅
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'otp' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $otp = OtpCode::where('email', $request->email)
+            ->where('code', $request->otp)
+            ->where('is_used', true)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$otp)
         {
-            return response()->json(['message' => 'Invalid OTP'], 400);
+            return response()->json(['message' => 'OTP not found'], 404);
         }
+
+        $user = User::where('email', $request->email)->first();
 
         $user->update([
             'password' => Hash::make($request->password),
         ]);
-
-        $otp->update(['is_used' => true]);
 
         return response()->json([
             'message' => 'Password changed successfully.'
         ], 200);
     }
     //================================================================
-    public function updatePassword(Request $request)
+    public function updatePassword(Request $request)//✅
     {
         $user = Auth::user();
         $request->validate([
@@ -307,7 +316,7 @@ class InvestorController extends Controller
 
     }
     //================================================================
-    public function saveFcmToken(Request $request)
+    public function saveFcmToken(Request $request)//✅
     {
         $request->validate([
             'fcm_token' => 'required|string',
@@ -325,83 +334,7 @@ class InvestorController extends Controller
         ], 200);
     }
     //================================================================
-    public function getPorfile()
-    {
-        $user=Auth::user();
-        $investor=$user->investor;
-        return response()->json([
-            'user'=>$user,
-            'investor' =>$investor,
-            'social_links'=> $investor->socialLinks,
-        ], 200);
-    }
-    //================================================================
-    public function UpdatePorfile(UpdateInvestorProfileRequest $request)
-    {
-        $user = Auth::user();
-        $investor = $user->investor;
-
-        $user->update($request->only(['email','phone']));
-
-        if ($request->hasFile('logo'))
-        {
-            if ($investor->logo)
-            {
-                Storage::disk('public')->delete($investor->logo);
-            }
-            $path = $request->file('logo')->store('investor_logo', 'public');
-            $investor->logo = $path;
-            $investor->update(['logo' => $path]);
-        }
-
-        $investor->update($request->only(['bio','location','website']));
-
-        // تحديث الروابط
-        /*
-        الروابط التي فيها id → يتم تعديلها
-        ✔ الروابط التي بدون id → يتم إنشاؤها
-        ✔ الروابط التي لم تُرسل → يتم حذفها
-        */
-        if ($request->filled('links'))
-        {
-            $newLinks = collect($request->links);
-            // 1) حذف الروابط التي لم يتم إرسالها
-            $investor->socialLinks()
-                ->whereNotIn('id', $newLinks->pluck('id')->filter())
-                ->delete();
-
-            // 2) تعديل أو إضافة الروابط
-            foreach ($newLinks as $item)
-            {
-                // تعديل رابط موجود
-                if (isset($item['id']))
-                {
-                    SocialLink::where('id', $item['id'])
-                        ->update([
-                            'link' => $item['link'],
-                            'type' => $item['type'],
-                        ]);
-                }
-                else// إضافة رابط جديد
-                {
-                    SocialLink::create([
-                        'investor_id' => $investor->id,
-                        'link' => $item['link'],
-                        'type' => $item['type'],
-                    ]);
-                }
-            }
-        }
-
-        return response()->json([
-            'message' => 'Updated profile',
-            'user' => $user,
-            'investor' => $investor,
-            'social_links' => $investor->socialLinks,
-        ], 200);
-    }
-    //================================================================
-    public function deleteAccount(Request $request)
+    public function deleteAccount(Request $request)//✅
     {
         $user = Auth::user();
 
@@ -425,6 +358,8 @@ class InvestorController extends Controller
     }
     //================================================================
     //================================================================
+    //================================================================
+
 
 
 }

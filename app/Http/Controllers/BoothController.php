@@ -128,8 +128,202 @@ class BoothController extends Controller
             'message' => 'Booth deleted successfully'
         ], 200);
     }
-    //=============================================================================
-    //=============================================================================
+    //==============================================================
+    //i
+    //==============================================================
+    public function getAvailableBooths(Request $request)//✅
+    {
+        $page  = $request->query('page', 1);
+        $per_page = $request->query('per_page', 20);
+
+        $exhibition_id = $request->query('exhibition_id');
+        $status = $request->query('status');
+
+        $query = Booth::query();
+
+        if ($exhibition_id)
+        {
+            $query->where('exhibition_id', $exhibition_id);
+        }
+
+        if ($status)
+        {
+            $query->where('status_inv', $status);
+        }
+
+        $query->orderBy('created_at', 'desc');
+
+        $booths = $query->paginate($per_page, ['*'], 'page', $page);
+
+        $booths_data = $booths->map(function ($booth)
+        {
+            return
+            [
+                'id' => $booth->id,
+                'number' => $booth->number,
+                'exhibition_name' => $booth->exhibition->name,
+                'image_url' => $booth->image,
+                'area' => $booth->area,
+                'status' => $booth->status_inv,
+                'price' => $booth->price,
+                'start_date' => $booth->exhibition->start_date,
+                'end_date' => $booth->exhibition->end_date,
+                'location' => $booth->location,
+                'amenities' => json_decode($booth->amenities, true) ?? [],
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $booth->id)
+                    ->where('favoritable_type', Booth::class)
+                    ->exists(),
+
+                'services' => json_decode($booth->services, true) ?? [],
+            ];
+        });
+
+        return response()->json([
+            'data' => $booths_data,
+            'pagination' => [
+                'current_page' => $booths->currentPage(),
+                'per_page'     => $booths->perPage(),
+                'total'        => $booths->total(),
+                'last_page'    => $booths->lastPage(),
+            ]
+        ], 200);
+    }
+    //==============================================================
+    public function getExhibitionBooths(Request $request)//✅
+    {
+        $exhibition_id = $request->query('exhibition_id');
+
+        if (!$exhibition_id)
+        {
+            return response()->json(['message' => 'exhibition_id is required'], 400);
+        }
+
+        $per_page = $request->query('per_page', 100);
+
+        $booths = Booth::with(['exhibition', 'boothBookings.investor.user'])
+            ->where('exhibition_id', $exhibition_id)
+            ->orderBy('number', 'asc')
+            ->paginate($per_page);
+
+        $data = $booths->map(function ($booth)
+        {
+            $services = json_decode($booth->services, true) ?? [];
+            $amenities = json_decode($booth->amenities, true) ?? [];
+
+            //if booked
+            $company_name = null;
+            $company_email = null;
+            $company_initials = null;
+            if ($booth->status_inv === 'booked')
+            {
+                $booking = $booth->boothBookings()->latest()->first();
+                if ($booking && $booking->investor)
+                {
+                    $company_name = $booking->investor->company_name;
+                    $company_email = $booking->investor->user->email;
+                    $company_initials = mb_substr($company_name, 0, 2);
+                }
+            }
+
+            return
+            [
+                'id' => $booth->id,
+                'number' => $booth->number,
+                'status' => $booth->status_inv,
+                'price' => $booth->price,
+                'area' => $booth->area,
+
+                'image_url' => $booth->image,
+                'location' => $booth->location,
+                'start_date' => $booth->exhibition->start_date,
+                'end_date' => $booth->exhibition->end_date,
+                'amenities' => $amenities,
+
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $booth->id)
+                    ->where('favoritable_type', Booth::class)
+                    ->exists(),
+
+                'services' => $services,
+
+                //if booked
+                'company_name' => $company_name,
+                'company_email' => $company_email,
+                'company_initials' => $company_initials,
+            ];
+        });
+
+        return response()->json([
+            'data' => $data
+        ], 200);
+    }
+    //==============================================================
+    public function getBoothDetail($booth_id)//✅
+    {
+        $booth = Booth::with([
+        'exhibition',
+        'boothBookings.investor.user'
+        ])->find($booth_id);
+
+        if (!$booth)
+        {
+            return response()->json(['message' => 'Booth not found'], 404);
+        }
+
+        $services = json_decode($booth->services, true) ?? [];
+        $amenities = json_decode($booth->amenities, true) ?? [];
+
+        $company_name = null;
+        $company_email = null;
+        $company_initials = null;
+        if ($booth->status_inv === 'booked')
+        {
+            $booking = $booth->boothBookings()->latest()->first();
+            if ($booking && $booking->investor)
+            {
+                $company_name = $booking->investor->company_name;
+                $company_email = $booking->investor->user->email;
+                $company_initials = mb_substr($company_name, 0, 2);
+            }
+        }
+
+        return response()->json([
+            'data' =>
+            [
+                'id' => $booth->id,
+                'number' => $booth->number,
+                'status' => $booth->status_inv,
+                'price' => $booth->price,
+                'area' => $booth->area,
+
+                'image_url' => $booth->image,
+                'location' => $booth->location,
+                'start_date' => $booth->exhibition->start_date,
+                'end_date' => $booth->exhibition->end_date,
+                'amenities' => $amenities,
+
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $booth->id)
+                    ->where('favoritable_type', Booth::class)
+                    ->exists(),
+
+                'services' => $services,
+                
+                //if booked
+                'company_name' => $company_name,
+                'company_email' => $company_email,
+                'company_initials' => $company_initials,
+
+                'exhibition_id' => $booth->exhibition_id,
+                'exhibition_name' => $booth->exhibition->name,
+            ]
+        ], 200);
+    }
+    //==============================================================
+    //==============================================================
+    //==============================================================
+
 
 
 
