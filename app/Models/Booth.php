@@ -16,7 +16,6 @@ class Booth extends Model
         'status_inv',
         'status',
         'price',
-        'end_date',
         'location',
         'services',
         'map_x',
@@ -30,21 +29,19 @@ class Booth extends Model
     [
         'area'      => 'float',
         'price'     => 'float',
-        'end_date'  => 'date',
     ];
-
     //---------------------------------------------------
-    protected static function booted()
-    {
-        static::creating(function ($booth)
-        {
-            // إذا ما كان في end_date، خليه ياخد تاريخ نهاية المعرض
-            if (empty($booth->end_date))
-            {
-                $booth->end_date = $booth->exhibition->end_date;
-            }
-        });
-    }
+    // protected static function booted()
+    // {
+    //     static::creating(function ($booth)
+    //     {
+    //         // إذا ما كان في end_date، خليه ياخد تاريخ نهاية المعرض
+    //         if (empty($booth->end_date))
+    //         {
+    //             $booth->end_date = $booth->exhibition->end_date;
+    //         }
+    //     });
+    // }
 
     // =================Relationships===================
     public function exhibition()

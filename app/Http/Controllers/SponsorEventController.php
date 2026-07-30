@@ -367,9 +367,8 @@ class SponsorEventController extends Controller
             'statistics' => $statistics
         ], 200);
     }
-    //===============================================================
-    //دعوات//o
-    //===============================================================
+
+    //--------------------------------Invitation/o-------------------------------------------
     public function statisticsSponsorEventInvitations($sponsor_event_id)//احصائيات الدعوات في فعالية ما
     {
         $invitations = SponsorEventInvitation::where('sponsor_event_id', $sponsor_event_id);
@@ -484,20 +483,100 @@ class SponsorEventController extends Controller
             'invitation' => $invitation
         ], 200);
     }
-    //===============================================================
-    //التذاكر//o
-    //===============================================================
+    //-------------------Ticekt/o-----------------------
 
+
+    //===========================================================
+    //SponsorEvent//i
+    //===========================================================
+    public function getSponsorEvents(Request $request)//✅
+    {
+        $page       = $request->query('page', 1);
+        $perPage    = $request->query('per_page', 20);
+        $type       = $request->query('type');
+        $dateStart  = $request->query('date_start');
+        $dateEnd    = $request->query('date_end');
+        $search     = $request->query('search');
+
+        $query = SponsorEvent::with(['exhibition', 'sponsorEventImages'])
+            ->where('copy_status', 'active');
+
+        if ($type)
+        {
+            $query->where('type', $type);
+        }
+
+        if ($dateStart)
+        {
+            $query->whereDate('start_time', '>=', $dateStart);
+        }
+
+        if ($dateEnd)
+        {
+            $query->whereDate('start_time', '<=', $dateEnd);
+        }
+
+        if ($search)
+        {
+            $query->where(function ($q) use ($search)
+            {
+                $q->where('name', 'LIKE', "%$search%")
+                ->orWhereHas('exhibition', function ($ex) use ($search)
+                {
+                    $ex->where('name', 'LIKE', "%$search%");
+                });
+            });
+        }
+
+        $events = $query->orderBy('start_time', 'asc')
+                    ->paginate($perPage, ['*'], 'page', $page);
+
+        $eventsData = $events->map(function ($ev)
+        {
+            return
+            [
+                'id' => $ev->id,
+                'name' => $ev->name,
+                'type' => $ev->type,
+
+                'exhibition_id' => $ev->exhibition_id,
+                'exhibition_name' => $ev->exhibition->name,
+                'exhibition_image_url' => optional($ev->exhibition->exhibitionImages->first())->image,
+
+                'date' => Carbon::parse($ev->start_time)->format('Y-m-d'),
+                'start_time' => Carbon::parse($ev->start_time)->format('H:i'),
+                'end_time' => Carbon::parse($ev->end_time)->format('H:i'),
+
+                'place' => $ev->place,
+                'listing_days' => $ev->duration_days ?? 1,
+                'description' => $ev->description,
+
+                //if exsist
+                'duration_options' => $ev->duration_options
+                    ? json_decode($ev->duration_options, true)
+                    : [],
+
+                'images' => $ev->sponsorEventImages->pluck('image')->toArray(),
+
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $ev->id)
+                    ->where('favoritable_type', SponsorEvent::class)
+                    ->exists(),
+            ];
+        });
+
+        return response()->json([
+            'data' => $eventsData,
+            'pagination' => [
+                'current_page' => $events->currentPage(),
+                'per_page' => $events->perPage(),
+                'total' => $events->total(),
+                'last_page' => $events->lastPage(),
+            ]
+        ], 200);
+    }
     //===============================================================
-    //i
-    //===============================================================
-    
-    //===============================================================
-    //===============================================================
-    //===============================================================
-    //===============================================================
-    //===============================================================
-     // public function getUpcomingSponsorEvents()//للمعارض القادمة
+    // public function getUpcomingSponsorEvents()//للمعارض القادمة
     // {
     //     $exhibitions_id = Exhibition::where('status', 'upcoming')
     //     ->pluck('id');
@@ -533,20 +612,10 @@ class SponsorEventController extends Controller
     //     ], 200);
     // }
     //===============================================================
-    // public function featurrdSponsorEventsI()//عرض الفعاليات الاعلانية المميزة للمستثمر
-    // {
-    //     $invsetor_user=Auth::user()->investor;
-    //     $sponsor_events = SponsorEvent::where('copy_status', 'active')
-    //     ->where('type', $invsetor_user->activity_type)
-    //     ->whereIn('status', ['upcoming', 'ongoing'])
-    //     ->orderBy('start_date', 'asc')
-    //     ->get();
-
-    //     return response()->json([
-    //         'sponsor_events' => $sponsor_events
-    //     ], 200);
-
-    // }
     //===============================================================
+    //===============================================================
+    //===============================================================
+    //===============================================================
+
 
 }

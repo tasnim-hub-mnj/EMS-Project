@@ -6,7 +6,7 @@ use App\Models\Favorite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class FavoritesController extends Controller
+class FavoriteController extends Controller
 {
     public function addFavorite(Request $request, $id)//✅
     {
