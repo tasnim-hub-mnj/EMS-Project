@@ -68,7 +68,7 @@ class Visitor extends Model
         return $this->hasMany(CollectedBooths::class);
     }
     //============================================
-    
+
 
     //التقييمات
     //============================================
@@ -93,6 +93,11 @@ class Visitor extends Model
     public function sponsorEventTickets()
     {
         return $this->hasMany(SponserEventTicket::class);
+    }
+    public function favorites()
+    {
+        return $this->morphMany(Favorite::class, 'favoritable');
+
     }
 
 

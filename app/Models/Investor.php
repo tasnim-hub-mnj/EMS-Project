@@ -10,24 +10,24 @@ class Investor extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'user_id',
-        'company_name',
-        'trade_name',
-        'location',
-        'website',
-        'activity_type',
-        'terms_accepted',
-        'bio',
-        'logo',
-    ];
+        [
+            'user_id',
+            'company_name',
+            'trade_name',
+            'location',
+            'website',
+            'activity_type',
+            'terms_accepted',
+            'bio',
+            'logo',
+        ];
 
     protected $table = 'investors';
 
     protected $casts =
-    [
-        'terms_accepted' => 'boolean',
-    ];
+        [
+            'terms_accepted' => 'boolean',
+        ];
 
     //=================Relationships===================
     public function user()
@@ -37,7 +37,7 @@ class Investor extends Model
     //=====================================================
     public function boothBookings()
     {
-        return $this->hasMany(BoothBooking::class,'investor_id');
+        return $this->hasMany(BoothBooking::class, 'investor_id');
     }
     //=====================================================
     public function events()

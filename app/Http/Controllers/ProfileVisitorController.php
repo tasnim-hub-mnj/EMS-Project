@@ -16,7 +16,7 @@ class ProfileVisitorController extends Controller
 
         // تحميل علاقة الزائر مع الأعداد تلقائياً
         $visitor = $user->visitor()
-            ->withCount(['schedules', 'tickets', 'eventTickets', 'sponsorEventTickets', 'favorites'])
+            ->withCount(['schedule', 'tickets', 'eventTickets', 'sponsorEventTickets', 'favorites'])
             ->first();
 
         $totalTickets = 0;

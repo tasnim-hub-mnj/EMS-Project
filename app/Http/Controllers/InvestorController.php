@@ -33,30 +33,29 @@ class InvestorController extends Controller
         ]);
 
         $investor_data =
-        [
-            'user_id' => $user->id,
-            'company_name' => $data['company_name'],
-            'trade_name' => $data['trade_name'],
-            'location' => $data['location'],
-            'website' => $data['website'],
-            'activity_type' => $data['activity_type'],
+            [
+                'user_id' => $user->id,
+                'company_name' => $data['company_name'],
+                'trade_name' => $data['trade_name'],
+                'location' => $data['location'],
+                'website' => $data['website'],
+                'activity_type' => $data['activity_type'],
 
-        ];
+            ];
 
         $investor = Investor::create($investor_data);
 
-        $data=
-        [
-            'id'     => $user->id,
-            'email'  => $user->email,
-            'company_name'=> $investor->company_name,
-            'avatar_url'=> $investor->logo,
-        ];
+        $data =
+            [
+                'id' => $user->id,
+                'email' => $user->email,
+                'company_name' => $investor->company_name,
+                'avatar_url' => $investor->logo,
+            ];
 
         //----------------------------------
         $newOtp = rand(100000, 999999);
-        while (OtpCode::where('code', $newOtp)->exists())
-        {
+        while (OtpCode::where('code', $newOtp)->exists()) {
             $newOtp = rand(100000, 999999);
         }
         OtpCode::create([
@@ -77,21 +76,19 @@ class InvestorController extends Controller
     public function login(Request $request)//✅
     {
         $request->validate([
-            'email'    => 'required|email|exists:users,email',
+            'email' => 'required|email|exists:users,email',
             'password' => 'required|string',
         ]);
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || $user->role !== 'investor')
-        {
+        if (!$user || $user->role !== 'investor') {
             return response()->json([
                 'message' => 'This account is not an investor'
             ], 403);
         }
 
-        if (!Hash::check($request->password, $user->password))
-        {
+        if (!Hash::check($request->password, $user->password)) {
             return response()->json([
                 'message' => 'Invalid password'
             ], 401);
@@ -99,8 +96,7 @@ class InvestorController extends Controller
 
         $investor = $user->investor;
 
-        if ($user->status === 'pending')
-        {
+        if ($user->status === 'pending') {
             return response()->json([
                 'message' => 'Your account is pending review'
             ], 403);
@@ -108,17 +104,17 @@ class InvestorController extends Controller
 
         $token = $user->createToken('investor_token')->plainTextToken;
 
-        $data=
-        [
-            'token' =>$token,
-            'id'     => $user->id,
-            'email'  => $user->email,
-            'company_name'=> $investor->company_name,
-            'avatar_url'=> $investor->logo,
-        ];
+        $data =
+            [
+                'token' => $token,
+                'id' => $user->id,
+                'email' => $user->email,
+                'company_name' => $investor->company_name,
+                'avatar_url' => $investor->logo,
+            ];
 
         return response()->json([
-            'message'  => 'Login successful',
+            'message' => 'Login successful',
             'data' => $data,
         ], 200);
     }
@@ -144,17 +140,15 @@ class InvestorController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
-        {
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
-        $user = User::where('id',$otp->user_id)->first();
+        $user = User::where('id', $otp->user_id)->first();
 
         $otp->update(['is_used' => true]);
         $user->update(['is_verified' => true]);
@@ -176,8 +170,7 @@ class InvestorController extends Controller
         OtpCode::where('user_id', $user->id)->delete();
 
         $newOtp = rand(100000, 999999);
-        while (OtpCode::where('code', $newOtp)->exists())
-        {
+        while (OtpCode::where('code', $newOtp)->exists()) {
             $newOtp = rand(100000, 999999);
         }
 
@@ -208,8 +201,7 @@ class InvestorController extends Controller
 
 
         $code = rand(100000, 999999);
-        while (OtpCode::where('code', $code)->exists())
-        {
+        while (OtpCode::where('code', $code)->exists()) {
             $code = rand(100000, 999999);
         }
 
@@ -244,13 +236,11 @@ class InvestorController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
-        {
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
@@ -275,8 +265,7 @@ class InvestorController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
@@ -299,8 +288,7 @@ class InvestorController extends Controller
             'new_password' => 'required|string|min:6|confirmed',
         ]);
 
-        if (!Hash::check($request->current_password, $user->password))
-        {
+        if (!Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'message' => 'Invalid password'
             ], 401);
@@ -338,8 +326,7 @@ class InvestorController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user)
-        {
+        if (!$user) {
             return response()->json([
                 'message' => 'User not authenticated'
             ], 401);
@@ -347,8 +334,7 @@ class InvestorController extends Controller
 
         $user->delete();
 
-        if ($request->user()->currentAccessToken())
-        {
+        if ($request->user()->currentAccessToken()) {
             $request->user()->currentAccessToken()->delete();
         }
 
@@ -363,27 +349,27 @@ class InvestorController extends Controller
         $investor = $user->investor;
 
         $social =
-        [
-            'linkedin'  => optional($investor->socialLinks()->where('type', 'linkedin')->first())->link,
-            'twitter'   => optional($investor->socialLinks()->where('type', 'twitter')->first())->link,
-            'instagram' => optional($investor->socialLinks()->where('type', 'instagram')->first())->link,
-            'facebook'  => optional($investor->socialLinks()->where('type', 'facebook')->first())->link,
-        ];
+            [
+                'linkedin' => optional($investor->socialLinks()->where('type', 'linkedin')->first())->link,
+                'twitter' => optional($investor->socialLinks()->where('type', 'twitter')->first())->link,
+                'instagram' => optional($investor->socialLinks()->where('type', 'instagram')->first())->link,
+                'facebook' => optional($investor->socialLinks()->where('type', 'facebook')->first())->link,
+            ];
 
         return response()->json([
             'data' =>
-            [
-                'id'            => $user->id,
-                'name'          => $investor->company_name,
-                'email'         => $user->email,
-                'company_name'  => $investor->company_name,
-                'avatar_url'    => $investor->logo ? asset('storage/' . $investor->logo) : null,
-                'location'      => $investor->location,
-                'phone'         => $user->phone,
-                'website'       => $investor->website,
-                'bio'           => $investor->bio,
-                'social'        => $social,
-            ]
+                [
+                    'id' => $user->id,
+                    'name' => $investor->company_name,
+                    'email' => $user->email,
+                    'company_name' => $investor->company_name,
+                    'avatar_url' => $investor->logo ? asset('storage/' . $investor->logo) : null,
+                    'location' => $investor->location,
+                    'phone' => $user->phone,
+                    'website' => $investor->website,
+                    'bio' => $investor->bio,
+                    'social' => $social,
+                ]
         ], 200);
     }
     //================================================================
@@ -399,27 +385,23 @@ class InvestorController extends Controller
 
         $investor->update([
             'company_name' => $request->company_name,
-            'location'     => $request->location,
-            'website'      => $request->website,
-            'bio'          => $request->bio,
+            'location' => $request->location,
+            'website' => $request->website,
+            'bio' => $request->bio,
         ]);
 
-        if ($request->filled('social'))
-        {
+        if ($request->filled('social')) {
             $social = $request->social;
             $types = ['linkedin', 'twitter', 'instagram', 'facebook'];
 
-            foreach ($types as $type)
-            {
+            foreach ($types as $type) {
                 $linkValue = $social[$type] ?? null;
-                if ($linkValue)
-                {
+                if ($linkValue) {
                     $investor->socialLinks()->updateOrCreate(
                         ['type' => $type],
                         ['link' => $linkValue]
                     );
-                } else
-                {
+                } else {
                     $investor->socialLinks()->where('type', $type)->delete();
                 }
             }
@@ -441,8 +423,7 @@ class InvestorController extends Controller
         $investor = $user->investor;
 
         // حذف الصورة القديمة
-        if ($investor->logo)
-        {
+        if ($investor->logo) {
             Storage::disk('public')->delete($investor->logo);
         }
 
@@ -465,23 +446,23 @@ class InvestorController extends Controller
         $investor = $user->investor;
 
         return
-        [
-            'id'            => $user->id,
-            'name'          => $investor->company_name,
-            'email'         => $user->email,
-            'company_name'  => $investor->company_name,
-            'avatar_url'    => $investor->logo ? asset('storage/' . $investor->logo) : null,
-            'location'      => $investor->location,
-            'phone'         => $user->phone,
-            'website'       => $investor->website,
-            'bio'           => $investor->bio,
-            'social'        => [
-                'linkedin'  => optional($investor->socialLinks()->where('type', 'linkedin')->first())->link,
-                'twitter'   => optional($investor->socialLinks()->where('type', 'twitter')->first())->link,
-                'instagram' => optional($investor->socialLinks()->where('type', 'instagram')->first())->link,
-                'facebook'  => optional($investor->socialLinks()->where('type', 'facebook')->first())->link,
-            ]
-        ];
+            [
+                'id' => $user->id,
+                'name' => $investor->company_name,
+                'email' => $user->email,
+                'company_name' => $investor->company_name,
+                'avatar_url' => $investor->logo ? asset('storage/' . $investor->logo) : null,
+                'location' => $investor->location,
+                'phone' => $user->phone,
+                'website' => $investor->website,
+                'bio' => $investor->bio,
+                'social' => [
+                    'linkedin' => optional($investor->socialLinks()->where('type', 'linkedin')->first())->link,
+                    'twitter' => optional($investor->socialLinks()->where('type', 'twitter')->first())->link,
+                    'instagram' => optional($investor->socialLinks()->where('type', 'instagram')->first())->link,
+                    'facebook' => optional($investor->socialLinks()->where('type', 'facebook')->first())->link,
+                ]
+            ];
     }
     //================================================================
     //================================================================

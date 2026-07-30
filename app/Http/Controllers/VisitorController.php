@@ -89,13 +89,14 @@ class VisitorController extends Controller
         $favoritesCount = 0;
 
         if ($visitor) {
-            $ticketsCount = $visitor->tickets()->count() +
-                $visitor->eventTickets()->count() +
-                $visitor->sponsorEventTickets()->count();
+            $ticketsCount = ($visitor->tickets()->count() ?? 0) +
+                ($visitor->eventTickets()->count() ?? 0) +
+                ($visitor->sponsorEventTickets()->count() ?? 0);
 
-            $scheduleCount = $visitor->schedules ? $visitor->schedules()->count() : 0;
-            $favoritesCount = $visitor->favorites ? $visitor->favorites()->count() : 0;
+            $scheduleCount = method_exists($visitor, 'schedules') ? $visitor->schedules()->count() : 0;
+            $favoritesCount = method_exists($visitor, 'favorites') ? $visitor->favorites()->count() : 0;
         }
+
         $token = $user->createToken('visitor_token')->plainTextToken;
 
         return response()->json([
@@ -108,13 +109,12 @@ class VisitorController extends Controller
                 'first_name' => $visitor ? $visitor->first_name : '',
                 'last_name' => $visitor ? $visitor->last_name : '',
                 'email' => $user->email,
-                'phone' => $visitor ? $visitor->phone : '',
-                'avatar' => $visitor ? $visitor->avatar : null,
+                'phone' => $user->phone ?? '',
+                'avatar' => $visitor ? $visitor->avatar_url : null,
                 'interests' => $visitor ? $visitor->interests : [],
                 'profession' => $visitor ? $visitor->profession : '',
                 'city' => $visitor ? $visitor->city : '',
                 'hobby' => $visitor ? $visitor->hobby : '',
-                'preferred_lang' => $visitor ? $visitor->preferred_lang : 'ar',
                 'schedule_count' => $scheduleCount,
                 'tickets_count' => $ticketsCount,
                 'favorites_count' => $favoritesCount,

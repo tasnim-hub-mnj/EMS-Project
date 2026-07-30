@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ExhibitionSeeder::class,
             BoothSeeder::class,
             SponsorEventSeeder::class,
+            VisitorSeeder::class,
         ]);
     }
 }
