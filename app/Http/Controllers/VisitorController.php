@@ -10,48 +10,59 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class VisitorController extends Controller
 {
     public function register(Request $request)
     {
-        $validated = $request->validate([
-            'email' => 'required|string|email|unique:users,email',
-            'firstName' => 'required|string|max:255',
-            'lastName' => 'required|string|max:255',
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|unique:users,phone',
             'password' => 'required|string|min:6',
+            'firstName' => 'required|string|max:255',
+            'lastName' => 'required|string|max:255',
         ]);
 
-        $otpCode = (string) rand(1000, 9999);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
 
+        DB::beginTransaction();
 
-        DB::transaction(function () use ($validated, $otpCode) {
+        try {
             $user = User::create([
-                'email' => $validated['email'],
-                'phone' => $validated['phone'],
-                'password' => Hash::make($validated['password']),
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'password' => Hash::make($request->password),
                 'role' => 'visitor',
                 'status' => 'pending',
-
             ]);
 
             Visitor::create([
                 'user_id' => $user->id,
-                'first_name' => $validated['firstName'],
-                'lastName' => $validated['lastName'],
-                'profession' => '',
-                'city' => '',
-                'hobby' => '',
-                'interests' => [],
+                'first_name' => $request->firstName,
+                'last_name' => $request->lastName,
             ]);
-        });
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Registration successful. Please verify your OTP.',
-            'otp' => $otpCode
-        ], 201);
+            DB::commit();
+            return response()->json([
+                'status' => true,
+                'message' => 'User registered successfully',
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Registration failed: ' . $e->getMessage(),
+            ], 500);
+        }
+
     }
     //================================================================
 
@@ -91,6 +102,7 @@ class VisitorController extends Controller
             'status' => true,
             'message' => 'تم تسجيل الدخول بنجاح',
             'token' => $token,
+            'token_type' => 'Bearer',
             'user' => [
                 'id' => $user->id,
                 'first_name' => $visitor ? $visitor->first_name : '',
@@ -107,6 +119,18 @@ class VisitorController extends Controller
                 'tickets_count' => $ticketsCount,
                 'favorites_count' => $favoritesCount,
             ]
+        ], 200);
+    }
+    //=================================================================
+    public function logout(Request $request)
+    {
+        // حذف التوكين المستخدَم حالياً للتسجيل
+        $request->user()->currentAccessToken()->delete();
+
+        // إرجاع الاستجابة بنفس الشكل المطلوب في الموثق
+        return response()->json([
+            'status' => true,
+            'message' => 'Logged out successfully',
         ], 200);
     }
     //=================================================================

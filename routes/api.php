@@ -173,21 +173,24 @@ Route::middleware('auth:sanctum')->group(function () {
 //____________________________________________________________________________________________
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/support/tickets', [SupportTicketController::class, 'index']);
+    Route::get('/support/tickets', [SupportTicketController::class, 'AllTickets']);
     Route::get('/support/tickets/{id}', [SupportTicketController::class, 'show']);
     Route::post('/support/messages', [SupportTicketController::class, 'storeMessage']);
     Route::post('/support/report', [SupportTicketController::class, 'storeReport']);
+    Route::post('/support/location', [SupportTicketController::class, 'sendLocation']);
     //__________________________________________________________________________________________
 
 });
 Route::middleware('auth:sanctum')->group(function () {
     //تذاكر الزائر
     Route::get('/bookings/my-tickets', [TicketController::class, 'myTickets']);
-    Route::get('/tickets/exhibition/{id}', [TicketController::class, 'showExhibitionTicket']);
-    Route::get('/tickets/event/{id}', [TicketController::class, 'showEventTicket']);
+    Route::post('/exhibition', [TicketController::class, 'bookExhibition']);
+    Route::get('/exhibition/{id}', [TicketController::class, 'getExhibitionTicket']);
+    Route::post('/event', [TicketController::class, 'bookEvent']);
+    Route::get('/event/{id}', [TicketController::class, 'getEventTicket']);
+    Route::delete('/{id}/cancel', [TicketController::class, 'cancelTicket']);
     Route::get('/tickets/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
-    Route::post('/tickets/exhibition', [TicketController::class, 'bookExhibitionTicket']);
-    Route::post('/tickets/event', [TicketController::class, 'bookEventTicket']);
+
     Route::post('/tickets/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
 
 });

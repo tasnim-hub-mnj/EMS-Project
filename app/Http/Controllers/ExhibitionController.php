@@ -108,7 +108,7 @@ class ExhibitionController extends Controller
         $per_page = $request->query('per_page', 15);
 
         $search = $request->query('search');
-        $city   = $request->query('city');
+        $city = $request->query('city');
         $sector = $request->query('sector');
         $status = $request->query('status'); // upcoming | active | ended
 
@@ -123,14 +123,14 @@ class ExhibitionController extends Controller
             });
         }
 
-        if ($city)
-        {
+        if ($city) {
             $query->where('city', $city);
         }
 
         if ($sector)
         {
             $query->whereJsonContains('sectors', $sector);
+
         }
 
         // Status filter (mapping API → DB)
@@ -360,7 +360,7 @@ class ExhibitionController extends Controller
         ], 200);
     }
     //===============================================================
-    public function getEventsExh($id)
+    public function getEventsExh(Request $request, $id)
     {
         $exhibition = Exhibition::find($id);
         if (!$exhibition) {
@@ -369,14 +369,79 @@ class ExhibitionController extends Controller
                 'message' => 'المعرض غير موجود'
             ], 404);
         }
-        $events = Event::whereHas('boothBooking.booth', function ($query) use ($id) {
+        $perPage = (int) $request->input('per_page', 20);
+
+
+        $user = auth('sanctum')->user();
+        $visitorId = $user?->visitor?->id;
+
+        $eventsQuery = Event::whereHas('boothBooking.booth', function ($query) use ($id) {
             $query->where('exhibition_id', $id);
-        })->get();
+        })->with([
+                    'boothBooking.booth.hall',
+                    'boothBooking.company',
+
+                    'tickets' => function ($query) use ($visitorId) {
+                        if ($visitorId) {
+                            $query->where('visitor_id', $visitorId);
+                        }
+                    }
+                ]);
+
+        $events = $eventsQuery->paginate($perPage);
+
+        $formattedEvents = $events->getCollection()->map(function ($event) use ($exhibition, $visitorId, $id) {
+
+            $boothBooking = $event->boothBooking;
+            $booth = $boothBooking?->booth;
+            $totalSeats = (int) ($event->max_participants ?? $event->total_seats ?? 0);
+            $registeredCount = (int) ($event->registered_count ?? 0);
+            $availableSeats = max(0, $totalSeats - $registeredCount);
+
+            $startTime = null;
+            if ($event->date && $event->time) {
+                $startTime = \Carbon\Carbon::parse($event->date . ' ' . $event->time)->toIso8601String();
+            }
+
+            $endTime = null;
+            if ($event->end_time) {
+                $endTime = \Carbon\Carbon::parse($event->end_time)->toIso8601String();
+            }
+
+            $isRegistered = false;
+            if ($visitorId && $event->relationLoaded('tickets')) {
+                $isRegistered = $event->tickets->whereIn('status', ['pending', 'approved'])->isNotEmpty();
+            }
+
+            return [
+                'id' => $event->id,
+                'exhibition_id' => (int) $id,
+                'name' => $event->name ?? '',
+                'type' => $event->type ?? '',
+                'hall' => $booth?->hall?->name ?? $event->place ?? '',
+                'booth' => $booth?->name ?? $booth?->booth_number ?? '',
+                'company_name' => $boothBooking?->company?->name ?? '',
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'description' => $event->description ?? '',
+                'image_url' => $event->video_promo_url ?? null,
+                'speaker_name' => $event->speaker_name ?? '',
+                'available_seats' => $availableSeats,
+                'total_seats' => $totalSeats,
+                'is_registered' => $isRegistered,
+                'exhibition_name' => $exhibition->name ?? '',
+            ];
+        });
 
         return response()->json([
             'status' => true,
-            'message' => 'تم جلب فعاليات المعرض بنجاح',
-            'data' => $events
+            'data' => $formattedEvents,
+            'pagination' => [
+                'current_page' => $events->currentPage(),
+                'last_page' => $events->lastPage(),
+                'per_page' => $events->perPage(),
+                'total' => $events->total(),
+            ]
         ], 200);
     }
     //===============================================================
@@ -400,6 +465,7 @@ class ExhibitionController extends Controller
     //===============================================================
     public function getFloorMap($id)
     {
+        //  جلب المعرض مع الأكشاك التابعة له
         $exhibition = Exhibition::with('booths')->find($id);
 
         if (!$exhibition) {
@@ -409,42 +475,55 @@ class ExhibitionController extends Controller
             ], 404);
         }
 
+        $mapData = (array) ($exhibition->extra_services ?? []);
+
+        if (empty($mapData)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'بيانات الخريطة غير متوفرة لهذا المعرض'
+            ], 404);
+        }
+
         $boothsData = [];
         if ($exhibition->booths) {
             foreach ($exhibition->booths as $booth) {
+                $amenities = $booth->services;
+                if (is_string($amenities)) {
+                    $amenities = json_decode($amenities, true);
+                }
+
                 $boothsData[] = [
-                    'id' => $booth->id,
-                    'number' => $booth->number,
-                    'col' => $booth->map_x ?? 0,
-                    'row' => $booth->map_y ?? 0,
-                    'width' => (int) $booth->area,
-                    'depth' => $booth->map_z ?? 2,
+                    'id' => (int) $booth->id,
+                    'number' => (string) $booth->number,
+                    'col' => (int) ($booth->map_x ?? 0),
+                    'row' => (int) ($booth->map_y ?? 0),
+                    'width' => (int) ($booth->area ?? 1),
+                    'depth' => (int) ($booth->map_z ?? 1),
                     'height' => 1.5,
                     'status' => ($booth->status === 'available') ? 'available' : 'booked',
                     'price' => (float) $booth->price,
                     'area' => (float) $booth->area,
-                    'amenities' => is_string($booth->services) ? json_decode($booth->services) : ($booth->services ?? []), // حقل الخدمات من جدولك
+                    'amenities' => is_array($amenities) ? array_values($amenities) : [],
                 ];
             }
         }
-
 
         return response()->json([
             'status' => true,
             'message' => 'تم جلب مخطط المعرض بنجاح',
             'data' => [
-                'exhibition_id' => $exhibition->id,
-                'exhibition_name' => $exhibition->name,
-                'grid_width' => 20,
-                'grid_depth' => 20,
-                'halls' => [
-                    [
-                        'id' => "1",
-                        'name' => "Main Hall",
-                        'color' => "FFFFFF",
-                        'booths' => $boothsData
-                    ]
-                ]
+                'exhibition_id' => (int) $exhibition->id,
+                'exhibition_name' => (string) $exhibition->name,
+                'grid_width' => (int) ($mapData['grid_width'] ?? 20),
+                'grid_depth' => (int) ($mapData['grid_depth'] ?? 20),
+                'halls' => array_map(function ($hall) use ($boothsData) {
+                    return [
+                        'id' => (string) ($hall['id'] ?? '1'),
+                        'name' => (string) ($hall['name'] ?? 'Main Hall'),
+                        'color' => (string) ($hall['color'] ?? 'FFFFFF'),
+                        'booths' => $boothsData // دمج الأكشاك المحضرة داخل كل قاعة
+                    ];
+                }, $mapData['halls'] ?? [])
             ]
         ], 200);
     }
