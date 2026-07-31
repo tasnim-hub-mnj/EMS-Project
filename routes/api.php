@@ -41,8 +41,7 @@ Route::post('/auth/forgot-password', [InvestorController::class, 'forgotPassword
 Route::post('/auth/forgot-password/verify-otp', [InvestorController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
 Route::post('/auth/reset-password', [InvestorController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
 
-Route::middleware('auth:sanctum')->group(function ()
-{
+Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/change-password', [InvestorController::class, 'updatePassword']);// تغيير كلمة المرور داخل التطبيق
     Route::post('/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);// حفظ FCM Token
     Route::post('/auth/delete-account', [InvestorController::class, 'deleteAccount']);// حذف الحساب
@@ -80,7 +79,7 @@ Route::middleware('auth:sanctum')->group(function ()
 
     //Event
     Route::post('/investor/events', [EventController::class, 'createEvent']);
-    Route::get('/investor/events', [EventController ::class, 'getInvestorEvents']);
+    Route::get('/investor/events', [EventController::class, 'getInvestorEvents']);
     Route::get('/investor/events/{id}/ticket-requests', [EventController::class, 'getTicketRequests']);
     Route::patch('/investor/events/{eventId}/ticket-requests/{requestId}', [EventController::class, 'ticketRequestAction']);
     //SponsorEvent
@@ -126,40 +125,40 @@ Route::post('/auth/register', [VisitorController::class, 'register']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
-
+    //profile+logout
     Route::get('/profile', [ProfileVisitorController::class, 'getProfile']);
     Route::match(['put', 'post'], '/profile/update', [ProfileVisitorController::class, 'updateProfile']);
     Route::post('/profile/delete-account', [ProfileVisitorController::class, 'deleteAccount']);
+    Route::post('/profile/change-password', [ProfileVisitorController::class, 'changePassword']);
     Route::post('/auth/logout', [VisitorController::class, 'logout']);
 });
 
 //*************/
 Route::middleware('auth:sanctum')->group(function () {
-
+    //exh
     Route::get('/exhibitions', [ExhibitionController::class, 'featuredExhibitionsForVisitor']);
     Route::get('/exhibitions/{id}/events', [ExhibitionController::class, 'getEventsExh']);
     Route::get('/exhibitions/{id}/booths', [ExhibitionController::class, 'getBoothsExh']);
     Route::get('/exhibitions/{id}/map', [ExhibitionController::class, 'getFloorMap']);
 
-    //Route::post('/exhibition/review', [ExhibitionReviewController::class, 'addReviewExhibition']);
+    //exh review
     Route::get('/exhibitions/{id}/reviews', [ExhibitionReviewController::class, 'getExhibitionReviews']);
     Route::get('/reviews/exhibitions/all', [ExhibitionReviewController::class, 'getAllExhibitionsReviews']);
     Route::post('/reviews/exhibition', [ExhibitionReviewController::class, 'submitExhibitionReview']);
-    //Route::get('/exhibitions/reviews', [ExhibitionReviewController::class, 'allExhibitionReviews']);
+
     //__________________________________________________________________________________________
-    // Route::post('/booth/review', [BoothReviewController::class, 'addReviewBooth']);
+    //booth review
     Route::get('/booths/{id}/reviews', [BoothReviewController::class, 'getBoothReviews']);
     Route::get('/reviews/booths/all', [BoothReviewController::class, 'getAllBoothsReviews']);
     Route::post('/reviews/booth', [BoothReviewController::class, 'submitBoothReview']);
 
-    // Route::get('/booths/reviews', [BoothReviewController::class, 'allBoothReviews']);
     //____________________________________________________________________________________________
 // عرض كل تقييمات زائر معيّن (معرض + جناح)
     Route::get('/visitor/{id}/reviews', [VisitorController::class, 'visitorReviews']);
 });
 //____________________________________________________________________________________________
 Route::middleware('auth:sanctum')->group(function () {
-
+    //support ticket
     Route::get('/support/tickets', [SupportTicketController::class, 'AllTickets']);
     Route::get('/support/tickets/{id}', [SupportTicketController::class, 'show']);
     Route::post('/support/messages', [SupportTicketController::class, 'storeMessage']);
