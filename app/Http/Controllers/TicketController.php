@@ -378,7 +378,7 @@ class TicketController extends Controller
 
         // 3. تذاكر الفعاليات الإعلانية (Sponsor Events)
         $sponsorTickets = SponserEventTicket::with('sponsorEvent')
-            ->where('visitor_id', $visitor->id)
+            ->where('visitor_id', $visitor->سid)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($t) {
@@ -397,7 +397,7 @@ class TicketController extends Controller
                 ];
             });
 
-        // 4. دمج كل التذاكر في مصفوفة واحدة مثل التوثيق
+        // 4. دمج كل التذاكر في مصفوفة واحدةق
         $allTickets = $exhibitionTickets
             ->concat($eventTickets)
             ->concat($sponsorTickets)

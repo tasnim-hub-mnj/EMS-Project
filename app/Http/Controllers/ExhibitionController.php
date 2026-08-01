@@ -105,7 +105,7 @@ class ExhibitionController extends Controller
     //===============================================================
     public function getAllExhibitions(Request $request)//✅
     {
-        $page     = $request->query('page', 1);
+        $page = $request->query('page', 1);
         $per_page = $request->query('per_page', 15);
 
         $search = $request->query('search');
@@ -117,12 +117,10 @@ class ExhibitionController extends Controller
             'sponsorEvents'
         ])->where('copy_status', 'active');
 
-        if ($search)
-        {
-            $query->where(function ($q) use ($search)
-            {
+        if ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%$search%")
-                ->orWhere('city', 'LIKE', "%$search%");
+                    ->orWhere('city', 'LIKE', "%$search%");
             });
         }
 
@@ -130,24 +128,21 @@ class ExhibitionController extends Controller
             $query->where('city', $city);
         }
 
-        if ($sector)
-        {
+        if ($sector) {
             $query->whereJsonContains('sectors', $sector);
 
         }
 
         // Status filter (mapping API → DB)
-        if ($status)
-        {
+        if ($status) {
             $statusMap =
-            [
-                'upcoming' => 'upcoming',
-                'active'   => 'ongoing',
-                'ended'    => 'finished'
-            ];
+                [
+                    'upcoming' => 'upcoming',
+                    'active' => 'ongoing',
+                    'ended' => 'finished'
+                ];
 
-            if (isset($statusMap[$status]))
-            {
+            if (isset($statusMap[$status])) {
                 $query->where('status', $statusMap[$status]);
             }
         }
@@ -156,8 +151,7 @@ class ExhibitionController extends Controller
 
         $exhibitions = $query->paginate($per_page, ['*'], 'page', $page);
 
-        $exhibitions_data = $exhibitions->map(function ($exhibition)
-        {
+        $exhibitions_data = $exhibitions->map(function ($exhibition) {
             return
             [
                 'id' => $exhibition->id,
@@ -186,12 +180,12 @@ class ExhibitionController extends Controller
         return response()->json([
             'data' => $exhibitions_data,
             'pagination' =>
-            [
-                'current_page' => $exhibitions->currentPage(),
-                'per_page'     => $exhibitions->perPage(),
-                'total'        => $exhibitions->total(),
-                'last_page'    => $exhibitions->lastPage(),
-            ]
+                [
+                    'current_page' => $exhibitions->currentPage(),
+                    'per_page' => $exhibitions->perPage(),
+                    'total' => $exhibitions->total(),
+                    'last_page' => $exhibitions->lastPage(),
+                ]
         ], 200);
     }
     //===============================================================
@@ -203,8 +197,7 @@ class ExhibitionController extends Controller
             'sponsorEvents'
         ])->find($exhibition_id);
 
-        if (!$exhibition)
-        {
+        if (!$exhibition) {
             return response()->json(['message' => 'Exhibition not found'], 404);
         }
 
@@ -221,14 +214,13 @@ class ExhibitionController extends Controller
 
         $map_data = $exhibition->map;
 
-        $sponsor_events = $exhibition->sponsorEvents->map(function ($event)
-        {
+        $sponsor_events = $exhibition->sponsorEvents->map(function ($event) {
             return
-            [
-                'id' => $event->id,
-                'name' => $event->name,
-                'type' => $event->type,
-            ];
+                [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'type' => $event->type,
+                ];
         });
 
         return response()->json([

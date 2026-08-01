@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileVisitorController extends Controller
 {
@@ -16,7 +17,7 @@ class ProfileVisitorController extends Controller
 
         // تحميل علاقة الزائر مع الأعداد تلقائياً
         $visitor = $user->visitor()
-            ->withCount(['schedules', 'tickets', 'eventTickets', 'sponsorEventTickets', 'favorites'])
+            ->withCount(['schedule', 'tickets', 'eventTickets', 'sponsorEventTickets', 'favorites'])
             ->first();
 
         $totalTickets = 0;
@@ -171,6 +172,36 @@ class ProfileVisitorController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Account deleted successfully',
+        ], 200);
+    }
+    //============================================================
+    public function changePassword(Request $request)
+    {
+        $user = $request->user();
+
+        $rules = [
+            'password' => ['required', 'string', 'confirmed', Password::defaults()],
+        ];
+        if (!is_null($user->password)) {
+            $rules['current_password'] = ['required', 'string'];
+        }
+
+        $request->validate($rules);
+        if (!is_null($user->password)) {
+            if (!Hash::check($request->current_password, $user->password)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'كلمة المرور الحالية غير صحيحة'
+                ], 422);
+            }
+        }
+        $user->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم حفظ كلمة المرور بنجاح'
         ], 200);
     }
 }

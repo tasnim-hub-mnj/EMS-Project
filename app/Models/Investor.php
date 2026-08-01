@@ -24,9 +24,9 @@ class Investor extends Model
     protected $table = 'investors';
 
     protected $casts =
-    [
-        'terms_accepted' => 'boolean',
-    ];
+        [
+            'terms_accepted' => 'boolean',
+        ];
 
     //=================Relationships===================
     public function user()
@@ -36,7 +36,7 @@ class Investor extends Model
     //=====================================================
     public function boothBookings()
     {
-        return $this->hasMany(BoothBooking::class,'investor_id');
+        return $this->hasMany(BoothBooking::class, 'investor_id');
     }
     //=====================================================
     public function events()

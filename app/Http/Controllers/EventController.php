@@ -35,8 +35,7 @@ class EventController extends Controller
             ->where('status', 'approved')
             ->first();
 
-        if (!$booking)
-        {
+        if (!$booking) {
             return response()->json([
                 'message' => 'You do not have an approved booking for this booth.'
             ], 400);
@@ -45,8 +44,7 @@ class EventController extends Controller
         //التحقق أن الفعالية ضمن فترة الحجز
         $start = Carbon::parse($data['start_date']);
         $end = Carbon::parse($data['end_date']);
-        if ($start < $booking->start_date || $end > $booking->end_date)
-        {
+        if ($start < $booking->start_date || $end > $booking->end_date) {
             return response()->json([
                 'message' => 'Event dates must be within your booth booking period.'
             ], 400);
@@ -77,10 +75,8 @@ class EventController extends Controller
         ]);
 
         $images = [];
-        if ($request->hasFile('images'))
-        {
-            foreach ($request->file('images') as $img)
-            {
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $img) {
                 $path = $img->store('event_images', 'public');
 
                 $images[] = EventImage::create([
@@ -112,30 +108,29 @@ class EventController extends Controller
         ->orderBy('start_date', 'asc')
         ->get();
 
-        $data = $events->map(function ($ev)
-        {
+        $data = $events->map(function ($ev) {
             $booth = $ev->boothBooking->booth;
             $exhibition = $booth->exhibition;
 
             return
-            [
-                'id' => $ev->id,
-                'name' => $ev->name,
-                'type' => $ev->type,
+                [
+                    'id' => $ev->id,
+                    'name' => $ev->name,
+                    'type' => $ev->type,
 
-                'booth_number' => $booth->number,
-                'exhibition_name' => $exhibition->name,
+                    'booth_number' => $booth->number,
+                    'exhibition_name' => $exhibition->name,
 
                 'start_date' => Carbon::parse($ev->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($ev->end_date)->format('Y-m-d'),
 
                 'time' => Carbon::parse($ev->start_date)->format('H:i') . ' - ' . Carbon::parse($ev->end_date)->format('H:i'),
 
-                'max_participants' => $ev->max_participants,
-                'registered_count' => $ev->registered_count ?? 0,
+                    'max_participants' => $ev->max_participants,
+                    'registered_count' => $ev->registered_count ?? 0,
 
-                'status' => $ev->status,
-                'description' => $ev->description,
+                    'status' => $ev->status,
+                    'description' => $ev->description,
 
                 'requires_booking' => $ev->requires_booking,
                 'has_bookable_seats' => $ev->has_bookable_seats,
@@ -143,24 +138,24 @@ class EventController extends Controller
                 'booked_seats' => $ev->registered_count ?? 0,
                 // 'sold_tickets' => $ev->sold_tickets ?? 0,
 
-                'ticket_price' => $ev->ticket_price,
-                'is_general_invitation' => $ev->is_general_invitation,
+                    'ticket_price' => $ev->ticket_price,
+                    'is_general_invitation' => $ev->is_general_invitation,
 
-                'place' => $ev->place,
-                'duration_days' => $ev->duration_days,
-                'company_images' => $ev->eventImages->pluck('image')->toArray(),
+                    'place' => $ev->place,
+                    'duration_days' => $ev->duration_days,
+                    'company_images' => $ev->eventImages->pluck('image')->toArray(),
 
-                // الإحصائيات اليومية
-                'current_day' => $ev->current_day ?? 1,
-                'total_event_days' => $ev->duration_days,
-                'daily_attendees' => json_decode($ev->daily_attendees, true) ?? [],
-                'scanned_count' => $ev->scanned_count ?? 0,
+                    // الإحصائيات اليومية
+                    'current_day' => $ev->current_day ?? 1,
+                    'total_event_days' => $ev->duration_days,
+                    'daily_attendees' => json_decode($ev->daily_attendees, true) ?? [],
+                    'scanned_count' => $ev->scanned_count ?? 0,
 
-                'is_favorite' => Auth::user()->favorites()
-                    ->where('favoritable_id', $ev->id)
-                    ->where('favoritable_type', Event::class)
-                    ->exists(),
-            ];
+                    'is_favorite' => Auth::user()->favorites()
+                        ->where('favoritable_id', $ev->id)
+                        ->where('favoritable_type', Event::class)
+                        ->exists(),
+                ];
         });
 
         return response()->json([
@@ -187,19 +182,18 @@ class EventController extends Controller
             ->orderBy('booked_at', 'desc')
             ->get();
 
-        $data = $tickets->map(function ($ticket)
-        {
+        $data = $tickets->map(function ($ticket) {
             return
-            [
-                'id' => $ticket->id,
-                'visitor_name' => $ticket->visitor->first_name . ' ' . $ticket->visitor->last_name,
-                'visitor_phone' => $ticket->visitor->user->phone,
-                'visitor_email' => $ticket->visitor->user->email,
-                'status' => $ticket->status,
-                'amount' => $ticket->amount,
-                'booked_at' => $ticket->booked_at,
-                'qr_code' => $ticket->qr_code,
-            ];
+                [
+                    'id' => $ticket->id,
+                    'visitor_name' => $ticket->visitor->first_name . ' ' . $ticket->visitor->last_name,
+                    'visitor_phone' => $ticket->visitor->user->phone,
+                    'visitor_email' => $ticket->visitor->user->email,
+                    'status' => $ticket->status,
+                    'amount' => $ticket->amount,
+                    'booked_at' => $ticket->booked_at,
+                    'qr_code' => $ticket->qr_code,
+                ];
         });
 
         return response()->json([
@@ -207,7 +201,7 @@ class EventController extends Controller
         ], 200);
     }
     //===========================================================
-    public function ticketRequestAction(Request $request,$event_id,$ticket_id)//✅
+    public function ticketRequestAction(Request $request, $event_id, $ticket_id)//✅
     {
         $request->validate([
             'action' => 'required|in:approve,reject'
@@ -224,21 +218,18 @@ class EventController extends Controller
                 'message' => 'You do not can access this event ticket.'
             ], 400);
         }
-        
+
         $ticket = EventTicket::where('id', $ticket_id)
             ->where('event_id', $event_id)
             ->firstOrFail();
 
         //approve
-        if ($request->action === 'approve')
-        {
-            if ($ticket->status === 'approved')
-            {
+        if ($request->action === 'approve') {
+            if ($ticket->status === 'approved') {
                 return response()->json(['message' => 'Ticket already approved'], 400);
             }
 
-            if ($event->total_seats == 0)
-            {
+            if ($event->total_seats == 0) {
                 return response()->json(['message' => 'No seats available'], 400);
             }
 
@@ -260,16 +251,13 @@ class EventController extends Controller
         }
 
         //reject
-        if ($request->action === 'reject')
-        {
-            if ($ticket->status === 'rejected')
-            {
+        if ($request->action === 'reject') {
+            if ($ticket->status === 'rejected') {
                 return response()->json(['message' => 'Ticket already rejected'], 400);
             }
 
             //التراجع
-            if ($ticket->status === 'approved')
-            {
+            if ($ticket->status === 'approved') {
                 $event->decrement('registered_count');
                 $event->increment('total_seats');
             }
@@ -623,10 +611,10 @@ class EventController extends Controller
     //=====================الزائر===============================
     public function getLatestEvents(Request $request)
     {
-        $visitor = $request->user()->visitor;
+        $visitor = $request->user()?->visitor;
 
+        $perPage = (int) $request->query('per_page', 6);
         $isLatest = $request->query('latest', 0);
-        $perPage = $request->query('per_page', 6);
 
         $query = Event::with([
             'boothBooking.booth.exhibition',
@@ -637,28 +625,27 @@ class EventController extends Controller
             $query->latest();
         }
 
-        $events = $query->take($perPage)->get();
+        $events = $query->paginate($perPage);
 
-        $formattedEvents = $events->map(function ($event) use ($visitor) {
+        $registeredEventIds = [];
+        if ($visitor) {
+            $registeredEventIds = \DB::table('event_tickets')
+                ->where('visitor_id', $visitor->id)
+                ->whereIn('event_id', $events->pluck('id'))
+                ->pluck('event_id')
+                ->toArray();
+        }
+        $formattedEvents = $events->getCollection()->map(function ($event) use ($registeredEventIds) {
             $booking = $event->boothBooking;
             $booth = $booking?->booth;
             $exhibition = $booth?->exhibition;
 
-            $isRegistered = false;
-            if ($visitor) {
-                $isRegistered = \DB::table('event_tickets')
-                    ->where('visitor_id', $visitor->id)
-                    ->where('event_id', $event->id)
-                    ->exists();
-            }
-
             $totalSeats = $event->total_seats ?? 0;
             $registeredCount = $event->registered_count ?? 0;
-            $availableSeats = max(0, $totalSeats - $registeredCount);
 
             return [
-                'id' => $event->id,
-                'exhibition_id' => $exhibition?->id,
+                'id' => (int) $event->id,
+                'exhibition_id' => $exhibition?->id ? (int) $exhibition->id : null,
                 'name' => $event->name,
                 'type' => $event->type,
                 'hall' => $booth?->hall_name ?? 'الرئيسية',
@@ -673,19 +660,28 @@ class EventController extends Controller
                 'description' => $event->description,
                 'image_url' => $event->images?->first()?->image_url ?? $event->video_promo_url ?? null,
                 'speaker_name' => $event->by ?? 'متحدث رسمي',
-                'available_seats' => $availableSeats,
-                'total_seats' => $totalSeats,
-                'is_registered' => $isRegistered,
+                'available_seats' => max(0, $totalSeats - $registeredCount),
+                'total_seats' => (int) $totalSeats,
+                'is_registered' => in_array($event->id, $registeredEventIds),
                 'exhibition_name' => $exhibition?->name ?? 'معرض غير محدد',
             ];
         });
 
-        return response()->json($formattedEvents, 200);
+        return response()->json([
+            'status' => true,
+            'data' => $formattedEvents,
+            'pagination' => [
+                'total' => $events->total(),
+                'per_page' => $events->perPage(),
+                'current_page' => $events->currentPage(),
+                'last_page' => $events->lastPage(),
+            ]
+        ], 200);
     }
     //=====================================================
     public function getEventById(Request $request, $id)
     {
-        $visitor = $request->user()->visitor;
+        $visitor = $request->user()?->visitor;
 
         $event = Event::with([
             'boothBooking.booth.exhibition',
@@ -704,13 +700,13 @@ class EventController extends Controller
                 ->exists();
         }
 
-        $totalSeats = $event->total_seats ?? 0;
-        $registeredCount = $event->registered_count ?? 0;
+        $totalSeats = (int) ($event->total_seats ?? 0);
+        $registeredCount = (int) ($event->registered_count ?? 0);
         $availableSeats = max(0, $totalSeats - $registeredCount);
 
         $formattedEvent = [
-            'id' => $event->id,
-            'exhibition_id' => $exhibition?->id,
+            'id' => (int) $event->id,
+            'exhibition_id' => $exhibition?->id ? (int) $exhibition->id : null,
             'name' => $event->name,
             'type' => $event->type,
             'hall' => $booth?->hall_name ?? 'الرئيسية',
@@ -731,7 +727,10 @@ class EventController extends Controller
             'exhibition_name' => $exhibition?->name ?? 'معرض غير محدد',
         ];
 
-        return response()->json($formattedEvent, 200);
+        return response()->json([
+            'status' => true,
+            'data' => $formattedEvent
+        ], 200);
     }
     //=====================================================
 
