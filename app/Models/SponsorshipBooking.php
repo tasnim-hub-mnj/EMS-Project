@@ -51,7 +51,7 @@ class SponsorshipBooking extends Model
     //=====================================================
     public function sponsorshipBookingProductImages()
     {
-        return $this->hasMany(SponsorshipBookingProductImage::class);
+        return $this->hasMany(SponsorshipBookingProductImage::class, 'sp_b_id', 'id');
     }
     //=====================================================
 }

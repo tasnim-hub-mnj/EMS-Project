@@ -15,8 +15,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('type')->nullable();//ندوة/مسابقة/عرض تقديمي/ورشة/بث مباشر
             // $table->string('by');//اسم المقدم/لجنة التحكيم
-            $table->date('date')->nullable();//البداية
-            $table->time('time')->nullable();//البداية
+            $table->date('start_date');
+            $table->date('end_date');
+            // $table->date('date')->nullable();
+            $table->time('time')->nullable();
             $table->string('place')->nullable();//موقع الفعالية هو موقع الجناح
             $table->integer('duration_days')->default(1);//مدة الحدث بالأيام(ايام الحجز)
             $table->text('description')->nullable();
@@ -26,6 +28,8 @@ return new class extends Migration
             $table->integer('max_participants')->nullable();//عدد المقاعد الكلي
             $table->boolean('requires_booking')->default(false);//هل يتطلب الحدث حجز مسبق
             $table->float('ticket_price')->default(0)->nullable();
+            $table->enum('ticket_type', ['paid', 'free'])->nullable();
+            $table->integer('free_ticket_limit')->nullable();
             $table->integer('registered_count')->default(0);//المحجوز//المسجلون
             $table->integer('total_seats')->nullable();//المتبقي//default(max_participants)
             $table->integer('scanned_count')->default(0);//عدد الحضور

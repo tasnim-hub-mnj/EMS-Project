@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('product_booking_image', function (Blueprint $table) {
+        Schema::create('product_booking_image', function (Blueprint $table)
+        {
             $table->id();
             $table->foreignId('booth_booking_id')->constrained('booth_bookings')->cascadeOnDelete();
             $table->string('image_p');

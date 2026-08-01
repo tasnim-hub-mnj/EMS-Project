@@ -552,9 +552,7 @@ class SponsorEventController extends Controller
                 'description' => $ev->description,
 
                 //if exsist
-                'duration_options' => $ev->duration_options
-                    ? json_decode($ev->duration_options, true)
-                    : [],
+                'duration_options' => $ev->duration_options ? $ev->duration_options : [],
 
                 'images' => $ev->sponsorEventImages->pluck('image')->toArray(),
 

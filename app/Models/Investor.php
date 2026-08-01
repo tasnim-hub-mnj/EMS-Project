@@ -17,7 +17,6 @@ class Investor extends Model
         'location',
         'website',
         'activity_type',
-        'terms_accepted',
         'bio',
         'logo',
     ];

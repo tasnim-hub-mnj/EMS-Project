@@ -169,13 +169,13 @@ class BoothController extends Controller
                 'start_date' => $booth->exhibition->start_date,
                 'end_date' => $booth->exhibition->end_date,
                 'location' => $booth->location,
-                'amenities' => json_decode($booth->amenities, true) ?? [],
+                'amenities' => $booth->amenities ?? [],
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $booth->id)
                     ->where('favoritable_type', Booth::class)
                     ->exists(),
 
-                'services' => json_decode($booth->services, true) ?? [],
+                'services' => $booth->services ?? [],
             ];
         });
 
@@ -208,8 +208,8 @@ class BoothController extends Controller
 
         $data = $booths->map(function ($booth)
         {
-            $services = json_decode($booth->services, true) ?? [];
-            $amenities = json_decode($booth->amenities, true) ?? [];
+            $services = $booth->services ?? [];
+            $amenities = $booth->amenities ?? [];
 
             //if booked
             $company_name = null;
@@ -271,8 +271,8 @@ class BoothController extends Controller
             return response()->json(['message' => 'Booth not found'], 404);
         }
 
-        $services = json_decode($booth->services, true) ?? [];
-        $amenities = json_decode($booth->amenities, true) ?? [];
+        $services = $booth->services ?? [];
+        $amenities = $booth->amenities ?? [];
 
         $company_name = null;
         $company_email = null;
@@ -309,7 +309,7 @@ class BoothController extends Controller
                     ->exists(),
 
                 'services' => $services,
-                
+
                 //if booked
                 'company_name' => $company_name,
                 'company_email' => $company_email,
@@ -322,7 +322,7 @@ class BoothController extends Controller
     }
     //==============================================================
     //==============================================================
-    //==============================================================
+    
 
 
 

@@ -15,7 +15,7 @@ class SponsorshipBookingImage extends Model
         'image',
     ];
 
-    protected $table = 'sponsorship_booking_images';
+    protected $table = 'sponsorship_bookings_images';
 
     //===============Relationships==================
     public function sponsorshipBooking()

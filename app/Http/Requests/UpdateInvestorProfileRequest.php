@@ -30,21 +30,21 @@ class UpdateInvestorProfileRequest extends FormRequest
             // USER fields
             'email' =>
             [
-                'required',
+                'nullable',
                 'email',
                 Rule::unique('users', 'email')->ignore($userId)
             ],
 
             'phone' =>
             [
-                'required',
+                'nullable',
                 'string',
                 Rule::unique('users', 'phone')->ignore($userId)
             ],
 
             // INVESTOR fields
-            'company_name' => 'required|string|max:255',
-            'location'     => 'required|string|max:255',
+            'company_name' => 'nullable|string|max:255',
+            'location'     => 'nullable|string|max:255',
             'website'      => 'nullable|string|max:255',
             'bio'          => 'nullable|string|max:2000',
 

@@ -60,7 +60,8 @@ class EventController extends Controller
             'booth_booking_id' => $booking->id,
             'name' => $data['name'],
             'type' => $data['type'],
-            'date' => $data['start_date'],
+            'start_date' => $data['start_date'],
+            'end_date' => $data['end_date'],
             'time' => $data['time'],
             'place' => $booking->booth->number . ' - ' . $booking->booth->location,
             'duration_days' => $duration_days,
@@ -108,7 +109,7 @@ class EventController extends Controller
         {
             $q->where('investor_id', $investor->id);
         })
-        ->orderBy('date', 'asc')
+        ->orderBy('start_date', 'asc')
         ->get();
 
         $data = $events->map(function ($ev)
@@ -125,14 +126,10 @@ class EventController extends Controller
                 'booth_number' => $booth->number,
                 'exhibition_name' => $exhibition->name,
 
-                'date' => $ev->date,
-                'start_date' => $ev->date,
-                'end_date' => Carbon::parse($ev->date)
-                    ->copy()
-                    ->addDays($ev->duration_days - 1)
-                    ->format('Y-m-d'),
+                'start_date' => Carbon::parse($ev->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($ev->end_date)->format('Y-m-d'),
 
-                'time' => $ev->time,
+                'time' => Carbon::parse($ev->start_date)->format('H:i') . ' - ' . Carbon::parse($ev->end_date)->format('H:i'),
 
                 'max_participants' => $ev->max_participants,
                 'registered_count' => $ev->registered_count ?? 0,
@@ -144,7 +141,7 @@ class EventController extends Controller
                 'has_bookable_seats' => $ev->has_bookable_seats,
                 'total_seats' => $ev->total_seats,
                 'booked_seats' => $ev->registered_count ?? 0,
-                'sold_tickets' => $ev->sold_tickets ?? 0,
+                // 'sold_tickets' => $ev->sold_tickets ?? 0,
 
                 'ticket_price' => $ev->ticket_price,
                 'is_general_invitation' => $ev->is_general_invitation,
@@ -176,8 +173,14 @@ class EventController extends Controller
         $investor = Auth::user()->investor;
 
         $event = Event::where('id', $event_id)
-            ->where('investor_id', $investor->id)
             ->firstOrFail();
+
+        if (!$event->boothBooking || $event->boothBooking->investor_id !== $investor->id)
+        {
+            return response()->json([
+                'message' => 'You do not can access this event ticket.'
+            ], 400);
+        }
 
         $tickets = EventTicket::with('visitor.user')
             ->where('event_id', $event_id)
@@ -213,9 +216,15 @@ class EventController extends Controller
         $investor = Auth::user()->investor;
 
         $event = Event::where('id', $event_id)
-            ->where('investor_id', $investor->id)
             ->firstOrFail();
 
+        if (!$event->boothBooking || $event->boothBooking->investor_id !== $investor->id)
+        {
+            return response()->json([
+                'message' => 'You do not can access this event ticket.'
+            ], 400);
+        }
+        
         $ticket = EventTicket::where('id', $ticket_id)
             ->where('event_id', $event_id)
             ->firstOrFail();
@@ -276,7 +285,7 @@ class EventController extends Controller
             ], 200);
         }
     }
-    
+
     //===========================================================
     // public function show($event_id)//عرض فعالية واحدة
     // {

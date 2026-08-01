@@ -13,10 +13,10 @@ class VerificationCodeMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $code;
-    public function __construct($code)
+    public $otp;
+    public function __construct($otp)
     {
-        $this->code=$code;
+        $this->otp=$otp;
     }
 
     /**

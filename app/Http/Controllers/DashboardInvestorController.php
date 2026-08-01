@@ -40,8 +40,8 @@ class DashboardInvestorController extends Controller
                 'id'               => $ex->id,
                 'name'             => $ex->name,
                 'images'           => $ex->exhibitionImages ?? [],
-                'start_date'       => $ex->start_date,
-                'end_date'         => $ex->end_date,
+                'start_date'       => Carbon::parse($ex->start_date)->format('Y-m-d'),
+                'end_date'         => Carbon::parse($ex->end_date)->format('Y-m-d'),
                 'location'         => $ex->location,
                 'city'             => $ex->city,
                 'status'           => $ex->status,
@@ -87,9 +87,9 @@ class DashboardInvestorController extends Controller
                 'exhibition_id'         => $ev->exhibition_id,
                 'exhibition_name'       => $ex->name ?? null,
                 'exhibition_image_url'  => $ex->exhibitionImages->pluck('image')->first() ?? null,
-                'date'                  => $ev->start_time->format('Y-m-d'),
-                'start_time'            => $ev->start_time->format('H:i'),
-                'end_time'              => $ev->end_time->format('H:i'),
+                'date'                  => Carbon::parse($ev->start_time)->format('Y-m-d'),
+                'start_time'            => Carbon::parse($ev->start_time)->format('H:i'),
+                'end_time'              => Carbon::parse($ev->end_time)->format('H:i'),
                 'place'                 => $ev->place,
                 'listing_days'          => $ev->duration_days,
                 'description'           => $ev->description,
@@ -112,7 +112,7 @@ class DashboardInvestorController extends Controller
         ], 200);
     }
     //=====================================================================
-    private function buildDurationOptions($event)
+    private function buildDurationOptions($event)//↕️
     {
         $options = [];
 
@@ -149,7 +149,7 @@ class DashboardInvestorController extends Controller
         return $options;
     }
     //=====================================================================
-    private function getDateRanges($period)
+    private function getDateRanges($period)//↕️
     {
         switch ($period)
         {
@@ -196,90 +196,107 @@ class DashboardInvestorController extends Controller
     public function dashboard(Request $request)//✅
     {
         $period = $request->query('period', 'month');
-        $investor = Auth::user()->investor;
+        $investor_id = Auth::user()->investor->id;
 
-        [$current_start, $current_end] = $this->getDateRanges($period);
+        [$current_start, $current_end, $previous_start, $previous_end] = $this->getDateRanges($period);
 
-
-        // ============================
-        // Total bookings
-        $total_bookings = BoothBooking::where('investor_id', $investor->id)
+        $current_bookings = BoothBooking::where('investor_id', $investor_id)
+            ->whereNotNull('approved_at')
             ->whereBetween('approved_at', [$current_start, $current_end])
-            ->count();
+            ->get();
 
-        // ============================
-        // Total visitors
-        $bookingIds = BoothBooking::whereIn('investor_id', $investor->id)
-        ->whereBetween('approved_at', [$current_start, $current_end])
-        ->pluck('id');
+        $current_total_bookings = $current_bookings->whereIn('status', ['approved', 'finished'])->count();
+        $current_active_booths  = $current_bookings->where('status', 'approved')->count();
 
-        $total_visitors = Event::where('booth_booking_id', $bookingIds)
-            ->whereBetween('created_at', [$current_start, $current_end])
-            ->sum('scanned_count');
 
-        // ============================
-        // Total campaigns (sponsor events)
-        $total_campaigns = SponsorshipBooking::where('investor_id', $investor->id)
-            ->whereBetween('created_at', [$current_start, $current_end])
-            ->count();
+        $previous_bookings = BoothBooking::where('investor_id', $investor_id)
+            ->whereNotNull('approved_at')
+            ->whereBetween('approved_at', [$previous_start, $previous_end])
+            ->get();
 
-        // ============================
-        // Total revenue (from event tickets)
-        $current_events = Event::whereIn('booth_booking_id', $bookingIds)
+        $previous_total_bookings = $previous_bookings->whereIn('status', ['approved', 'finished'])->count();
+        $previous_active_booths  = $previous_bookings->where('status', 'approved')->count();
+
+        //-----Events------------------------
+        $all_booking_ids = BoothBooking::where('investor_id', $investor_id)->pluck('id');
+
+
+        $current_events = Event::whereIn('booth_booking_id', $all_booking_ids)
             ->whereBetween('created_at', [$current_start, $current_end])
             ->get();
 
-        $total_revenue = $current_events->sum(function ($event) {
-            $attendees = $event->scanned_count + $event->registered_count;
-            return $event->ticket_price * $attendees;
-        });
+        $current_published_events = $current_events->count();
+        $current_engagement = $current_events->sum('scanned_count') + $current_events->sum('registered_count');
 
-        // ============================
-        // Visitors trend (last 7 days)
-        $visitors_trend = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = now()->subDays($i);
-            $visitors_trend[] = Event::where('investor_id', $investor->id)
-                ->whereDate('created_at', $day)
-                ->sum('scanned_count');
-        }
 
-        // ============================
-        // Top booths (based on event visitors)
-        $events = Event::whereIn('booth_booking_id', $bookingIds)->get();
+        $previous_events = Event::whereIn('booth_booking_id', $all_booking_ids)
+            ->whereBetween('created_at', [$previous_start, $previous_end])
+            ->get();
 
-        // Sum visitors per booth
-        $boothVisitors = $events->groupBy('booth_booking_id')->map(function ($group)
-        {
-            return $group->sum('scanned_count');
-        });
+        $previous_published_events = $previous_events->count();
+        $previous_engagement = $previous_events->sum('scanned_count') + $previous_events->sum('registered_count');
 
-        // Build top booths list
-        $top_booths = BoothBooking::whereIn('id', $boothVisitors->keys())
-            ->get()
-            ->map(function ($booking) use ($boothVisitors)
-            {
-                return
-                [
-                    'booth_number' => $booking->booth->number,
-                    'visitors'     => $boothVisitors[$booking->id] ?? 0
-                ];
-            })
-            ->sortByDesc('visitors')
-            ->take(5)
-            ->values();
-
+        //----------------growthRate---------------------
+        $growth_total_bookings   = $this->growthRate($current_total_bookings, $previous_total_bookings);
+        $growth_active_booths    = $this->growthRate($current_active_booths, $previous_active_booths);
+        $growth_published_events = $this->growthRate($current_published_events, $previous_published_events);
+        $growth_engagement       = $this->growthRate($current_engagement, $previous_engagement);
+        //------------------------------------------
 
         return response()->json([
-            'total_visitors'  => $total_visitors,
-            'total_bookings'  => $total_bookings,
-            'total_campaigns' => $total_campaigns,
-            'total_revenue'   => $total_revenue,
-            'visitors_trend'  => $visitors_trend,
-            'top_booths'      => $top_booths
+            'total_bookings' => $current_total_bookings,
+            'active_booths' => $current_active_booths,
+            'published_events' => $current_published_events,
+            'total_engagement' => $current_engagement
         ], 200);
-    }
 
+        // return response()->json([
+        //     'summary' => [
+        //         'total_bookings' =>
+        //         [
+        //             'value'  => $current_total_bookings,
+        //             'growth' => $growth_total_bookings
+        //         ],
+        //         'active_booths' =>
+        //         [
+        //             'value'  => $current_active_booths,
+        //             'growth' => $growth_active_booths
+        //         ],
+        //         'published_events' =>
+        //         [
+        //             'value'  => $current_published_events,
+        //             'growth' => $growth_published_events
+        //         ],
+        //         'total_engagement' =>
+        //         [
+        //             'value'  => $current_engagement,
+        //             'growth' => $growth_engagement
+        //         ],
+        //     ],
+
+        //     'period' => $period,
+        //     'current_range' =>
+        //     [
+        //         'start' => $current_start->format('Y-m-d'),
+        //         'end'   => $current_end->format('Y-m-d'),
+        //     ],
+        //     'previous_range' =>
+        //     [
+        //         'start' => $previous_start->format('Y-m-d'),
+        //         'end'   => $previous_end->format('Y-m-d'),
+        //     ]
+        // ], 200);
+    }
+    //=====================================================================
+    private function growthRate($current, $previous)//↕️
+    {
+        if ($previous == 0)
+        {
+            return $current > 0 ? 100 : 0;
+        }
+
+        return round((($current - $previous) / $previous) * 100, 2);
+    }
     //=====================================================================
     public function latestExhibitions()//✅
     {
@@ -297,10 +314,10 @@ class DashboardInvestorController extends Controller
                 'description' => $exhibition->description,
                 'images' => $exhibition->exhibitionImages ?? [],
                 'services' => $exhibition->extra_services
-                    ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
+                    ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
                     : [],
-                'start_date' => $exhibition->start_date,
-                'end_date' => $exhibition->end_date,
+                'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
                 'location' => $exhibition->location,
                 'city' => $exhibition->city,
                 'status' => $exhibition->status,
@@ -392,16 +409,6 @@ class DashboardInvestorController extends Controller
     //         $previous_start,
     //         $previous_end
     //     ];
-    // }
-    // //=====================================================================
-    // private function growthRate($current, $previous)
-    // {
-    //     if ($previous == 0)
-    //     {
-    //         return $current > 0 ? 100 : 0;
-    //     }
-
-    //     return round((($current - $previous) / $previous) * 100, 2);
     // }
     // //=====================================================================
     // public function investorPerformanceSummary($investor_id, $period)

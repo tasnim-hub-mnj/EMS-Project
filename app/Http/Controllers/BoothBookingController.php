@@ -12,6 +12,7 @@ use App\Models\ProductBookingImage;
 use App\Models\SocialLink;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
+use App\BookingConflictTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Storage;
 
 class BoothBookingController extends Controller
 {
+    use BookingConflictTrait;
+
     public function bookBooth(BookingBoothRequest $request)//✅
     {
         $data = $request->validated();
@@ -26,7 +29,7 @@ class BoothBookingController extends Controller
         $investor = Auth::user()->investor;
         $booth = Booth::with('exhibition')->findOrFail($data['booth_id']);
 
-        if ($booth->status_inv !== 'available')
+        if ($booth->status_inv !== 'available' || $booth->status !== 'available')
         {
             return response()->json([
                 'message' => 'This booth is not available for booking.'
@@ -37,13 +40,21 @@ class BoothBookingController extends Controller
         $end   = Carbon::parse($data['end_date']);
         $days  = $start->diffInDays($end) + 1;
 
+        //منع الحجز إذا كان هناك حجز مقبول متضارب
+        if ($this->hasApprovedConflict($booth->id, $start, $end))
+        {
+            return response()->json([
+                'message' => 'This booth is already booked in this period.'
+            ], 409);
+        }
+
         $booking = BoothBooking::create([
             'investor_id'        => $investor->id,
             'booth_id'           => $booth->id,
             'start_date'         => $start,
             'end_date'           => $end,
             'days'               => $days,
-            'additional_services'=> json_encode($data['services']),
+            'additional_services'=> json_decode($data['services']),
             'notes'              => $data['notes'],
             'total_price'        => $data['total_price'],
             'paid_amount'        => 0,
@@ -51,9 +62,12 @@ class BoothBookingController extends Controller
             'status'             => 'pending',
         ]);
 
-        $services = json_decode($booth->services, true) ?? [];
-        $amenities = json_decode($booth->amenities, true) ?? [];
-        $bookedServices = json_decode($booking->additional_services, true) ?? [];
+        $services = $booth->services ?? [];
+        $amenities = $booth->amenities ?? [];
+        $bookedServices = $booking->additional_services ?? [];
+
+        // $booth->status_inv = 'booked';عند القبول 
+        // $booth->save();
 
         // $user = User::findOrfail($user_id);
         // $title = "تم قبول طلبك رقم #520";
@@ -73,8 +87,8 @@ class BoothBookingController extends Controller
                 'area' => $booth->area,
                 'status' => $booth->status_inv,
                 'price' => $booth->price,
-                'start_date' => $booking->start_date,
-                'end_date' => $booking->end_date,
+                'start_date' => Carbon::parse($booking->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($booking->end_date)->format('Y-m-d'),
                 'location' => $booth->location,
                 'amenities' => $amenities,
                 'is_favorite' => Auth::user()->favorites()
@@ -91,13 +105,13 @@ class BoothBookingController extends Controller
                 //booking
                 'booking_id' => $booking->id,
                 'booking_number' => 'BK-' . $booking->id,
-                'booked_at' => $booking->booked_at,
+                'booked_at' => Carbon::parse($booking->booked_at)->format('Y-m-d'),
                 'duration_days' => $booking->days,
                 'services_price' => 0, // يُحسب لاحقاً عند الموافقة
                 'total_price' => $booking->total_price,
                 'paid_amount' => $booking->paid_amount,
                 'remaining_amount' => $booking->total_price - $booking->paid_amount,
-                'booked_services' => array_keys(array_filter($bookedServices)),
+                'booked_services' => $bookedServices,
                 'notes' => $booking->notes,
             ]
         ], 201);
@@ -130,7 +144,7 @@ class BoothBookingController extends Controller
             ], 400);
         }
 
-        $booking->status = 'canceled';
+        $booking->status = 'cancelled';
         $booking->save();
 
         return response()->json([
@@ -167,12 +181,12 @@ class BoothBookingController extends Controller
                 'start_date' => $booking->start_date,
                 'end_date' => $booking->end_date,
                 'location' => $booth->location,
-                'amenities' => json_decode($booth->amenities, true) ?? [],
+                'amenities' => $booth->amenities ?? [],
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $booth->id)
                     ->where('favoritable_type', Booth::class)
                     ->exists(),
-                'services' => json_decode($booth->services, true) ?? [],
+                'services' => $booth->services ?? [],
 
                 //investor
                 'company_name' => $booking->investor->company_name,
@@ -182,13 +196,13 @@ class BoothBookingController extends Controller
                 //booking
                 'booking_id' => $booking->id,
                 'booking_number' => 'BK-' . $booking->id,
-                'booked_at' => $booking->booked_at,
+                'booked_at' => Carbon::parse($booking->booked_at)->format('Y-m-d'),
                 'duration_days' => $booking->days,
                 'services_price' => $booking->services_price ?? 0,
                 'total_price' => $booking->total_price,
                 'paid_amount' => $booking->paid_amount,
                 'remaining_amount' => $booking->total_price - $booking->paid_amount,
-                'booked_services' => json_decode($booking->additional_services, true) ?? [],
+                'booked_services' => $booking->additional_services ?? [],
                 'notes' => $booking->notes,
             ];
         });
@@ -216,9 +230,9 @@ class BoothBookingController extends Controller
 
         $booth = $booking->booth;
 
-        $services = json_decode($booth->services, true) ?? [];
-        $amenities = json_decode($booth->amenities, true) ?? [];
-        $bookedServices = json_decode($booking->additional_services, true) ?? [];
+        $services = $booth->services ?? [];
+        $amenities = $booth->amenities ?? [];
+        $bookedServices = $booking->additional_services ?? [];
 
         return response()->json([
             'data' =>
@@ -249,19 +263,19 @@ class BoothBookingController extends Controller
                 //booking
                 'booking_id' => $booking->id,
                 'booking_number' => 'BK-' . $booking->id,
-                'booked_at' => $booking->booked_at,
+                'booked_at' => Carbon::parse($booking->booked_at)->format('Y-m-d'),
                 'duration_days' => $booking->days,
                 'services_price' => $booking->services_price ?? 0,
                 'total_price' => $booking->total_price,
                 'paid_amount' => $booking->paid_amount ?? 0,
                 'remaining_amount' => $booking->total_price - ($booking->paid_amount ?? 0),
-                'booked_services' => array_keys(array_filter($bookedServices)),
+                'booked_services' => $bookedServices ?? [],
                 'notes' => $booking->notes,
             ]
         ], 200);
     }
     //==============================================================
-    
+
     //==============================================================
     //==============================================================
     //==============================================================

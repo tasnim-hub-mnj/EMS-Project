@@ -4,90 +4,80 @@ use App\Http\Controllers\BoothBookingController;
 use App\Http\Controllers\BoothController;
 use App\Http\Controllers\BoothManagementController;
 use App\Http\Controllers\BoothReviewController;
-use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CollectedBoothController;
-use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\DashboardInvestorController;
 use App\Http\Controllers\EventController;
-use App\Http\Controllers\EventsController;
 use App\Http\Controllers\ExhibitionController;
 use App\Http\Controllers\ExhibitionReviewController;
 use App\Http\Controllers\FavoriteController;
-use App\Http\Controllers\FavoritesController;
 use App\Http\Controllers\InvestorController;
-use App\Http\Controllers\ProfileCompanyController;
 use App\Http\Controllers\ProfileVisitorController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SponsorshipBookingController;
 use App\Http\Controllers\SponsorEventController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\TicketController;
-use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitorController;
 use App\Http\Controllers\VisitorScheduleController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 //================================================================
 //***********************Investor*********************************
 //================================================================
 //Auth
-Route::post('/auth/register', [InvestorController::class, 'register']);
-Route::post('/auth/verify-otp', [InvestorController::class, 'verifyOtp']);
-Route::post('/auth/resend-otp', [InvestorController::class, 'resendOtp']);
-Route::post('/auth/login', [InvestorController::class, 'login']);
+Route::post('/investor/auth/register', [InvestorController::class, 'register']);
+Route::post('/investor/auth/verify-otp', [InvestorController::class, 'verifyOtp']);
+Route::post('/investor/auth/resend-otp', [InvestorController::class, 'resendOtp']);
+Route::post('/investor/auth/login', [InvestorController::class, 'login']);
 
-Route::post('/auth/forgot-password', [InvestorController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
-Route::post('/auth/forgot-password/verify-otp', [InvestorController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
-Route::post('/auth/reset-password', [InvestorController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
+Route::post('/investor/auth/forgot-password', [InvestorController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
+Route::post('/investor/auth/forgot-password/verify-otp', [InvestorController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
+Route::post('/investor/auth/reset-password', [InvestorController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
 
 Route::middleware('auth:sanctum')->group(function ()
 {
-    Route::post('/auth/change-password', [InvestorController::class, 'updatePassword']);// تغيير كلمة المرور داخل التطبيق
-    Route::post('/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);// حفظ FCM Token
-    Route::post('/auth/delete-account', [InvestorController::class, 'deleteAccount']);// حذف الحساب
-    Route::post('/auth/logout', [InvestorController::class, 'logout']);// تسجيل الخروج
+    Route::post('/investor/auth/change-password', [InvestorController::class, 'updatePassword']);
+    Route::post('/investor/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);
+    Route::post('/investor/auth/delete-account', [InvestorController::class, 'deleteAccount']);
+    Route::post('/investor/auth/logout', [InvestorController::class, 'logout']);
 
     //Dashboard
-    Route::get('/exhibitions/featured', [DashboardInvestorController::class, 'featuredExhibitions']);
+    Route::get('/investor/exhibitions/featured', [DashboardInvestorController::class, 'featuredExhibitions']);
     Route::get('/investor/sponsor-events/featured', [DashboardInvestorController::class, 'featuredSponsorEvents']);
     Route::get('/investor/dashboard', [DashboardInvestorController::class, 'dashboard']);
-    Route::get('/exhibitions/latest', [DashboardInvestorController::class, 'latestExhibitions']);
-
-    //Analytics
-
+    Route::get('/investor/exhibitions/latest', [DashboardInvestorController::class, 'latestExhibitions']);
 
     //Exhibitions
-    Route::get('/exhibitions', [ExhibitionController::class, 'getAllExhibitions']);
-    Route::get('/exhibitions/{id}', [ExhibitionController::class, 'show']);
+    Route::get('/investor/exhibitions', [ExhibitionController::class, 'getAllExhibitions']);
+    Route::get('/investor/exhibitions/{id}', [ExhibitionController::class, 'show']);
 
     //Booths
-    Route::get('/booths', [BoothController::class, 'getAvailableBooths']);//الاجنحة المتاحة
-    Route::get('/booths', [BoothController::class, 'getExhibitionBooths']);
-    Route::get('/booths/{id}', [BoothController::class, 'getBoothDetail']);
+    Route::get('/investor/booths', [BoothController::class, 'getAvailableBooths']);
+    Route::get('/investor/exhibition/booths', [BoothController::class, 'getExhibitionBooths']);
+    Route::get('/investor/booths/{id}', [BoothController::class, 'getBoothDetail']);
 
     //Booking
-    Route::post('/booths/book', [BoothBookingController::class, 'bookBooth']);//حجز
+    Route::post('/booths/book', [BoothBookingController::class, 'bookBooth']);
     Route::patch('/investor/bookings/{id}/cancel', [BoothBookingController::class, 'cancelBooking']);
     Route::get('/investor/bookings/{id}', [BoothBookingController::class, 'getBookingDetail']);
-    Route::get('/investor/bookings', [BoothBookingController::class, 'myBookings']);//حجوزاتي
+    Route::get('/investor/bookings', [BoothBookingController::class, 'myBookings']);
 
     //Booth Profile
     Route::get('/investor/booths/{boothId}/profile', [BoothManagementController::class, 'getBoothProfile']);
-    Route::put('/investor/booths/{boothId}/profile', [BoothManagementController::class, 'updateBoothProfile']);
+    Route::post('/investor/booths/{boothId}/profile/update', [BoothManagementController::class, 'updateBoothProfile']);
     Route::post('/investor/booths/{boothId}/cover', [BoothManagementController::class, 'uploadBoothCover']);
-    Route::get('/investor/events', [BoothManagementController::class, 'getBoothEvents']);
+    Route::get('/investor/booth/events', [BoothManagementController::class, 'getBoothEvents']);
 
     //Event
-    Route::post('/investor/events', [EventController::class, 'createEvent']);
+    Route::post('/investor/events', [EventController::class, 'createEvent']);//❌
     Route::get('/investor/events', [EventController ::class, 'getInvestorEvents']);
     Route::get('/investor/events/{id}/ticket-requests', [EventController::class, 'getTicketRequests']);
     Route::patch('/investor/events/{eventId}/ticket-requests/{requestId}', [EventController::class, 'ticketRequestAction']);
     //SponsorEvent
     Route::get('/investor/sponsor-events', [SponsorEventController::class, 'getSponsorEvents']);
-    Route::get('/investor/sponsorships', [SponsorshipBookingController::class, 'getMySponsorships']);
-    Route::post('/investor/sponsorships', [SponsorshipBookingController::class, 'createSponsorship']);
+    Route::post('/investor/sponsorships', [SponsorshipBookingController::class, 'createSponsorship']);//❌
     Route::patch('/investor/sponsorships/{id}/cancel', [SponsorshipBookingController::class, 'cancelSponsorship']);
+    Route::get('/investor/sponsorships', [SponsorshipBookingController::class, 'getMySponsorships']);
 
     //Reports
     Route::get('/investor/reports', [ReportsController::class, 'getReports']);
@@ -103,8 +93,6 @@ Route::middleware('auth:sanctum')->group(function ()
     Route::get('/investor/profile', [InvestorController::class, 'getProfile']);
     Route::put('/investor/profile', [InvestorController::class, 'updateProfile']);
     Route::post('/investor/profile/avatar', [InvestorController::class, 'uploadAvatar']);
-
-
 
 
 });

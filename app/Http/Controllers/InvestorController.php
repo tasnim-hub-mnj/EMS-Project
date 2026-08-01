@@ -32,15 +32,30 @@ class InvestorController extends Controller
             'status' => 'approved',
         ]);
 
+        //----------------------------------
+        $newOtp = rand(100000, 999999);
+        while (OtpCode::where('code', $newOtp)->exists())
+        {
+            $newOtp = rand(100000, 999999);
+        }
+        $otp = OtpCode::create([
+            'user_id' => $user->id,
+            // 'email' => $user->email,
+            'code' => $newOtp,
+            'expires_at' => now()->addMinutes(10),
+            'is_used' => false,
+        ]);
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        //----------------------------------
+
         $investor_data =
         [
             'user_id' => $user->id,
             'company_name' => $data['company_name'],
             'trade_name' => $data['trade_name'],
             'location' => $data['location'],
-            'website' => $data['website'],
+            'website' => $data['website'] ?? null,
             'activity_type' => $data['activity_type'],
-
         ];
 
         $investor = Investor::create($investor_data);
@@ -53,25 +68,80 @@ class InvestorController extends Controller
             'avatar_url'=> $investor->logo,
         ];
 
-        //----------------------------------
+        return response()->json([
+            'message' => 'Investor registered successfully',
+            'data' => $data,
+        ], 201);
+    }
+    //================================================================
+    public function verifyOtp(Request $request)//التحقق من ملكية الايميل//✅
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'otp' => 'required|string',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        $otp = OtpCode::where('user_id', $user->id)
+            ->where('is_used', false)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$otp)
+        {
+            return response()->json(['message' => 'OTP not found'], 404);
+        }
+
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
+        {
+            return response()->json(['message' => 'OTP expired'], 400);
+        }
+
+        $user = User::where('id',$otp->user_id)->first();
+
+        $otp->update(['is_used' => true]);
+        $user->update([
+            'is_verified' => true,
+            'status' => 'approved',
+        ]);
+
+        return response()->json([
+            'message' => 'OTP verified successfully',
+            'user' => $user
+        ], 200);
+    }
+    //================================================================
+    public function resendOtp(Request $request)//اعادة ارسال كود التحقق//✅
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        OtpCode::where('user_id', $user->id)->delete();
+
         $newOtp = rand(100000, 999999);
         while (OtpCode::where('code', $newOtp)->exists())
         {
             $newOtp = rand(100000, 999999);
         }
-        OtpCode::create([
+
+        $otp = OtpCode::create([
             'user_id' => $user->id,
-            'email' => $user->email,
+            // 'email' => $user->email,
             'code' => $newOtp,
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
-        Mail::to($user->email)->send(new VerificationCodeMail($newOtp));
-        //----------------------------------
+
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+
         return response()->json([
-            'message' => 'Investor registered successfully',
-            'data' => $data,
-        ], 201);
+            'message' => 'OTP resent successfully',
+            // 'otp'=>$otp
+        ], 200);
     }
     //================================================================
     public function login(Request $request)//✅
@@ -123,79 +193,6 @@ class InvestorController extends Controller
         ], 200);
     }
     //================================================================
-    public function logout(Request $request)//✅
-    {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json([
-            'message' => 'Logout successful'
-        ], 200);
-    }
-
-    //================================================================
-    public function verifyOtp(Request $request)//التحقق من ملكية الايميل//✅
-    {
-        $request->validate([
-            'otp' => 'required|string'
-        ]);
-
-        $otp = OtpCode::where('code', $request->otp)
-            ->where('is_used', false)
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-        if (!$otp)
-        {
-            return response()->json(['message' => 'OTP not found'], 404);
-        }
-
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
-        {
-            return response()->json(['message' => 'OTP expired'], 400);
-        }
-
-        $user = User::where('id',$otp->user_id)->first();
-
-        $otp->update(['is_used' => true]);
-        $user->update(['is_verified' => true]);
-
-        return response()->json([
-            'message' => 'OTP verified successfully',
-            'user' => $user
-        ], 200);
-    }
-    //================================================================
-    public function resendOtp(Request $request)//اعادة ارسال كود التحقق//✅
-    {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-        ]);
-        // $user = Auth::user();
-        $user = User::where('email', $request->email)->first();
-
-        OtpCode::where('user_id', $user->id)->delete();
-
-        $newOtp = rand(100000, 999999);
-        while (OtpCode::where('code', $newOtp)->exists())
-        {
-            $newOtp = rand(100000, 999999);
-        }
-
-        OtpCode::create([
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'code' => $newOtp,
-            'expires_at' => now()->addMinutes(10),
-            'is_used' => false,
-        ]);
-
-        Mail::to($user->email)->send(new VerificationCodeMail($newOtp));
-
-        return response()->json([
-            'message' => 'OTP resent successfully',
-        ], 200);
-    }
-    //================================================================
     public function forgotPassword1(Request $request)//1//✅
     {
         $request->validate([
@@ -213,21 +210,21 @@ class InvestorController extends Controller
             $code = rand(100000, 999999);
         }
 
-        OtpCode::create([
+        $otp = OtpCode::create([
             'user_id' => $user->id,
-            'email' => $user->email,
+            // 'email' => $user->email,
             'code' => $code,
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->send(new VerificationCodeMail($code));
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
 
         return response()->json([
-            'message' => 'Verification code sent to your email.'
+            'message' => 'Verification code sent to your email.',
+            // 'otp'=>$otp
         ], 200);
     }
-
     //================================================================
     public function forgotPassword2(Request $request)//2-التحقق من الكود//✅
     {
@@ -238,7 +235,7 @@ class InvestorController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        $otp = OtpCode::where('email', $request->email)
+        $otp = OtpCode::where('user_id', $user->id)
             ->where('code', $request->otp)
             ->where('is_used', false)
             ->orderBy('created_at', 'desc')
@@ -269,7 +266,9 @@ class InvestorController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        $otp = OtpCode::where('email', $request->email)
+        $user = User::where('email', $request->email)->first();
+
+        $otp = OtpCode::where('user_id', $user->id)
             ->where('code', $request->otp)
             ->where('is_used', true)
             ->orderBy('created_at', 'desc')
@@ -331,6 +330,15 @@ class InvestorController extends Controller
         return response()->json([
             'message' => 'FCM token saved successfully.',
             'fcm_token' => $user->fcm_token
+        ], 200);
+    }
+    //================================================================
+    public function logout(Request $request)//✅
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Logout successful'
         ], 200);
     }
     //================================================================

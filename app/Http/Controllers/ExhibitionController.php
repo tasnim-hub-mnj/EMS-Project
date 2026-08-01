@@ -9,6 +9,7 @@ use App\Models\Event;
 use App\Models\Exhibition;
 use App\Models\ExhibitionImage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class ExhibitionController extends Controller
@@ -112,7 +113,9 @@ class ExhibitionController extends Controller
         $sector = $request->query('sector');
         $status = $request->query('status'); // upcoming | active | ended
 
-        $query = Exhibition::where('copy_status', 'active');
+        $query = Exhibition::with([
+            'sponsorEvents'
+        ])->where('copy_status', 'active');
 
         if ($search)
         {
@@ -162,10 +165,12 @@ class ExhibitionController extends Controller
                 'description' => $exhibition->description,
                 'images' => $exhibition->images ?? [],
                 'services' => $exhibition->extra_services
-                    ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
+                    ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
                     : [],
-                'start_date' => $exhibition->start_date,
-                'end_date' => $exhibition->end_date,
+                'mapJson' => $exhibition->map,
+                'sponsorEvents' => $exhibition->sponsorEvents,
+                'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
                 'location' => $exhibition->location,
                 'city' => $exhibition->city,
                 'status' => $exhibition->status,
@@ -209,12 +214,12 @@ class ExhibitionController extends Controller
             ->exists();
 
         $services = $exhibition->extra_services
-            ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
+            ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
             : [];
 
         $images = $exhibition->exhibitionImages ?? [];
 
-        $map_data = json_decode($exhibition->map, true);
+        $map_data = $exhibition->map;
 
         $sponsor_events = $exhibition->sponsorEvents->map(function ($event)
         {
@@ -232,8 +237,8 @@ class ExhibitionController extends Controller
             'description' => $exhibition->description,
             'images' => $images,
             'services' => $services,
-            'start_date' => $exhibition->start_date,
-            'end_date' => $exhibition->end_date,
+            'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
+            'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
             'location' => $exhibition->location,
             'city' => $exhibition->city,
             'status' => $exhibition->status,

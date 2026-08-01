@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ReportInvestor;
+use App\Models\ReportInvestor;//
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,6 +23,7 @@ class ReportsController extends Controller
         $data = $reports->map(function ($r)
         {
             $mainMetric = $r->reportMetrics->first();
+            $booth = optional($r->boothBooking)->booth;
             return
             [
                 'id' => (string) $r->id,
@@ -31,8 +32,8 @@ class ReportsController extends Controller
                 'description' => $this->generateReportDescription($r),
                 'period' => $r->period,
 
-                'booth_name' => optional($r->boothBooking->booth)->name,
-                'exhibition_name' => optional($r->boothBooking->booth->exhibition)->name,
+                'booth_name' => optional($booth)->name,
+                'exhibition_name' => optional(optional($booth)->exhibition)->name,
 
                 'created_at' => $r->created_at->format('Y-m-d'),
 
@@ -53,7 +54,7 @@ class ReportsController extends Controller
         $investor = Auth::user()->investor;
 
         $r = ReportInvestor::with([
-            'metrics',
+            'reportMetrics',
             'boothBooking.booth.exhibition'
         ])
         ->where('investor_id', $investor->id)

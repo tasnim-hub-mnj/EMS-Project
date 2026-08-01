@@ -11,7 +11,7 @@ class SponsorshipBookingProductImage extends Model
 
     protected $fillable =
     [
-        'sponsorship_booking_id',
+        'sp_b_id',
         'product_name',
         'image',
     ];
@@ -21,7 +21,7 @@ class SponsorshipBookingProductImage extends Model
     //===============Relationships==================
     public function sponsorshipBooking()
     {
-        return $this->belongsTo(SponsorshipBooking::class);
+        return $this->belongsTo(SponsorshipBooking::class,'sp_b_id', 'id');
     }
     //=====================================================
 }
