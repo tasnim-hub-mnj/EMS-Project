@@ -10,7 +10,7 @@ class EventTicket extends Model
     protected $fillable = [
         'investor_id',
         'sponsorEvent_id',
-        'user_id',
+        'visitor_id',
         'name',
         'email',
         'phone',

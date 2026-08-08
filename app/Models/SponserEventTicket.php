@@ -8,7 +8,7 @@ class SponserEventTicket extends Model
 {
     protected $fillable = [
         'sponsor_event_id',
-        'user_id',
+        'visitor_id',
         'name',
         'email',
         'phone',

@@ -170,14 +170,14 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     //تذاكر الزائر
     Route::get('/bookings/my-tickets', [TicketController::class, 'myTickets']);
-    Route::post('/exhibition', [TicketController::class, 'bookExhibition']);
-    Route::get('/exhibition/{id}', [TicketController::class, 'getExhibitionTicket']);
-    Route::post('/event', [TicketController::class, 'bookEvent']);
-    Route::get('/event/{id}', [TicketController::class, 'getEventTicket']);
-    Route::delete('/{id}/cancel', [TicketController::class, 'cancelTicket']);
-    Route::get('/tickets/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
+    Route::post('/bookings/exhibition', [TicketController::class, 'bookExhibition']);
+    Route::get('/booking/exhibition/{id}', [TicketController::class, 'getExhibitionTicket']);
+    Route::post('/bookings/event', [TicketController::class, 'bookEvent']);
+    Route::get('/booking/event/{id}', [TicketController::class, 'getEventTicket']);
+    Route::delete('bookings/{id}/cancel', [TicketController::class, 'cancelTicket']);
+    Route::get('/booking/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
 
-    Route::post('/tickets/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
+    Route::post('/booking/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
 
 });
 

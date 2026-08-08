@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Exhibition;
 use App\Models\ExhibitionReview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -87,7 +88,6 @@ class ExhibitionReviewController extends Controller
     //=============================================================
     public function submitExhibitionReview(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'exhibition_id' => 'required|exists:exhibitions,id',
             'rating' => 'required|numeric|min:0|max:5',
@@ -112,12 +112,23 @@ class ExhibitionReviewController extends Controller
 
         $mainRating = (float) $request->rating;
 
-        $review = ExhibitionReview::create([
-            'visitor_id' => $visitor->id,
-            'exhibition_id' => $request->exhibition_id,
-            'rating' => $mainRating,
-            'comment' => $request->comment,
-        ]);
+        $review = ExhibitionReview::updateOrCreate(
+            [
+                'visitor_id' => $visitor->id,
+                'exhibition_id' => $request->exhibition_id,
+            ],
+            [
+                'rating' => $mainRating,
+                'comment' => $request->comment,
+            ]
+        );
+
+        // 3. تحديث متوسط تقييم المعرض
+        $exhibition = Exhibition::find($request->exhibition_id);
+        if ($exhibition) {
+            $avgRating = ExhibitionReview::where('exhibition_id', $exhibition->id)->avg('rating');
+            $exhibition->update(['rating' => round($avgRating, 1)]);
+        }
 
         return response()->json([
             'status' => true,
