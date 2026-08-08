@@ -9,34 +9,34 @@ class BoothBooking extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'investor_id',
-        'booth_id',
-        'start_date',
-        'end_date',
-        'days',
-        'additional_services',
-        'notes',
-        'total_price',
-        'paid_amount',
-        'services_products',
-        'status',
-        'booked_at',
-        'approved_at',
-        'cover_image'
-    ];
+        [
+            'investor_id',
+            'booth_id',
+            'start_date',
+            'end_date',
+            'days',
+            'additional_services',
+            'notes',
+            'total_price',
+            'paid_amount',
+            'services_products',
+            'status',
+            'booked_at',
+            'approved_at',
+            'cover_image'
+        ];
 
     protected $table = 'booth_bookings';
 
     protected $casts =
-    [
-        'days'    => 'integer',
-        'total_price'      => 'float',
-        'booked_at'        => 'date',
-        'approved_at'        => 'date',
-        'additional_services' => 'array',
-        // 'additional_services' => 'array',
-    ];
+        [
+            'days' => 'integer',
+            'total_price' => 'float',
+            'booked_at' => 'date',
+            'approved_at' => 'date',
+            'additional_services' => 'array',
+            // 'additional_services' => 'array',
+        ];
     //=================Relationships===================
     public function investor()
     {
@@ -45,12 +45,12 @@ class BoothBooking extends Model
     //=================================================
     public function booth()
     {
-        return $this->belongsTo(Booth::class);
+        return $this->belongsTo(Booth::class, 'booth_id');
     }
     //=================================================
     public function events()
     {
-        return $this->hasMany(Event::class,'booth_booking_id');
+        return $this->hasMany(Event::class, 'booth_booking_id');
     }
     //=================================================
     public function boothBookingImages()

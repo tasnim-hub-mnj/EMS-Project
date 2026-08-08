@@ -58,11 +58,24 @@ class SupportTicketController extends Controller
             ], 403);
         }
 
-        // جلب التذكرة الخاصة بالزائر أو إرجاع 404 إذا لم تُوجد
-        $ticket = SupportTicket::where('visitor_id', $visitor->id)
-            ->findOrFail($id);
+        // البحث عن التذكرة بالمعرف
+        $ticket = SupportTicket::find($id);
 
-        // إرجاع الاستجابة المنسقة والمغلفة
+        if (!$ticket) {
+            return response()->json([
+                'status' => false,
+                'message' => 'لا توجد تذكرة دعم تحمل هذا الرقم'
+            ], 404);
+        }
+
+        if ($ticket->visitor_id !== $visitor->id) {
+            return response()->json([
+                'status' => false,
+                'message' => 'غير مصرح لك بعرض هذه التذكرة'
+            ], 403);
+        }
+
+
         return response()->json([
             'status' => true,
             'data' => [

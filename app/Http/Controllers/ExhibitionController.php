@@ -10,7 +10,7 @@ use App\Models\Exhibition;
 use App\Models\ExhibitionImage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+//use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class ExhibitionController extends Controller
@@ -154,28 +154,28 @@ class ExhibitionController extends Controller
 
         $exhibitions_data = $exhibitions->map(function ($exhibition) {
             return
-            [
-                'id' => $exhibition->id,
-                'name' => $exhibition->name,
-                'description' => $exhibition->description,
-                'images' => $exhibition->images ?? [],
-                'services' => $exhibition->extra_services
-                    ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
-                    : [],
-                'mapJson' => $exhibition->map,
-                'sponsorEvents' => $exhibition->sponsorEvents,
-                'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
-                'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
-                'location' => $exhibition->location,
-                'city' => $exhibition->city,
-                'status' => $exhibition->status,
-                'available_booths' => $exhibition->available_booths,
-                'sectors' => $exhibition->sectors ?? [],
-                'is_favorite' => Auth::user()->favorites()
-                    ->where('favoritable_id', $exhibition->id)
-                    ->where('favoritable_type', Exhibition::class)
-                    ->exists(),
-            ];
+                [
+                    'id' => $exhibition->id,
+                    'name' => $exhibition->name,
+                    'description' => $exhibition->description,
+                    'images' => $exhibition->images ?? [],
+                    'services' => $exhibition->extra_services
+                        ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
+                        : [],
+                    'mapJson' => $exhibition->map,
+                    'sponsorEvents' => $exhibition->sponsorEvents,
+                    'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
+                    'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
+                    'location' => $exhibition->location,
+                    'city' => $exhibition->city,
+                    'status' => $exhibition->status,
+                    'available_booths' => $exhibition->available_booths,
+                    'sectors' => $exhibition->sectors ?? [],
+                    'is_favorite' => Auth::user()->favorites()
+                        ->where('favoritable_id', $exhibition->id)
+                        ->where('favoritable_type', Exhibition::class)
+                        ->exists(),
+                ];
         });
 
         return response()->json([
@@ -331,9 +331,17 @@ class ExhibitionController extends Controller
         $isFeatured = $request->query('featured', 0);
         $perPage = (int) $request->query('per_page', 4);
 
-        $query = Exhibition::query();
+        // جلب متوسط التقييم، عدد الأكشاك، عدد التذاكر المقبولة، وعدد الفعاليات
+        $query = Exhibition::with(['exhibitionImages'])
+            ->withCount([
+                'booths',
+                'tickets' => function ($ticketQuery) {
+                    $ticketQuery->where('status', 'approved');
+                },
+                'sponsorEvents' // إضافة العلاقة هنا
+            ])
+            ->withAvg('exhibitionReviews as average_rating', 'rating');
 
-        // فحص الحالة إذا كانت موجودة 
         if (\Schema::hasColumn('exhibitions', 'copy_status')) {
             $query->where('copy_status', 'active');
         }
@@ -343,7 +351,6 @@ class ExhibitionController extends Controller
         }
 
         if ($isFeatured == 1) {
-            // فلترة بالاهتمامات إذا توفرت
             if (!empty($interests)) {
                 $query->where(function ($innerQuery) use ($interests) {
                     foreach ($interests as $interest) {
@@ -352,43 +359,75 @@ class ExhibitionController extends Controller
                 });
             }
 
-            // ترتيب حسب المدينة والأكثر شعبية
             if ($city) {
                 $query->orderByRaw("city = ? DESC", [$city]);
             }
 
-            $query->orderBy('visitors_count', 'desc');
+            $query->orderBy('tickets_count', 'desc'); // الترتيب بحسب التذاكر المقبولة مباشرةً
         }
 
         $exhibitions = $query->limit($perPage)->get();
 
+        // الاستعلام الاحتياطي في حال عدم مطابقة الفلاتر أعلاه
         if ($exhibitions->isEmpty()) {
-            $exhibitions = Exhibition::latest()->limit($perPage)->get();
+            $exhibitions = Exhibition::with(['exhibitionImages'])
+                ->withCount([
+                    'booths',
+                    'tickets' => function ($ticketQuery) {
+                        $ticketQuery->where('status', 'approved');
+                    },
+                    'sponsorEvents' // 👈 أضفناها هنا أيضاً لمنع رجوع الصفر
+                ])
+                ->withAvg('exhibitionReviews as average_rating', 'rating')
+                ->latest()
+                ->limit($perPage)
+                ->get();
         }
 
         $formattedExhibitions = $exhibitions->map(function ($exhibition) {
             $endDate = $exhibition->end_date ? Carbon::parse($exhibition->end_date) : null;
             $daysLeft = $endDate ? max(0, (int) now()->diffInDays($endDate, false)) : 0;
 
+            // معالجة الصور
+            $imagesList = [];
+            if ($exhibition->relationLoaded('exhibitionImages') && $exhibition->exhibitionImages->isNotEmpty()) {
+                $imagesList = $exhibition->exhibitionImages->pluck('image_url')->toArray();
+            } elseif (!empty($exhibition->image)) {
+                $imagesList = [asset('storage/' . $exhibition->image)];
+            }
+
+            // استخراج الإحداثيات من حقل map
+            $mapData = $exhibition->map ?? [];
+            $latitude = isset($mapData['latitude']) ? (float) $mapData['latitude'] : (isset($mapData['lat']) ? (float) $mapData['lat'] : 0.0);
+            $longitude = isset($mapData['longitude']) ? (float) $mapData['longitude'] : (isset($mapData['lng']) ? (float) $mapData['lng'] : 0.0);
+
+            // حساب عدد الأكشاك
+            $totalBooths = (int) ($exhibition->booths_count ?? $exhibition->total_booths ?? 0);
+
+            // عدد الزائرين
+            $visitorsCount = $exhibition->tickets_count > 0
+                ? (int) $exhibition->tickets_count
+                : (int) ($exhibition->visitors_count ?? 0);
+
             return [
                 'id' => (int) $exhibition->id,
-                'name' => $exhibition->name,
-                'type' => $exhibition->type ?? 'معرض',
-                'location' => $exhibition->location ?? $exhibition->city ?? 'غير محدد',
-                'start_date' => $exhibition->start_date,
-                'end_date' => $exhibition->end_date,
-                'description' => $exhibition->description,
-                'rating' => (float) ($exhibition->rating ?? 0.0),
+                'name' => (string) $exhibition->name,
+                'type' => (string) ($exhibition->type ?? 'معرض'),
+                'location' => (string) ($exhibition->location ?? $exhibition->city ?? ''),
+                'start_date' => $exhibition->start_date ? $exhibition->start_date->format('Y-m-d') : null,
+                'end_date' => $exhibition->end_date ? $exhibition->end_date->format('Y-m-d') : null,
+                'description' => (string) ($exhibition->description ?? ''),
+                'rating' => (float) round($exhibition->average_rating ?? 0.0, 1),
                 'is_active' => true,
-                'images' => $exhibition->images ?? [],
-                'days_left' => $daysLeft,
-                'latitude' => (float) ($exhibition->latitude ?? 0.0),
-                'longitude' => (float) ($exhibition->longitude ?? 0.0),
+                'images' => $imagesList,
+                'days_left' => (int) $daysLeft,
+                'latitude' => $latitude,
+                'longitude' => $longitude,
                 'is_paid' => (bool) ($exhibition->is_paid ?? false),
                 'ticket_price' => (float) ($exhibition->ticket_price ?? 0.0),
-                'total_booths' => (int) ($exhibition->booths_count ?? $exhibition->total_booths ?? 0),
-                'total_events' => (int) ($exhibition->events_count ?? $exhibition->total_events ?? 0),
-                'visitors_count' => (int) ($exhibition->visitors_count ?? 0),
+                'total_booths' => $totalBooths,
+                'total_events' => (int) ($exhibition->sponsor_events_count ?? 0),
+                'visitors_count' => $visitorsCount,
             ];
         });
 
@@ -407,24 +446,28 @@ class ExhibitionController extends Controller
                 'message' => 'المعرض غير موجود'
             ], 404);
         }
-        $perPage = (int) $request->input('per_page', 20);
 
+        $perPage = (int) $request->input('per_page', 20);
 
         $user = auth('sanctum')->user();
         $visitorId = $user?->visitor?->id;
 
-        $eventsQuery = Event::whereHas('boothBooking.booth', function ($query) use ($id) {
-            $query->where('exhibition_id', $id);
-        })->with([
-                    'boothBooking.booth.hall',
-                    'boothBooking.company',
+        // 1. جلب معرفات الحجوزات التابعة لأكشاك هذا المعرض
+        $boothBookingIds = \App\Models\BoothBooking::whereHas('booth', function ($q) use ($id) {
+            $q->where('exhibition_id', $id);
+        })->pluck('id');
 
-                    'tickets' => function ($query) use ($visitorId) {
-                        if ($visitorId) {
-                            $query->where('visitor_id', $visitorId);
-                        }
+        // 2. الاستعلام عن الفعاليات المرتبطة بهذه الحجوزات
+        $eventsQuery = Event::whereIn('booth_booking_id', $boothBookingIds)
+            ->with([
+                'boothBooking.booth.hall',
+                'boothBooking.company',
+                'tickets' => function ($query) use ($visitorId) {
+                    if ($visitorId) {
+                        $query->where('visitor_id', $visitorId);
                     }
-                ]);
+                }
+            ]);
 
         $events = $eventsQuery->paginate($perPage);
 
@@ -436,14 +479,18 @@ class ExhibitionController extends Controller
             $registeredCount = (int) ($event->registered_count ?? 0);
             $availableSeats = max(0, $totalSeats - $registeredCount);
 
+            // صياغة وقت البداية والنهاية باستخدام الحقول الصحيحة (start_date / end_date)
             $startTime = null;
-            if ($event->date && $event->time) {
-                $startTime = \Carbon\Carbon::parse($event->date . ' ' . $event->time)->toIso8601String();
+            if ($event->start_date) {
+                $dateTimeString = $event->time
+                    ? $event->start_date . ' ' . $event->time
+                    : $event->start_date;
+                $startTime = \Carbon\Carbon::parse($dateTimeString)->toIso8601String();
             }
 
             $endTime = null;
-            if ($event->end_time) {
-                $endTime = \Carbon\Carbon::parse($event->end_time)->toIso8601String();
+            if ($event->end_date) {
+                $endTime = \Carbon\Carbon::parse($event->end_date)->toIso8601String();
             }
 
             $isRegistered = false;
@@ -457,7 +504,7 @@ class ExhibitionController extends Controller
                 'name' => $event->name ?? '',
                 'type' => $event->type ?? '',
                 'hall' => $booth?->hall?->name ?? $event->place ?? '',
-                'booth' => $booth?->name ?? $booth?->booth_number ?? '',
+                'booth' => $booth?->name ?? $booth?->booth_number ?? $booth?->number ?? '',
                 'company_name' => $boothBooking?->company?->name ?? '',
                 'start_time' => $startTime,
                 'end_time' => $endTime,

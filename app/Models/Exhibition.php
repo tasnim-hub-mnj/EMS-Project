@@ -53,7 +53,7 @@ class Exhibition extends Model
     //=====================================================
     public function booths()
     {
-        return $this->hasMany(Booth::class);
+        return $this->hasMany(Booth::class, 'exhibition_id', 'id');
     }
     //=====================================================
     public function sponsorEvents()
@@ -68,7 +68,7 @@ class Exhibition extends Model
     //=====================================================
     public function tickets()
     {
-        return $this->hasMany(Ticket::class);
+        return $this->hasMany(Ticket::class, 'exhibition_id');
     }
     //=====================================================
     public function favorites()
@@ -96,6 +96,8 @@ class Exhibition extends Model
         return $this->hasMany(Copy::class);
     }
     //=====================================================
+
+
 }
 
 
