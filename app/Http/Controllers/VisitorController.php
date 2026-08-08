@@ -141,33 +141,72 @@ class VisitorController extends Controller
 
         if (!$visitor) {
             return response()->json([
+                'status' => false,
                 'message' => 'الزائر غير موجود'
             ], 404);
         }
 
-        $exhibitionReviews = ExhibitionReview::with('exhibition')
-            ->where('visitor_id', $visitor_id)
+        $exhibitionReviews = ExhibitionReview::where('visitor_id', $visitor_id)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $boothReviews = BoothReview::with('booth')
-            ->where('visitor_id', $visitor_id)
+        $boothReviews = BoothReview::where('visitor_id', $visitor_id)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // إذا ما في ولا تقييم
-        if ($exhibitionReviews->isEmpty() && $boothReviews->isEmpty()) {
-            return response()->json([
-                'message' => 'لا يوجد أي تقييمات لهذا الزائر'
-            ]);
-        }
+        $fullName = trim(($visitor->first_name ?? '') . ' ' . ($visitor->last_name ?? ''));
+        $userName = $fullName !== '' ? $fullName : 'زائر';
+        $userAvatar = $visitor->avatar_url ? asset($visitor->avatar_url) : null;
+
+        $formattedExhibitions = $exhibitionReviews->map(function ($r) use ($visitor, $userName, $userAvatar) {
+            $mainRating = (float) ($r->rating ?? 0);
+            return [
+                'id' => (int) $r->id,
+                'user_id' => (int) ($visitor->user_id ?? $r->visitor_id),
+                'user_name' => $userName,
+                'user_avatar' => $userAvatar,
+                'target_type' => 'exhibition',
+                'target_id' => (int) $r->exhibition_id,
+                'rating' => $mainRating,
+
+                'org_score' => $mainRating,
+                'content_score' => $mainRating,
+                'services_score' => $mainRating,
+
+                'comment' => $r->comment ?? '',
+                'created_at' => $r->created_at ? $r->created_at->toIso8601String() : null,
+            ];
+        });
+
+        $formattedBooths = $boothReviews->map(function ($r) use ($visitor, $userName, $userAvatar) {
+            $mainRating = (float) ($r->rating ?? 0);
+            return [
+                'id' => (int) $r->id,
+                'user_id' => (int) ($visitor->user_id ?? $r->visitor_id),
+                'user_name' => $userName,
+                'user_avatar' => $userAvatar,
+                'target_type' => 'booth',
+                'target_id' => (int) $r->booth_id,
+                'rating' => $mainRating,
+
+                'org_score' => null,
+                'content_score' => null,
+                'services_score' => null,
+
+                'comment' => $r->comment ?? '',
+                'created_at' => $r->created_at ? $r->created_at->toIso8601String() : null,
+            ];
+        });
+
+        $allReviews = $formattedExhibitions->concat($formattedBooths)
+            ->sortByDesc('created_at')
+            ->values();
 
         return response()->json([
+            'status' => true,
             'message' => 'تم جلب جميع تقييمات الزائر بنجاح',
-            'visitor' => $visitor,
-            'exhibition_reviews' => $exhibitionReviews,
-            'booth_reviews' => $boothReviews
-        ]);
+            'data' => $allReviews
+        ], 200);
     }
 
 }

@@ -11,7 +11,7 @@ class SupportTicket extends Model
 
     protected $fillable =
         [
-            'user_id',
+            'visitor_id',
             'type',
             'body',
             // 'latitude',

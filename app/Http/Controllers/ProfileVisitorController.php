@@ -104,7 +104,7 @@ class ProfileVisitorController extends Controller
             $visitor->save();
         }
 
-        $visitor->loadCount(['schedules', 'tickets', 'eventTickets', 'sponsorEventTickets', 'favorites']);
+        $visitor->loadCount(['schedule', 'tickets', 'eventTickets', 'sponsorEventTickets', 'favorites']);
 
         $totalTickets = ($visitor->tickets_count ?? 0)
             + ($visitor->event_tickets_count ?? 0)

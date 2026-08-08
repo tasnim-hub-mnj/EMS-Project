@@ -11,7 +11,7 @@ class CollectedBooths extends Model
 
     protected $fillable =
         [
-            'user_id',
+            'visitor_id',
             'booth_id',
             'qr_data',
             'scanned_at'

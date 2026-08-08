@@ -10,12 +10,12 @@ class ExhibitionReview extends Model
     use HasFactory;
 
     protected $fillable =
-    [
-        'user_id',
-        'exhibition_id',
-        'rating',
-        'comment'
-    ];
+        [
+            'visitor_id',
+            'exhibition_id',
+            'rating',
+            'comment'
+        ];
 
     protected $table = 'exhibition_reviews';
 

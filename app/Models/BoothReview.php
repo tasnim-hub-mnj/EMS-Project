@@ -9,7 +9,7 @@ class BoothReview extends Model
 {
     protected $fillable = [
         'booth_id',
-        'user_id',
+        'visitor_id',
         'rating',
         'comment',
     ];

@@ -8,7 +8,7 @@ class Ticket extends Model
 {
     protected $fillable =
         [
-            'user_id',
+            'visitor_id',
             'exhibition_id',
             'qr_code',
             'status',
