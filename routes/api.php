@@ -34,20 +34,18 @@ Route::post('/investor/auth/forgot-password', [InvestorController::class, 'forgo
 Route::post('/investor/auth/forgot-password/verify-otp', [InvestorController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
 Route::post('/investor/auth/reset-password', [InvestorController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
 
-<<<<<<< HEAD
+
 Route::middleware('auth:sanctum')->group(function ()
 {
     Route::post('/investor/auth/change-password', [InvestorController::class, 'updatePassword']);
     Route::post('/investor/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);
     Route::post('/investor/auth/delete-account', [InvestorController::class, 'deleteAccount']);
     Route::post('/investor/auth/logout', [InvestorController::class, 'logout']);
-=======
-Route::middleware('auth:sanctum')->group(function () {
+
     Route::post('/auth/change-password', [InvestorController::class, 'updatePassword']);// تغيير كلمة المرور داخل التطبيق
     Route::post('/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);// حفظ FCM Token
     Route::post('/auth/delete-account', [InvestorController::class, 'deleteAccount']);// حذف الحساب
     Route::post('/auth/logout', [InvestorController::class, 'logout']);// تسجيل الخروج
->>>>>>> 04837f8c2fa0893c99135fb8405c055979524b55
 
     //Dashboard
     Route::get('/investor/exhibitions/featured', [DashboardInvestorController::class, 'featuredExhibitions']);
@@ -77,13 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/investor/booth/events', [BoothManagementController::class, 'getBoothEvents']);
 
     //Event
-<<<<<<< HEAD
     Route::post('/investor/events', [EventController::class, 'createEvent']);//❌
     Route::get('/investor/events', [EventController ::class, 'getInvestorEvents']);
-=======
-    Route::post('/investor/events', [EventController::class, 'createEvent']);
-    Route::get('/investor/events', [EventController::class, 'getInvestorEvents']);
->>>>>>> 04837f8c2fa0893c99135fb8405c055979524b55
     Route::get('/investor/events/{id}/ticket-requests', [EventController::class, 'getTicketRequests']);
     Route::patch('/investor/events/{eventId}/ticket-requests/{requestId}', [EventController::class, 'ticketRequestAction']);
     //SponsorEvent
@@ -203,10 +196,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/events/{id}', [EventController::class, 'getEventById']);
     Route::get('/events', [EventController::class, 'getLatestEvents']);
 });
-
-
-
-
 
 
 
