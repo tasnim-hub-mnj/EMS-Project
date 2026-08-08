@@ -12,22 +12,30 @@ class BoothBooking extends Model
     [
         'investor_id',
         'booth_id',
-        'duration_days',
+        'start_date',
+        'end_date',
+        'days',
+        'additional_services',
         'notes',
         'total_price',
         'paid_amount',
         'services_products',
         'status',
         'booked_at',
+        'approved_at',
+        'cover_image'
     ];
 
     protected $table = 'booth_bookings';
 
     protected $casts =
     [
-        'duration_days'    => 'integer',
+        'days'    => 'integer',
         'total_price'      => 'float',
         'booked_at'        => 'date',
+        'approved_at'        => 'date',
+        'additional_services' => 'array',
+        // 'additional_services' => 'array',
     ];
     //=================Relationships===================
     public function investor()
@@ -52,7 +60,7 @@ class BoothBooking extends Model
     //=================================================
     public function productBookingImages()
     {
-        return $this->hasMany(BoothBookingImage::class);
+        return $this->hasMany(ProductBookingImage::class);
     }
     //=================================================
     // public function investorBoothReports()

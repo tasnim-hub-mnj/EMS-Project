@@ -20,7 +20,7 @@ class SponsorEventSeeder extends Seeder
             SponsorEvent::create([
                 'exhibition_id' => $exhibition->id,
                 'name' => 'Opening Ceremony',
-                'type' => 'Ceremony',
+                'type' => 'food&hospitality',
                 'by' => 'Event Committee',
                 'place' => 'Main Hall',
                 'start_time' => Carbon::now()->addDays(5),
@@ -30,15 +30,15 @@ class SponsorEventSeeder extends Seeder
                 'ticket_price' => 0,
                 'max_participants' => 200,
                 'duration_days' => 1,
-                'duration_options' => json_encode([
-                    ['day' => 1, 'price' => 0]
+                'duration_options' => ([
+                    ['label'=>'one day','day' => 1, 'price' => 0]
                 ]),
                 'daily_price' => null,
                 'registered_count' => 0,
                 'total_seats' => 200,
                 'scanned_count' => 0,
                 'status' => 'upcoming',
-                'copy_status' => 'draft',
+                'copy_status' => 'active',
                 'publish_date' => Carbon::now(),
             ]);
 
@@ -56,16 +56,16 @@ class SponsorEventSeeder extends Seeder
                 'ticket_price' => 25,
                 'max_participants' => 150,
                 'duration_days' => 2,
-                'duration_options' => json_encode([
-                    ['day' => 1, 'price' => 25],
-                    ['day' => 2, 'price' => 40],
+                'duration_options' => ([
+                    ['label'=>'one day','day' => 1, 'price' => 25],
+                    ['label'=>'full event','day' => 2, 'price' => 40],
                 ]),
                 'daily_price' => 20,
                 'registered_count' => 0,
                 'total_seats' => 150,
                 'scanned_count' => 0,
                 'status' => 'upcoming',
-                'copy_status' => 'draft',
+                'copy_status' => 'active',
                 'publish_date' => Carbon::now(),
             ]);
         }

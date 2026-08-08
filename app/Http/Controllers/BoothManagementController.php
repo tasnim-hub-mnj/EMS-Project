@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class BoothManagementController extends Controller
 {
-    public function getBoothProfile($boothId)//✅
+    public function getBoothProfile($booth_id)//✅
     {
         $investor = Auth::user()->investor;
 
@@ -24,7 +24,10 @@ class BoothManagementController extends Controller
             'investor.socialLinks'
         ])
         ->where('investor_id', $investor->id)
-        ->where('booth_id', $boothId)
+        ->where('booth_id', $booth_id)
+        ->where('status', 'approved')
+        ->whereDate('start_date', '<=', today())
+        ->whereDate('end_date', '>=', today())
         ->first();
 
         if (!$booking)
@@ -39,9 +42,7 @@ class BoothManagementController extends Controller
                 'headquarters'      => $investor->location,
 
                 'social_links'      => $investor->socialLinks->pluck('link'),
-
                 'product_images'    => $booking->productBookingImages->pluck('image_p'),
-
                 'booth_images'      => $booking->boothBookingImages->pluck('image_b'),
             ]
         ], 200);
@@ -49,6 +50,19 @@ class BoothManagementController extends Controller
     //==============================================================
     public function updateBoothProfile(Request $request, $booth_id)//✅
     {
+        //--------------------------------------------------
+        $normalizeArray = function ($value)//string to array
+        {
+            if (is_array($value)) return $value;
+            if (is_string($value))
+            {
+                $decoded = json_decode($value, true);
+                return $decoded ?: [];
+            }
+            return [];
+        };
+        //--------------------------------------------------
+
         $investor = Auth::user()->investor;
 
         $booking = BoothBooking::with([
@@ -58,6 +72,9 @@ class BoothManagementController extends Controller
         ])
         ->where('investor_id', $investor->id)
         ->where('booth_id', $booth_id)
+        ->where('status', 'approved')
+        ->whereDate('start_date', '<=', today())
+        ->whereDate('end_date', '>=', today())
         ->first();
 
         if (!$booking)
@@ -82,10 +99,12 @@ class BoothManagementController extends Controller
             $booking->services_products = $request->services_products;
         }
 
-        //link
+        //social link
         if ($request->filled('delete_links'))
         {
-            foreach ($request->delete_links as $linkId)
+            $deleteLinks = $normalizeArray($request->delete_links);
+
+            foreach ($deleteLinks as $linkId)
             {
                 $link = SocialLink::where('investor_id', $investor->id)->find($linkId);
                 if ($link)
@@ -94,9 +113,12 @@ class BoothManagementController extends Controller
                 }
             }
         }
+
         if ($request->filled('social_links'))
         {
-            foreach ($request->social_links as $link)
+            $socialLinks = $normalizeArray($request->social_links);
+
+            foreach ($socialLinks as $link)
             {
                 if ($link)
                 {
@@ -108,10 +130,12 @@ class BoothManagementController extends Controller
             }
         }
 
-        //booth_images
+        //booth images
         if ($request->filled('delete_booth_images'))
         {
-            foreach ($request->delete_booth_images as $imgId)
+            $deleteBoothImages = $normalizeArray($request->delete_booth_images);
+
+            foreach ($deleteBoothImages as $imgId)
             {
                 $img = BoothBookingImage::where('booth_booking_id', $booking->id)->find($imgId);
                 if ($img)
@@ -121,9 +145,10 @@ class BoothManagementController extends Controller
                 }
             }
         }
-        if ($request->hasFile('booth_image_files'))
+
+        if ($request->hasFile('booth_images'))
         {
-            foreach ($request->file('booth_image_files') as $img)
+            foreach ($request->file('booth_images') as $img)
             {
                 $path = $img->store('booth_booking_images', 'public');
 
@@ -134,10 +159,12 @@ class BoothManagementController extends Controller
             }
         }
 
-        //product_images
+        //product images
         if ($request->filled('delete_product_images'))
         {
-            foreach ($request->delete_product_images as $imgId)
+            $deleteProductImages = $normalizeArray($request->delete_product_images);
+
+            foreach ($deleteProductImages as $imgId)
             {
                 $img = ProductBookingImage::where('booth_booking_id', $booking->id)->find($imgId);
                 if ($img)
@@ -147,9 +174,10 @@ class BoothManagementController extends Controller
                 }
             }
         }
-        if ($request->hasFile('product_image_files'))
+
+        if ($request->hasFile('product_images'))
         {
-            foreach ($request->file('product_image_files') as $img)
+            foreach ($request->file('product_images') as $img)
             {
                 $path = $img->store('product_booking_images', 'public');
 
@@ -161,13 +189,14 @@ class BoothManagementController extends Controller
         }
 
         //cover_image
-        if ($request->hasFile('cover_image'))
-        {
-            $path = $request->file('cover_image')->store('booth_cover_images', 'public');
-            $booking->cover_image = $path;
-        }
+        // if ($request->hasFile('cover_image'))
+        // {
+        //     $path = $request->file('cover_image')->store('booth_cover_images', 'public');
+        //     $booking->cover_image = $path;
+        // }
 
         $booking->save();
+        $booking->load(['productBookingImages', 'boothBookingImages']);
 
         return response()->json([
             'message' => 'Booth profile updated successfully.',
@@ -178,7 +207,7 @@ class BoothManagementController extends Controller
                 'social_links'      => $investor->socialLinks->pluck('link'),
                 'product_images'    => $booking->productBookingImages->pluck('image_p'),
                 'booth_images'      => $booking->boothBookingImages->pluck('image_b'),
-                'cover_image'       => $booking->cover_image,
+                // 'cover_image'       => $booking->cover_image,
             ]
         ], 200);
     }
@@ -189,6 +218,9 @@ class BoothManagementController extends Controller
 
         $booking = BoothBooking::where('investor_id', $investor->id)
             ->where('booth_id', $booth_id)
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', today())
+            ->whereDate('end_date', '>=', today())
             ->first();
 
         if (!$booking)
@@ -200,13 +232,13 @@ class BoothManagementController extends Controller
             'cover_image' => 'required|image|mimes:jpg,jpeg,png|max:4096'
         ]);
 
-        // حذف الغلاف القديم
+        //delete old
         if ($booking->cover_image)
         {
             Storage::disk('public')->delete($booking->cover_image);
         }
 
-        // رفع الغلاف الجديد
+        //store new
         $path = $request->file('cover_image')->store('booth_cover_images', 'public');
 
         $booking->cover_image = $path;
@@ -237,9 +269,11 @@ class BoothManagementController extends Controller
             return response()->json(['message' => 'Booking not found'], 404);
         }
 
-        $events = Event::with(['boothBooking.booth.exhibition', 'eventImages'])
+        $events = Event::with([
+            'boothBooking.booth.exhibition',
+            'eventImages'])
             ->where('booth_booking_id', $booking->id)
-            ->orderBy('date', 'asc')
+            ->orderBy('start_date', 'asc')
             ->get();
 
         $data = $events->map(function ($ev)
@@ -256,14 +290,10 @@ class BoothManagementController extends Controller
                 'booth_number' => $booth->number,
                 'exhibition_name' => $exhibition->name,
 
-                'date' => $ev->date,
-                'start_date' => $ev->date,
-                'end_date' => Carbon::parse($ev->date)
-                    ->copy()
-                    ->addDays($ev->duration_days - 1)
-                    ->format('Y-m-d'),
-
+                'start_date' => Carbon::parse($ev->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($ev->end_date)->format('Y-m-d'),
                 'time' => $ev->time,
+                // 'time' => Carbon::parse($ev->start_date)->format('H:i:s') . ' - ' . Carbon::parse($ev->end_date)->format('H:i'),
 
                 'max_participants' => $ev->max_participants,
                 'registered_count' => $ev->registered_count ?? 0,
@@ -275,13 +305,12 @@ class BoothManagementController extends Controller
                 'has_bookable_seats' => $ev->has_bookable_seats,
                 'total_seats' => $ev->total_seats,
                 'booked_seats' => $ev->registered_count ?? 0,
-                'sold_tickets' => $ev->sold_tickets ?? 0,
 
                 'ticket_price' => $ev->ticket_price,
                 'is_general_invitation' => $ev->is_general_invitation,
 
                 'place' => $ev->place,
-                'duration_days' => $ev->duration_days,
+                'duration_days' => carbon::parse($ev->start_date)->diffInDays(Carbon::parse($ev->end_date)) + 1,
 
                 'company_images' => $ev->eventImages->pluck('image')->toArray(),
 

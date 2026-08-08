@@ -10,6 +10,7 @@ use App\Models\Exhibition;
 use App\Models\ExhibitionImage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class ExhibitionController extends Controller
@@ -113,7 +114,9 @@ class ExhibitionController extends Controller
         $sector = $request->query('sector');
         $status = $request->query('status'); // upcoming | active | ended
 
-        $query = Exhibition::where('copy_status', 'active');
+        $query = Exhibition::with([
+            'sponsorEvents'
+        ])->where('copy_status', 'active');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -151,26 +154,28 @@ class ExhibitionController extends Controller
 
         $exhibitions_data = $exhibitions->map(function ($exhibition) {
             return
-                [
-                    'id' => $exhibition->id,
-                    'name' => $exhibition->name,
-                    'description' => $exhibition->description,
-                    'images' => $exhibition->images ?? [],
-                    'services' => $exhibition->extra_services
-                        ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
-                        : [],
-                    'start_date' => $exhibition->start_date,
-                    'end_date' => $exhibition->end_date,
-                    'location' => $exhibition->location,
-                    'city' => $exhibition->city,
-                    'status' => $exhibition->status,
-                    'available_booths' => $exhibition->available_booths,
-                    'sectors' => $exhibition->sectors ?? [],
-                    'is_favorite' => Auth::user()->favorites()
-                        ->where('favoritable_id', $exhibition->id)
-                        ->where('favoritable_type', Exhibition::class)
-                        ->exists(),
-                ];
+            [
+                'id' => $exhibition->id,
+                'name' => $exhibition->name,
+                'description' => $exhibition->description,
+                'images' => $exhibition->images ?? [],
+                'services' => $exhibition->extra_services
+                    ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
+                    : [],
+                'mapJson' => $exhibition->map,
+                'sponsorEvents' => $exhibition->sponsorEvents,
+                'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
+                'location' => $exhibition->location,
+                'city' => $exhibition->city,
+                'status' => $exhibition->status,
+                'available_booths' => $exhibition->available_booths,
+                'sectors' => $exhibition->sectors ?? [],
+                'is_favorite' => Auth::user()->favorites()
+                    ->where('favoritable_id', $exhibition->id)
+                    ->where('favoritable_type', Exhibition::class)
+                    ->exists(),
+            ];
         });
 
         return response()->json([
@@ -203,12 +208,12 @@ class ExhibitionController extends Controller
             ->exists();
 
         $services = $exhibition->extra_services
-            ? collect(json_decode($exhibition->extra_services, true))->pluck('name')->toArray()
+            ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
             : [];
 
         $images = $exhibition->exhibitionImages ?? [];
 
-        $map_data = json_decode($exhibition->map, true);
+        $map_data = $exhibition->map;
 
         $sponsor_events = $exhibition->sponsorEvents->map(function ($event) {
             return
@@ -225,8 +230,8 @@ class ExhibitionController extends Controller
             'description' => $exhibition->description,
             'images' => $images,
             'services' => $services,
-            'start_date' => $exhibition->start_date,
-            'end_date' => $exhibition->end_date,
+            'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
+            'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
             'location' => $exhibition->location,
             'city' => $exhibition->city,
             'status' => $exhibition->status,

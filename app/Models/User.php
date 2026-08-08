@@ -27,8 +27,8 @@ class User extends Authenticatable
             'password',
             'role',
             'status',
-            'fcm_token',
             'is_verified',
+            'fcm_token',
         ];
 
     /**
@@ -96,15 +96,6 @@ class User extends Authenticatable
         return $this->hasMany(BoothReview::class, 'user_id');
     }
     //=====================================================
-    public function verifyOtpCodes()
-    {
-        return $this->hasMany(VerifyOtp::class);
-    }
-
-    //=====================================================
-    //=====================HANAN===========================
-    //=====================================================
-
     public function otpCodes()
     {
         return $this->hasMany(OtpCode::class);

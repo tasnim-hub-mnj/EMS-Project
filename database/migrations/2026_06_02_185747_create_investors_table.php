@@ -13,7 +13,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('company_name');
-            $table->string('trade_name')->nullable();//المجال التجاري//activity_type
+            $table->string('trade_name')->nullable();//المجال التجاري
             $table->string('location');//المقر
             $table->string('website')->nullable();
             $table->enum('activity_type',['technology','food&hospitality','fashion','health','education','other'])->nullable();//نوع النشاط
@@ -27,7 +27,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

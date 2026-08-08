@@ -27,7 +27,6 @@ class InvestorRegisterRequest extends FormRequest
             'trade_name'     => 'required|string|max:200',
             'email'          => 'required|email|unique:users,email',
             'phone'          => 'required|string|unique:users,phone',
-            'fcm_token'      => 'required|string|max:400',
             'location'       => 'required|string|max:200',
             'website'        => 'nullable|url',
             'activity_type' => 'required|in:technology,food&hospitality,fashion,health,education,other',

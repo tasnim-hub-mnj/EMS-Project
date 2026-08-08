@@ -53,7 +53,7 @@ class SponsorshipBookingController extends Controller
                 'price' => $bk->total_price,
 
                 'status' => $bk->status,
-                'booked_at' => $bk->booked_at,
+                'booked_at' => Carbon::parse($bk->booked_at)->format('Y-m-d'),
 
                 // الإحصائيات
                 'total_visitors' => $bk->total_visitors ?? 0,
@@ -76,6 +76,7 @@ class SponsorshipBookingController extends Controller
     //===============================================================
     public function createSponsorship(BookingshipSponsorEventRequest $request)//حجز فعالية اعلانية//✅
     {
+
         $investor = Auth::user()->investor;
         $data = $request->validated();
 
@@ -112,7 +113,7 @@ class SponsorshipBookingController extends Controller
                 $path = $img->store('sponsorship_ad_images', 'public');
 
                 SponsorshipBookingImage::create([
-                    'sp_b_id' => $booking->id,
+                    'sponsorship_booking_id' => $booking->id,
                     'type' => 'ad',
                     'image' => $path,
                 ]);
@@ -127,7 +128,7 @@ class SponsorshipBookingController extends Controller
                 $path = $img->store('sponsorship_poster_images', 'public');
 
                 SponsorshipBookingImage::create([
-                    'sp_b_id' => $booking->id,
+                    'sponsorship_booking_id' => $booking->id,
                     'type' => 'poster',
                     'image' => $path,
                 ]);

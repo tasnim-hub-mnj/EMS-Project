@@ -32,7 +32,7 @@ class ReportInvestor extends Model
     //=================================================
     public function reportMetrics()
     {
-        return $this->hasMany(ReportMetrics::class);
+        return $this->hasMany(ReportMetrics::class, 'report_id');
     }
     //=================================================
 }

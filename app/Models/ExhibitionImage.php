@@ -13,7 +13,6 @@ class ExhibitionImage extends Model
     [
         'exhibition_id',
         'image',
-        // 'order'
     ];
 
     protected $table = 'exhibition_images';

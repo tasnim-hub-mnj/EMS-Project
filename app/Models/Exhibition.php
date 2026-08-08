@@ -29,12 +29,16 @@ class Exhibition extends Model
             'extra_services',
             'working_hours',
             'is_paid',
+            'ticket_price',
+            'image',
+            'map',
         ];
 
     protected $table = 'exhibitions';
 
     protected $casts =
         [
+            'map' => 'array',
             'sectors' => 'array',
             'extra_services' => 'array',
             'start_date' => 'date',

@@ -29,7 +29,7 @@ class ReportMetrics extends Model
     //===============Relationships==================
     public function report()
     {
-        return $this->belongsTo(ReportInvestor::class);
+        return $this->belongsTo(ReportInvestor::class, 'report_id');
     }
     //=================================================
 }
