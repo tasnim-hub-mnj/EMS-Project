@@ -11,60 +11,41 @@ class EventSeeder extends Seeder
 {
     public function run(): void
     {
-        // Fetch all booth bookings
+        // جلب جميع حجوزات الأكشاك مع العلاقة كشك
         $bookings = BoothBooking::with('booth')->get();
 
-        foreach ($bookings as $booking)
-        {
-            Event::create([
-                'booth_booking_id'   => $booking->id,
+        if ($bookings->isEmpty()) {
+            $this->command->warn('لم يتم العثور على حجوزات أكشاك في جدول BoothBooking.');
+            return;
+        }
 
-                // Basic event info
-                'name'               => 'Booth ' . $booking->booth->number . ' Special Event',
-                'type'               => 'Seminar',
+        foreach ($bookings as $booking) {
+            if (!$booking->booth) {
+                continue;
+            }
 
-                // Dates & time
-                'start_date'         => $booking->start_date,
-                'end_date'           => $booking->end_date,
-                'time'               => '10:00:00',
-
-                // Location
-                'place'              => $booking->booth->location,
-
-                // Duration
-                'duration_days'      => $booking->days,
-
-                // Description
-                'description'        => 'A special event held during the booth booking period.',
-
-                // Promo video (optional)
-                'video_promo_url'    => null,
-
-                // Invitation settings
-                'is_general_invitation' => true,
-
-                // Seat settings
-                'has_bookable_seats' => false,
-                'max_participants'   => null,
-                'requires_booking'   => false,
-
-                // Ticket settings
-                'ticket_price'       => 0,
-                'ticket_type'        => 'free',
-                'free_ticket_limit'  => null,
-
-                // Statistics
-                'registered_count'   => 0,
-                'total_seats'        => null,
-                'scanned_count'      => 0,
-
-                // Status
-                'status'             => 'upcoming',
-                'current_day'        => 1,
-
-                // Daily attendees
-                'daily_attendees'    => null,
-            ]);
+            Event::updateOrCreate(
+                ['booth_booking_id' => $booking->id],
+                [
+                    'name' => 'Booth ' . ($booking->booth->number ?? $booking->booth->id) . ' Special Event',
+                    'type' => 'Seminar',
+                    'time' => '10:00:00',
+                    'place' => $booking->booth->location ?? 'Main Hall',
+                    'duration_days' => $booking->days ?? 1,
+                    'description' => 'A special event held during the booth booking period.',
+                    'video_promo_url' => null,
+                    'is_general_invitation' => true,
+                    'has_bookable_seats' => true,
+                    'max_participants' => 50,
+                    'requires_booking' => false,
+                    'ticket_price' => 0,
+                    'registered_count' => 30,
+                    'total_seats' => 50,
+                    'scanned_count' => 0,
+                    'status' => 'upcoming',
+                    'current_day' => 1,
+                ]
+            );
         }
     }
 }

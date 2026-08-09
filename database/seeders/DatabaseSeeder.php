@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             OrganizerSeeder::class,
             ExhibitionSeeder::class,
             BoothSeeder::class,
+            BoothBookingSeeder::class,
             SponsorEventSeeder::class,
             EventSeeder::class,
             TicketEventSeeder::class,

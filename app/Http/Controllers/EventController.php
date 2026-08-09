@@ -101,12 +101,11 @@ class EventController extends Controller
             'boothBooking.booth.exhibition',
             'eventImages'
         ])
-        ->whereHas('boothBooking', function ($q) use ($investor)
-        {
-            $q->where('investor_id', $investor->id);
-        })
-        ->orderBy('start_date', 'asc')
-        ->get();
+            ->whereHas('boothBooking', function ($q) use ($investor) {
+                $q->where('investor_id', $investor->id);
+            })
+            ->orderBy('start_date', 'asc')
+            ->get();
 
         $data = $events->map(function ($ev) {
             $booth = $ev->boothBooking->booth;
@@ -121,10 +120,10 @@ class EventController extends Controller
                     'booth_number' => $booth->number,
                     'exhibition_name' => $exhibition->name,
 
-                'start_date' => Carbon::parse($ev->start_date)->format('Y-m-d'),
-                'end_date' => Carbon::parse($ev->end_date)->format('Y-m-d'),
+                    'start_date' => Carbon::parse($ev->start_date)->format('Y-m-d'),
+                    'end_date' => Carbon::parse($ev->end_date)->format('Y-m-d'),
 
-                'time' => Carbon::parse($ev->start_date)->format('H:i') . ' - ' . Carbon::parse($ev->end_date)->format('H:i'),
+                    'time' => Carbon::parse($ev->start_date)->format('H:i') . ' - ' . Carbon::parse($ev->end_date)->format('H:i'),
 
                     'max_participants' => $ev->max_participants,
                     'registered_count' => $ev->registered_count ?? 0,
@@ -132,11 +131,11 @@ class EventController extends Controller
                     'status' => $ev->status,
                     'description' => $ev->description,
 
-                'requires_booking' => $ev->requires_booking,
-                'has_bookable_seats' => $ev->has_bookable_seats,
-                'total_seats' => $ev->total_seats,
-                'booked_seats' => $ev->registered_count ?? 0,
-                // 'sold_tickets' => $ev->sold_tickets ?? 0,
+                    'requires_booking' => $ev->requires_booking,
+                    'has_bookable_seats' => $ev->has_bookable_seats,
+                    'total_seats' => $ev->total_seats,
+                    'booked_seats' => $ev->registered_count ?? 0,
+                    // 'sold_tickets' => $ev->sold_tickets ?? 0,
 
                     'ticket_price' => $ev->ticket_price,
                     'is_general_invitation' => $ev->is_general_invitation,
@@ -170,8 +169,7 @@ class EventController extends Controller
         $event = Event::where('id', $event_id)
             ->firstOrFail();
 
-        if (!$event->boothBooking || $event->boothBooking->investor_id !== $investor->id)
-        {
+        if (!$event->boothBooking || $event->boothBooking->investor_id !== $investor->id) {
             return response()->json([
                 'message' => 'You do not can access this event ticket.'
             ], 400);
@@ -212,8 +210,7 @@ class EventController extends Controller
         $event = Event::where('id', $event_id)
             ->firstOrFail();
 
-        if (!$event->boothBooking || $event->boothBooking->investor_id !== $investor->id)
-        {
+        if (!$event->boothBooking || $event->boothBooking->investor_id !== $investor->id) {
             return response()->json([
                 'message' => 'You do not can access this event ticket.'
             ], 400);
@@ -611,14 +608,16 @@ class EventController extends Controller
     //=====================الزائر===============================
     public function getLatestEvents(Request $request)
     {
-        $visitor = $request->user()?->visitor;
+        $user = auth('sanctum')->user();
+        $visitor = $user?->visitor;
 
         $perPage = (int) $request->query('per_page', 6);
         $isLatest = $request->query('latest', 0);
 
         $query = Event::with([
             'boothBooking.booth.exhibition',
-            'images'
+            'boothBooking.investor',
+            'eventImages' // تم تعديلها من images إلى eventImages
         ]);
 
         if ($isLatest == 1) {
@@ -635,35 +634,45 @@ class EventController extends Controller
                 ->pluck('event_id')
                 ->toArray();
         }
+
         $formattedEvents = $events->getCollection()->map(function ($event) use ($registeredEventIds) {
             $booking = $event->boothBooking;
             $booth = $booking?->booth;
             $exhibition = $booth?->exhibition;
 
-            $totalSeats = $event->total_seats ?? 0;
-            $registeredCount = $event->registered_count ?? 0;
+            $totalSeats = (int) ($event->max_participants ?? $event->total_seats ?? 0);
+            $registeredCount = (int) ($event->registered_count ?? 0);
+
+            $startTime = null;
+            if ($event->start_date) {
+                $dateTimeString = $event->time
+                    ? $event->start_date . ' ' . $event->time
+                    : $event->start_date;
+                $startTime = \Carbon\Carbon::parse($dateTimeString)->toIso8601String();
+            }
+
+            $endTime = null;
+            if ($event->end_date) {
+                $endTime = \Carbon\Carbon::parse($event->end_date)->toIso8601String();
+            }
 
             return [
                 'id' => (int) $event->id,
                 'exhibition_id' => $exhibition?->id ? (int) $exhibition->id : null,
-                'name' => $event->name,
-                'type' => $event->type,
-                'hall' => $booth?->hall_name ?? 'الرئيسية',
-                'booth' => $booth?->booth_number ?? 'غير محدد',
-                'company_name' => $booking?->company_name ?? $event->by ?? 'الجهة المنظمة',
-                'start_time' => $event->date && $event->start_time
-                    ? \Carbon\Carbon::parse($event->date . ' ' . $event->start_time)->toIso8601String()
-                    : null,
-                'end_time' => $event->date && $event->end_time
-                    ? \Carbon\Carbon::parse($event->date . ' ' . $event->end_time)->toIso8601String()
-                    : null,
-                'description' => $event->description,
-                'image_url' => $event->images?->first()?->image_url ?? $event->video_promo_url ?? null,
-                'speaker_name' => $event->by ?? 'متحدث رسمي',
+                'name' => $event->name ?? '',
+                'type' => $event->type ?? '',
+                'hall' => $booth?->location ?? $event->place ?? '',
+                'booth' => $booth?->number ?? $booth?->name ?? '',
+                'company_name' => $booking?->investor?->company_name ?? '',
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'description' => $event->description ?? '',
+                'image_url' => $event->eventImages?->first()?->image_url ?? $event->video_promo_url ?? null,
+                'speaker_name' => $event->speaker_name ?? '',
                 'available_seats' => max(0, $totalSeats - $registeredCount),
-                'total_seats' => (int) $totalSeats,
+                'total_seats' => $totalSeats,
                 'is_registered' => in_array($event->id, $registeredEventIds),
-                'exhibition_name' => $exhibition?->name ?? 'معرض غير محدد',
+                'exhibition_name' => $exhibition?->name ?? '',
             ];
         });
 

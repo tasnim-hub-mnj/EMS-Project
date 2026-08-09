@@ -34,8 +34,7 @@ class InvestorController extends Controller
 
         //----------------------------------
         $newOtp = rand(100000, 999999);
-        while (OtpCode::where('code', $newOtp)->exists())
-        {
+        while (OtpCode::where('code', $newOtp)->exists()) {
             $newOtp = rand(100000, 999999);
         }
         $otp = OtpCode::create([
@@ -49,14 +48,14 @@ class InvestorController extends Controller
         //----------------------------------
 
         $investor_data =
-        [
-            'user_id' => $user->id,
-            'company_name' => $data['company_name'],
-            'trade_name' => $data['trade_name'],
-            'location' => $data['location'],
-            'website' => $data['website'] ?? null,
-            'activity_type' => $data['activity_type'],
-        ];
+            [
+                'user_id' => $user->id,
+                'company_name' => $data['company_name'],
+                'trade_name' => $data['trade_name'],
+                'location' => $data['location'],
+                'website' => $data['website'] ?? null,
+                'activity_type' => $data['activity_type'],
+            ];
 
         $investor = Investor::create($investor_data);
 
@@ -88,17 +87,15 @@ class InvestorController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
-        {
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
-        $user = User::where('id',$otp->user_id)->first();
+        $user = User::where('id', $otp->user_id)->first();
 
         $otp->update(['is_used' => true]);
         $user->update([
@@ -207,7 +204,7 @@ class InvestorController extends Controller
 
         $otp = OtpCode::create([
             'user_id' => $user->id,
-            // 'email' => $user->email,
+            'email' => $user->email,
             'code' => $code,
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,

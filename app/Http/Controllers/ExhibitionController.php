@@ -457,21 +457,21 @@ class ExhibitionController extends Controller
             $q->where('exhibition_id', $id);
         })->pluck('id');
 
-        // 2. الاستعلام عن الفعاليات المرتبطة بهذه الحجوزات
-        $eventsQuery = Event::whereIn('booth_booking_id', $boothBookingIds)
+        // 2. الاستعلام عن الفعاليات مع تحميل علاقة eventTickets المعرفة
+        $events = Event::whereIn('booth_booking_id', $boothBookingIds)
             ->with([
-                'boothBooking.booth.hall',
-                'boothBooking.company',
-                'tickets' => function ($query) use ($visitorId) {
+                'boothBooking.booth',
+                'boothBooking.investor',
+                'eventTickets' => function ($query) use ($visitorId) {
                     if ($visitorId) {
                         $query->where('visitor_id', $visitorId);
                     }
                 }
-            ]);
+            ])
+            ->paginate($perPage);
 
-        $events = $eventsQuery->paginate($perPage);
-
-        $formattedEvents = $events->getCollection()->map(function ($event) use ($exhibition, $visitorId, $id) {
+        // 3. تحويل عناصر المجموعة
+        $events->getCollection()->transform(function ($event) use ($exhibition, $visitorId, $id) {
 
             $boothBooking = $event->boothBooking;
             $booth = $boothBooking?->booth;
@@ -479,7 +479,6 @@ class ExhibitionController extends Controller
             $registeredCount = (int) ($event->registered_count ?? 0);
             $availableSeats = max(0, $totalSeats - $registeredCount);
 
-            // صياغة وقت البداية والنهاية باستخدام الحقول الصحيحة (start_date / end_date)
             $startTime = null;
             if ($event->start_date) {
                 $dateTimeString = $event->time
@@ -493,9 +492,10 @@ class ExhibitionController extends Controller
                 $endTime = \Carbon\Carbon::parse($event->end_date)->toIso8601String();
             }
 
+            // فحص هل الزائر مسجل في الفعالية عبر علاقة eventTickets
             $isRegistered = false;
-            if ($visitorId && $event->relationLoaded('tickets')) {
-                $isRegistered = $event->tickets->whereIn('status', ['pending', 'approved'])->isNotEmpty();
+            if ($visitorId && $event->relationLoaded('eventTickets')) {
+                $isRegistered = $event->eventTickets->whereIn('status', ['pending', 'approved'])->isNotEmpty();
             }
 
             return [
@@ -503,9 +503,9 @@ class ExhibitionController extends Controller
                 'exhibition_id' => (int) $id,
                 'name' => $event->name ?? '',
                 'type' => $event->type ?? '',
-                'hall' => $booth?->hall?->name ?? $event->place ?? '',
-                'booth' => $booth?->name ?? $booth?->booth_number ?? $booth?->number ?? '',
-                'company_name' => $boothBooking?->company?->name ?? '',
+                'hall' => $booth?->location ?? $event->place ?? '',
+                'booth' => $booth?->number ?? $booth?->name ?? '',
+                'company_name' => $boothBooking?->investor?->company_name ?? '',
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'description' => $event->description ?? '',
@@ -520,7 +520,7 @@ class ExhibitionController extends Controller
 
         return response()->json([
             'status' => true,
-            'data' => $formattedEvents,
+            'data' => $events->items(),
             'pagination' => [
                 'current_page' => $events->currentPage(),
                 'last_page' => $events->lastPage(),
