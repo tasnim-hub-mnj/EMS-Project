@@ -126,7 +126,7 @@ class InvestorController extends Controller
 
         $otp = OtpCode::create([
             'user_id' => $user->id,
-            // 'email' => $user->email,
+            'email' => $user->email,
             'code' => $newOtp,
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
@@ -248,6 +248,40 @@ class InvestorController extends Controller
         ], 200);
     }
     //================================================================
+    // public function resetPassword(Request $request)
+    // {
+    //     $request->validate([
+    //         'email' => 'required|email|exists:users,email',
+    //         'otp' => 'required|string',
+    //         'password' => 'required|string|min:6|confirmed',
+    //     ]);
+
+    //     $user = User::where('email', $request->email)->first();
+
+    //     // البحث عن الرمز المفعل مسبقاً وغير المنتهي الصلاحية
+    //     $otp = OtpCode::where('user_id', $user->id)
+    //         ->where('code', $request->otp)
+    //         ->where('is_used', true)
+    //         ->where('expires_at', '>', now())
+    //         ->orderBy('created_at', 'desc')
+    //         ->first();
+
+    //     if (!$otp) {
+    //         return response()->json(['message' => 'OTP not found or expired.'], 404);
+    //     }
+
+    //     // تحديث كلمة المرور
+    //     $user->update([
+    //         'password' => Hash::make($request->password),
+    //     ]);
+
+    // حذف الرمز المستهلك لضمان عدم إعادة استخدامه مرة أخرى
+    // $otp->delete();
+
+    // return response()->json([
+    //     'message' => 'Password changed successfully.'
+    // ], 200);
+    // }
     public function resetPassword(Request $request)//3//✅
     {
         $request->validate([

@@ -113,11 +113,10 @@ class TicketController extends Controller
             ], 403);
         }
 
-        // جلب الفعالية مع المعرض المرتبط بها إن وجد
-        $event = Event::with('exhibition')->find($request->event_id);
+        $event = Event::with('boothBooking.booth.exhibition')->find($request->event_id);
         $quantity = (int) $request->input('quantity', 1);
+        $exhibition = $event->boothBooking?->booth?->exhibition;
 
-        // 2. التحقق من سعة المقاعد المتاحة
         $totalSeats = $event->total_seats ?? 0;
         $registeredCount = $event->registered_count ?? 0;
 
@@ -127,13 +126,14 @@ class TicketController extends Controller
                 'message' => 'المقاعد المتاحة لا تكفي للعدد المطلوب'
             ], 400);
         }
+
         $unitPrice = $request->has('paid_amount')
             ? ((float) $request->paid_amount / $quantity)
             : ($event->ticket_price ?? 0.00);
 
         $createdTickets = [];
 
-        DB::transaction(function () use ($quantity, $visitor, $event, $unitPrice, &$createdTickets) {
+        DB::transaction(function () use ($quantity, $visitor, $event, $exhibition, $unitPrice, &$createdTickets) {
             for ($i = 0; $i < $quantity; $i++) {
                 $qrCode = 'EVT-' . strtoupper(Str::random(10));
                 $now = now();
@@ -149,8 +149,8 @@ class TicketController extends Controller
 
                 $createdTickets[] = [
                     'id' => (int) $ticket->id,
-                    'exhibition_id' => $event->exhibition_id ? (int) $event->exhibition_id : null,
-                    'exhibition_name' => $event->exhibition?->name ?? null,
+                    'exhibition_id' => $exhibition ? (int) $exhibition->id : null,
+                    'exhibition_name' => $exhibition?->name ?? null,
                     'qr_data' => (string) $ticket->qr_code,
                     'booked_at' => Carbon::parse($ticket->booked_at)->toIso8601String(),
                     'type' => 'event',
@@ -433,7 +433,7 @@ class TicketController extends Controller
             ->first();
 
         if ($ticket) {
-            $ticket->update(['status' => 'cancelled']);
+            $ticket->update(['status' => 'rejected']);
 
             return response()->json([
                 'status' => true,
@@ -448,7 +448,7 @@ class TicketController extends Controller
 
         if ($eventTicket) {
             DB::transaction(function () use ($eventTicket) {
-                $eventTicket->update(['status' => 'cancelled']);
+                $eventTicket->update(['status' => 'rejected']);
 
                 if ($eventTicket->event && $eventTicket->event->registered_count > 0) {
                     $eventTicket->event->decrement('registered_count');
@@ -466,7 +466,7 @@ class TicketController extends Controller
             ->first();
 
         if ($sponsorTicket) {
-            $sponsorTicket->update(['status' => 'cancelled']);
+            $sponsorTicket->update(['status' => 'rejected']);
 
             return response()->json([
                 'status' => true,

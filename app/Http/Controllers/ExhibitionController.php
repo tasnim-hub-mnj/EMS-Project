@@ -151,8 +151,9 @@ class ExhibitionController extends Controller
         $query->orderBy('start_date', 'asc');
 
         $exhibitions = $query->paginate($per_page, ['*'], 'page', $page);
+        $user = auth('sanctum')->user();
 
-        $exhibitions_data = $exhibitions->map(function ($exhibition) {
+        $exhibitions_data = $exhibitions->map(function ($exhibition) use ($user) {
             return
                 [
                     'id' => $exhibition->id,
@@ -171,10 +172,10 @@ class ExhibitionController extends Controller
                     'status' => $exhibition->status,
                     'available_booths' => $exhibition->available_booths,
                     'sectors' => $exhibition->sectors ?? [],
-                    'is_favorite' => Auth::user()->favorites()
+                    'is_favorite' => $user ? $user->favorites()
                         ->where('favoritable_id', $exhibition->id)
                         ->where('favoritable_type', Exhibition::class)
-                        ->exists(),
+                        ->exists() : false,
                 ];
         });
 
