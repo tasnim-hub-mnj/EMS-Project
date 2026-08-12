@@ -175,7 +175,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/booking/exhibition/{id}', [TicketController::class, 'getExhibitionTicket']);
     Route::post('/bookings/event', [TicketController::class, 'bookEvent']);
     Route::get('/booking/event/{id}', [TicketController::class, 'getEventTicket']);
-    Route::delete('bookings/{id}/cancel', [TicketController::class, 'cancelTicket']);
+    Route::delete('/bookings/{id}/cancel', [TicketController::class, 'cancelTicket']);
     Route::get('/booking/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
 
     Route::post('/booking/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);

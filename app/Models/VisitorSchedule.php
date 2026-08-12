@@ -11,7 +11,7 @@ class VisitorSchedule extends Model
 
     protected $fillable =
         [
-            'user_id',
+            'visitor_id',
             'event_id',
             'added_at'
         ];

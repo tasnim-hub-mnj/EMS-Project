@@ -63,4 +63,15 @@ class Event extends Model
     //     return $this->hasMany(VisitorSchedule::class);
     // }
     //=====================================================
+    public function exhibition()
+    {
+        return $this->hasOneThrough(
+            Exhibition::class,
+            Booth::class,
+            'id',
+            'id',
+            'booth_id',
+            'exhibition_id'
+        );
+    }
 }
