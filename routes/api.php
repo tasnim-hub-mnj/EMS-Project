@@ -54,11 +54,10 @@ Route::middleware(['auth:sanctum','checkInvestor'])->group(function ()
     Route::post('/investor/auth/delete-account', [InvestorController::class, 'deleteAccount']);
     Route::post('/investor/auth/logout', [InvestorController::class, 'logout']);
 
-    Route::post('/auth/change-password', [InvestorController::class, 'updatePassword']);// تغيير كلمة المرور داخل التطبيق
-    Route::post('/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);// حفظ FCM Token
-    Route::post('/auth/delete-account', [InvestorController::class, 'deleteAccount']);// حذف الحساب
-    Route::post('/auth/logout', [InvestorController::class, 'logout']);// تسجيل الخروج
-
+    Route::post('/auth/change-password', [InvestorController::class, 'updatePassword']);
+    Route::post('/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);
+    Route::post('/auth/delete-account', [InvestorController::class, 'deleteAccount']);
+    Route::post('/auth/logout', [InvestorController::class, 'logout']);
     //Dashboard
     Route::get('/investor/exhibitions/featured', [DashboardInvestorController::class, 'featuredExhibitions']);
     Route::get('/investor/sponsor-events/featured', [DashboardInvestorController::class, 'featuredSponsorEvents']);
