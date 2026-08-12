@@ -7,7 +7,7 @@
     <title>Document</title>
 </head>
 <body>
-    <h4>Your Verify Code 🤫:</h4>
-    <h1>👉🏻<B>{{$otp->code}}</B>👈🏻</h1>
+    <h4>Your Verify Code 🙈:</h4>
+    <h1><B>{{$otp->code}}</B></h1>
 </body>
 </html>

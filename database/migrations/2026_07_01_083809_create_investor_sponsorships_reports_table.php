@@ -8,19 +8,18 @@ return new class extends Migration
 {//i
     public function up(): void
     {
-        Schema::create('investor_visitor_reports', function (Blueprint $table)
+        Schema::create('investor_sponsorships_reports', function (Blueprint $table)
         {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            $table->foreignId('booth_booking_id')->constrained('booth_bookings')->onDelete('cascade');
-            // $table->string('booth_number');
-            // $table->string('exhibition_name');
-            $table->string('date_period');
-            $table->integer('total_visitors')->default(0);
+
+            $table->integer('total_campaigns')->default(0);
+            $table->integer('total_reach')->default(0);
             $table->decimal('growth_rate', 8, 2)->default(0);
-            $table->json('peak_hours');
-            $table->decimal('average_visitors_per_hour', 8, 2)->default(0);
-            $table->integer('unique_visitors')->default(0);
+            $table->decimal('total_amount', 8, 2)->default(0);
+            $table->integer('total_favorites')->default(0);
+            $table->decimal('overall_ctr', 5, 2)->default(0);
+
             $table->json('data_graph');
             $table->json('data_specific_table');
             $table->json('data_recommendations');
@@ -29,10 +28,10 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations
+     * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('investor_visitor_reports');
+        Schema::dropIfExists('investor_performance_reports');
     }
 };

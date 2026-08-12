@@ -63,26 +63,22 @@ class BoothBooking extends Model
         return $this->hasMany(ProductBookingImage::class);
     }
     //=================================================
-    // public function investorBoothReports()
-    // {
-    //     return $this->hasMany(InvestorBoothReports::class);
-    // }
-    // //=================================================
-    // public function investorEventReports()
-    // {
-    //     return $this->hasMany(InvestorEventReports::class);
-    // }
-    // //=================================================
-    // public function investorVisitorReports()
-    // {
-    //     return $this->hasMany(InvestorVisitorReports::class);
-    // }
-    //=================================================
-    public function Reports()
+    public function investorVisitorReports()//******************
     {
-        return $this->hasMany(ReportInvestor::class);
+        return $this->hasMany(InvestorVisitorReports::class);
     }
     //=================================================
+    public function investorBoothReports()//******************
+    {
+        return $this->hasMany(InvestorBoothReports::class);
+    }
+    //=================================================
+    public function investorEventReports()//******************
+    {
+        return $this->hasMany(InvestorEventReports::class);
+    }
+    //=================================================
+    
 
 
 

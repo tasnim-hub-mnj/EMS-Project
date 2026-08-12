@@ -22,6 +22,7 @@ return new class extends Migration
             $table->float('total_price');
             $table->float('paid_amount')->default(0.0);
             $table->text('services_products')->nullable();
+            $table->integer('visitors_count')->default(0);//scane
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled','finished'])->default('pending');
             $table->date('booked_at')->nullable();//now()->format('Y-m-d')//تاريخ طلب الحجز
             $table->date('approved_at')->nullable();//now()->format('Y-m-d')//تاريخ الموافقة

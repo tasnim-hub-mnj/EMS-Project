@@ -28,7 +28,7 @@ class InvestorRegisterRequest extends FormRequest
             'email'          => 'required|email|unique:users,email',
             'phone'          => 'required|string|unique:users,phone',
             'location'       => 'required|string|max:200',
-            'website'        => 'nullable|url',
+            'website'        => 'nullable|string',
             'activity_type' => 'required|in:technology,food&hospitality,fashion,health,education,other',
             'password'       => 'required|string|min:6|confirmed',
 

@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class VerificationCodeMail extends Mailable
+class VerificationCodeMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -25,7 +25,7 @@ class VerificationCodeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verification Code',//الرسالة يلي بواجهة الايميل
+            subject: 'ExpCore',//الرسالة يلي بواجهة الايميل
         );
     }
 

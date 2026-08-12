@@ -9,20 +9,25 @@ class InvestorBoothReports extends Model
 {
     use HasFactory;
 
-    protected $fillable =
+    protected $guarded = [];
+
+    protected $casts =
     [
-        'investor_id',
-        'booth_booking_id',
-        'date',
-        'total_visitors',
-        'potential_clients',
-        'conversions',
-        'performance_index',
+        'data_graph' => 'array',
+        'data_specific_table' => 'array',
+        'data_recommendations' => 'array',
+        'performance_index' => 'float',
+        'growth_rate' => 'float',
     ];
 
     protected $table = 'investor_booth_reports';
 
     //===============Relationships==================
+    public function investor()
+    {
+        return $this->belongsTo(Investor::class);
+    }
+    //=================================================
     public function boothBooking()
     {
         return $this->belongsTo(BoothBooking::class);

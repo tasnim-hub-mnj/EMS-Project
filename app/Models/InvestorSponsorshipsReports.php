@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class InvestorEventReports extends Model
+class InvestorSponsorshipsReports extends Model
 {
     use HasFactory;
 
@@ -17,23 +17,20 @@ class InvestorEventReports extends Model
         'data_specific_table' => 'array',
         'data_recommendations' => 'array',
         'growth_rate' => 'float',
-        'registered_count' => 'integer',
-        'event_count' => 'integer',
-        'scanned_count' => 'integer',
-        'evaluation' => 'integer',
+        'total_amount' => 'float',
+        'overall_ctr' => 'float',
+
+        'total_campaigns' => 'integer',
+        'total_reach' => 'integer',
+        'total_favorites' => 'integer',
     ];
 
-    protected $table = 'investor_event_reports';
+    protected $table = 'investor_sponsorships_reports';
 
     //===============Relationships==================
     public function investor()
     {
         return $this->belongsTo(Investor::class);
-    }
-    //=================================================
-    public function boothBooking()
-    {
-        return $this->belongsTo(BoothBooking::class);
     }
     //=================================================
 }

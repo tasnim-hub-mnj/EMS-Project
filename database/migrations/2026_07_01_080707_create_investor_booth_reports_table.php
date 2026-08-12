@@ -12,19 +12,23 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');//00
-            // $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
             $table->foreignId('booth_booking_id')->constrained('booth_bookings')->onDelete('cascade');
-            $table->date('date');
-            $table->integer('total_visitors')->default(0);
-            $table->integer('potential_clients')->default(0);
-            $table->integer('conversions')->default(0);
+            // $table->string('booth_number');
+            // $table->string('exhibition_name');
+            $table->string('date_period');
             $table->float('performance_index')->default(0);
+            $table->decimal('growth_rate', 8, 2)->default(0);
+            $table->integer('potential_clients')->default(0);
+            $table->integer('events_count')->default(0);
+            $table->json('data_graph');
+            $table->json('data_specific_table');
+            $table->json('data_recommendations');
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

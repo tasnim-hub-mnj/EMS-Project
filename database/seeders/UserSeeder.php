@@ -63,7 +63,8 @@ class UserSeeder extends Seeder
                 ],
             ];
 
-        foreach ($organizers_user as $org) {
+        foreach ($organizers_user as $org) 
+        {
             User::create($org);
         }
         //========================================================
@@ -89,8 +90,37 @@ class UserSeeder extends Seeder
             ],
         ];
 
-        foreach ($visitors_user as $visitor) {
+        foreach ($visitors_user as $visitor) 
+        {
             User::create($visitor);
+        }
+        //========================================================
+        // 3. investor
+        $investor_user = 
+        [
+            [
+                'email' => 'investor1@example.com',
+                'phone' => '0988044001',
+                'password' => Hash::make('password123'),
+                'role' => 'investor',
+                'status' => 'approved',
+                'is_verified' => true,
+                'fcm_token' => 'token_visitor_1',
+            ],
+            [
+                'email' => 'investor2@example.com',
+                'phone' => '0988044002',
+                'password' => Hash::make('password123'),
+                'role' => 'investor',
+                'status' => 'approved',
+                'is_verified' => true,
+                'fcm_token' => 'token_visitor_2',
+            ],
+        ];
+
+        foreach ($investor_user as $investor) 
+        {
+            User::create($investor);
         }
     }
 

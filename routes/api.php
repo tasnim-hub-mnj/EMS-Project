@@ -12,7 +12,7 @@ use App\Http\Controllers\ExhibitionReviewController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\InvestorController;
 use App\Http\Controllers\ProfileVisitorController;
-use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\InvestorReportsController;
 use App\Http\Controllers\SponsorshipBookingController;
 use App\Http\Controllers\SponsorEventController;
 use App\Http\Controllers\SupportTicketController;
@@ -22,20 +22,33 @@ use App\Http\Controllers\VisitorScheduleController;
 use Illuminate\Support\Facades\Route;
 
 //================================================================
+//***********************Organizer*********************************
+//================================================================
+
+
+
+
+
+
+
+//================================================================
 //***********************Investor*********************************
 //================================================================
 //Auth
 Route::post('/investor/auth/register', [InvestorController::class, 'register']);
 Route::post('/investor/auth/verify-otp', [InvestorController::class, 'verifyOtp']);
 Route::post('/investor/auth/resend-otp', [InvestorController::class, 'resendOtp']);
-Route::post('/investor/auth/login', [InvestorController::class, 'login']);
+Route::post('/investor/auth/login', [InvestorController::class, 'login'])->middleware('throttle:log');
 
 Route::post('/investor/auth/forgot-password', [InvestorController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
 Route::post('/investor/auth/forgot-password/verify-otp', [InvestorController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
 Route::post('/investor/auth/reset-password', [InvestorController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
 
+Route::get('/investor/reports/{id}/download', [InvestorReportsController::class, 'downloadReport']);
 
-Route::middleware('auth:sanctum')->group(function () {
+
+Route::middleware(['auth:sanctum','checkInvestor'])->group(function ()
+{
     Route::post('/investor/auth/change-password', [InvestorController::class, 'updatePassword']);
     Route::post('/investor/auth/fcm-token', [InvestorController::class, 'saveFcmToken']);
     Route::post('/investor/auth/delete-account', [InvestorController::class, 'deleteAccount']);
@@ -85,9 +98,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/investor/sponsorships', [SponsorshipBookingController::class, 'getMySponsorships']);
 
     //Reports
-    Route::get('/investor/reports', [ReportsController::class, 'getReports']);
-    Route::get('/investor/reports/{id}', [ReportsController::class, 'getReportDetail']);
-    Route::get('/investor/reports/{id}/download', [ReportsController::class, 'downloadReport']);
+    Route::get('/investor/reports', [InvestorReportsController::class, 'getReports']);
+    Route::get('/investor/reports/{id}', [InvestorReportsController::class, 'getReportDetail']);
+    // Route::get('/investor/reports/{id}/download', [InvestorReportsController::class, 'downloadReport']);
 
     //Favorites
     Route::get('/investor/favorites', [FavoriteController::class, 'getFavoritesInvestor']);
@@ -99,20 +112,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/investor/profile', [InvestorController::class, 'updateProfile']);
     Route::post('/investor/profile/avatar', [InvestorController::class, 'uploadAvatar']);
 
-
 });
 
-//================================================================
-//***********************Organizer*********************************
-//================================================================
-
-
 
 //___________________________________________________________________________________
 //___________________________________________________________________________________
 //*****************************************************************************
-//**********************************HANAN😁***********************************
-//*****************************************************************************
+//**********************************HANAN😁Visitor****************************
+//****************************************************************************
 
 Route::post('/auth/login', [VisitorController::class, 'login']);
 Route::post('/auth/register', [VisitorController::class, 'register']);

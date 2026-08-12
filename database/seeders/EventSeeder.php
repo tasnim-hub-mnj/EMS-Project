@@ -14,13 +14,16 @@ class EventSeeder extends Seeder
         // جلب جميع حجوزات الأكشاك مع العلاقة كشك
         $bookings = BoothBooking::with('booth')->get();
 
-        if ($bookings->isEmpty()) {
-            $this->command->warn('لم يتم العثور على حجوزات أكشاك في جدول BoothBooking.');
+        if ($bookings->isEmpty())
+        {
+            $this->command->warn('BoothBooking.');
             return;
         }
 
-        foreach ($bookings as $booking) {
-            if (!$booking->booth) {
+        foreach ($bookings as $booking)
+        {
+            if (!$booking->booth)
+            {
                 continue;
             }
 
@@ -29,6 +32,8 @@ class EventSeeder extends Seeder
                 [
                     'name' => 'Booth ' . ($booking->booth->number ?? $booking->booth->id) . ' Special Event',
                     'type' => 'Seminar',
+                    'start_date' => $booking->start_date,
+                    'end_date' => $booking->end_date,
                     'time' => '10:00:00',
                     'place' => $booking->booth->location ?? 'Main Hall',
                     'duration_days' => $booking->days ?? 1,

@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->string('location');
             $table->text('description')->nullable();
             $table->string('city');
-            $table->enum('status', ['far', 'upcoming', 'ongoing', 'finished','hidden'])->default('upcoming');
+            $table->enum('status', ['far', 'upcoming', 'ongoing', 'finished','hidden'])->default('far');
             $table->enum('copy_status', ['draft', 'active', 'archived'])->default('draft');
             $table->integer('available_booths')->default(0);
             $table->integer('total_booths')->default(0);

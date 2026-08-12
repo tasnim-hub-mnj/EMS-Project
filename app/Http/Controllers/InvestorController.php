@@ -34,7 +34,8 @@ class InvestorController extends Controller
 
         //----------------------------------
         $newOtp = rand(100000, 999999);
-        while (OtpCode::where('code', $newOtp)->exists()) {
+        while (OtpCode::where('code', $newOtp)->exists())
+        {
             $newOtp = rand(100000, 999999);
         }
         $otp = OtpCode::create([
@@ -44,7 +45,7 @@ class InvestorController extends Controller
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
         //----------------------------------
 
         $investor_data =
@@ -87,11 +88,13 @@ class InvestorController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp) {
+        if (!$otp)
+        {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
+        {
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
@@ -120,7 +123,8 @@ class InvestorController extends Controller
         OtpCode::where('user_id', $user->id)->delete();
 
         $newOtp = rand(100000, 999999);
-        while (OtpCode::where('code', $newOtp)->exists()) {
+        while (OtpCode::where('code', $newOtp)->exists())
+        {
             $newOtp = rand(100000, 999999);
         }
 
@@ -132,7 +136,7 @@ class InvestorController extends Controller
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'OTP resent successfully',
@@ -149,13 +153,15 @@ class InvestorController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || $user->role !== 'investor') {
+        if (!$user || $user->role !== 'investor')
+        {
             return response()->json([
                 'message' => 'This account is not an investor'
             ], 403);
         }
 
-        if (!Hash::check($request->password, $user->password)) {
+        if (!Hash::check($request->password, $user->password))
+        {
             return response()->json([
                 'message' => 'Invalid password'
             ], 401);
@@ -163,7 +169,8 @@ class InvestorController extends Controller
 
         $investor = $user->investor;
 
-        if ($user->status === 'pending') {
+        if ($user->status === 'pending')
+        {
             return response()->json([
                 'message' => 'Your account is pending review'
             ], 403);
@@ -198,7 +205,8 @@ class InvestorController extends Controller
 
 
         $code = rand(100000, 999999);
-        while (OtpCode::where('code', $code)->exists()) {
+        while (OtpCode::where('code', $code)->exists())
+        {
             $code = rand(100000, 999999);
         }
 
@@ -210,7 +218,7 @@ class InvestorController extends Controller
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'Verification code sent to your email.',
@@ -233,12 +241,16 @@ class InvestorController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp) {
+        if (!$otp)
+        {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
-            return response()->json(['message' => 'OTP expired'], 400);
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
+        {
+            return response()->json([
+                'message' => 'OTP expired'
+            ], 400);
         }
 
         $otp->update(['is_used' => true]);
@@ -264,7 +276,8 @@ class InvestorController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp) {
+        if (!$otp)
+        {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
@@ -287,7 +300,8 @@ class InvestorController extends Controller
             'new_password' => 'required|string|min:6|confirmed',
         ]);
 
-        if (!Hash::check($request->current_password, $user->password)) {
+        if (!Hash::check($request->current_password, $user->password))
+        {
             return response()->json([
                 'message' => 'Invalid password'
             ], 401);
@@ -334,7 +348,8 @@ class InvestorController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (!$user)
+        {
             return response()->json([
                 'message' => 'User not authenticated'
             ], 401);
@@ -342,7 +357,8 @@ class InvestorController extends Controller
 
         $user->delete();
 
-        if ($request->user()->currentAccessToken()) {
+        if ($request->user()->currentAccessToken())
+        {
             $request->user()->currentAccessToken()->delete();
         }
 
@@ -398,18 +414,22 @@ class InvestorController extends Controller
             'bio' => $request->bio,
         ]);
 
-        if ($request->filled('social')) {
+        if ($request->filled('social'))
+        {
             $social = $request->social;
             $types = ['linkedin', 'twitter', 'instagram', 'facebook'];
 
-            foreach ($types as $type) {
+            foreach ($types as $type)
+            {
                 $linkValue = $social[$type] ?? null;
-                if ($linkValue) {
+                if ($linkValue)
+                {
                     $investor->socialLinks()->updateOrCreate(
                         ['type' => $type],
                         ['link' => $linkValue]
                     );
-                } else {
+                } else
+                {
                     $investor->socialLinks()->where('type', $type)->delete();
                 }
             }
@@ -431,7 +451,8 @@ class InvestorController extends Controller
         $investor = $user->investor;
 
         // حذف الصورة القديمة
-        if ($investor->logo) {
+        if ($investor->logo)
+        {
             Storage::disk('public')->delete($investor->logo);
         }
 

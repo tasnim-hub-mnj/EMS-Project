@@ -15,30 +15,32 @@ class BoothBookingSeeder extends Seeder
         // 1. جلب أول مستثمر أو إنشاء واحد جديد مرتبط بـ User
         $investor = Investor::first();
 
-        if (!$investor) {
-            $user = User::first() ?? User::create([
-                'name' => 'Investor User',
-                'email' => 'investor_test@example.com',
-                'password' => bcrypt('password'),
-            ]);
+        // if (!$investor) {
+        //     $user = User::first() ?? User::create([
+        //         'name' => 'Investor User',
+        //         'email' => 'investor_test@example.com',
+        //         'password' => bcrypt('password'),
+        //     ]);
 
-            $investor = Investor::create([
-                'user_id' => $user->id,
-                'company_name' => 'Default Company Ltd',
-                'location' => 'Main Office',
-            ]);
-        }
+        //     $investor = Investor::create([
+        //         'user_id' => $user->id,
+        //         'company_name' => 'Default Company Ltd',
+        //         'location' => 'Main Office',
+        //     ]);
+        // }
 
         // 2. جلب الأكشاك المتاحة
         $booths = Booth::all();
 
-        if ($booths->isEmpty()) {
+        if ($booths->isEmpty())
+        {
             $this->command->warn('لا توجد أكشاك في جدول booths، يرجى تشغيل BoothSeeder أولاً.');
             return;
         }
 
         // 3. إنشاء حجوزات الأكشاك
-        foreach ($booths as $booth) {
+        foreach ($booths as $booth)
+        {
             BoothBooking::firstOrCreate(
                 ['booth_id' => $booth->id],
                 [

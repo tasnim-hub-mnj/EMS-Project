@@ -12,14 +12,18 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
-            // $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
             $table->foreignId('booth_booking_id')->constrained('booth_bookings')->onDelete('cascade');
-            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
-            $table->date('date');
-            $table->integer('total_registrations')->default(0);
-            $table->integer('actual_attendance')->default(0);
-            $table->float('rating')->default(0);
-            $table->float('growth_rate')->default(0);
+            // $table->string('booth_number');
+            // $table->string('exhibition_name');
+            $table->string('date_period');
+            $table->integer('registered_count')->default(0);
+            $table->decimal('growth_rate', 8, 2)->default(0);
+            $table->integer('event_count')->default(0);
+            $table->integer('scanned_count')->default(0);
+            $table->integer('evaluation')->default(0);
+            $table->json('data_graph');
+            $table->json('data_specific_table');
+            $table->json('data_recommendations');
             $table->timestamps();
         });
     }

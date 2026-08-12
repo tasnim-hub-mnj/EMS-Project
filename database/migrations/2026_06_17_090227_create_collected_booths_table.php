@@ -12,7 +12,8 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
-            $table->foreignId('booth_id')->constrained('booths')->cascadeOnDelete();
+            $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
+            // $table->foreignId('booth_booking_id')->constrained('booth_bookings')->onDelete('cascade');
             $table->string('qr_data')->nullable();
             $table->timestamp('scanned_at')->nullable();
             $table->timestamps();
