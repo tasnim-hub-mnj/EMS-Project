@@ -16,28 +16,29 @@ return new class extends Migration {
         {
             $table->id();
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            $table->string('name');
+            $table->string('name');//title
             $table->string('type');
-            $table->string('by')->nullable();//اسم المقدم/لجنة التحكيم//v
-            $table->string('place');//الاماكن المتاحة فقط داخل المعرض
-            $table->dateTime('start_time');//now()->format('Y-m-d h:i A')
-            $table->dateTime('end_time');//now()->format('Y-m-d h:i A')
+            // $table->string('by')->nullable();//اسم المقدم/لجنة التحكيم//v
+            $table->string('place');//venue_name
+            $table->dateTime('start_time');//start_at
+            $table->dateTime('end_time');//end_at
             $table->text('description')->nullable();
-            $table->boolean('is_general_invitation')->default(true);//هل مفتوح للجميع أم يتطلب دعوة خاصة
+            $table->enum('ticket_type', ['invitation', 'paid'])->default('invitation');
+            // $table->boolean('is_general_invitation')->default(true);//ticket_type
             $table->float('ticket_price')->default(0);
-            $table->integer('max_participants');//عدد المقاعد الكلي
+            $table->integer('max_participants');//capacity
             // $table->string('image');//جدول لحال
 
             $table->integer('duration_days')->default(1);//عدد ايام عرض الحدث
             $table->json('duration_options')->nullable();//o->i/خيارات مدة العرض (كل يوم مع السعر )
             $table->double('daily_price')->nullable();//o->i/السعر اليومي للرعاية
 
-            $table->integer('registered_count')->default(0);//المحجوز
-            $table->integer('total_seats')->nullable();//المتبقي
-            $table->integer('scanned_count')->default(0);//عدد الحضور
-            $table->enum('status', ['upcoming', 'ongoing', 'finished'])->default('upcoming');
-            $table->enum('copy_status', ['draft', 'active', 'archived'])->default('draft');
-            $table->date('publish_date')->nullable();//Carbon::now()->locale('en')->translatedFormat('l, j F Y');
+            $table->integer('registered_count')->default(0);//registered/المحجوز
+            // $table->integer('total_seats')->nullable();//المتبقي
+            $table->integer('scanned_count')->default(0);//attended/عدد الحضور
+            $table->enum('status', ['upcoming', 'ongoing', 'finished'])->default('upcoming');//status in investor
+            $table->enum('copy_status', ['draft', 'published', 'archived'])->default('draft');//status in organizer
+            $table->date('publish_date')->nullable();//published_at
             $table->timestamps();
         });
     }

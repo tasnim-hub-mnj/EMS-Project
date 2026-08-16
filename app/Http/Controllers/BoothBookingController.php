@@ -13,6 +13,11 @@ use App\Models\SocialLink;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use App\BookingConflictTrait;
+use App\Http\Requests\RejectBookingRequest;
+use App\Http\Requests\StoreBookingRequest;
+use App\Http\Resources\BookingResource;
+use App\Models\Copy;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -21,7 +26,9 @@ use Illuminate\Support\Facades\Storage;
 class BoothBookingController extends Controller
 {
     use BookingConflictTrait;
-
+    //===============================================================
+    //**************************----i----****************************
+    //===============================================================
     public function bookBooth(BookingBoothRequest $request)//✅
     {
         $data = $request->validated();
@@ -275,139 +282,261 @@ class BoothBookingController extends Controller
         ], 200);
     }
     //==============================================================
+    //==============================================================
+    
 
     //==============================================================
+    //*************************----o----****************************
     //==============================================================
-    //==============================================================
-
-    //==============================================================
-    //o
-    //==============================================================
-    public function getAllBooking($exhibition_id)//عرض كل الحجوزات الخاصة بمعرض ما//o
+    public function index(Request $request)
     {
-        $exhibition = Exhibition::with(
-            'booths'
-        )->findOrFail($exhibition_id);
+        $query = BoothBooking::with(['booth', 'investor.user', 'copy']);
 
-        $bookings = BoothBooking::whereIn('booth_id', $exhibition->booths->pluck('id'))
-            ->with(['booth', 'investor.user','investor'])
-            ->orderBy('start_date', 'asc')
-            ->get();
+        if ($request->status)
+            $query->where('status', $request->status);
 
-        return response()->json([
-            // 'exhibition_id' => $exhibition->id,
-            // 'exhibition_name' => $exhibition->name,
-            'total_bookings' => $bookings->count(),
-            'bookings' => $bookings
-        ], 200);
+        if ($request->exhibition_id)
+            $query->whereHas('booth', fn($q) => $q->where('exhibition_id', $request->exhibition_id));
+
+        if ($request->edition_id)
+            $query->where('copy_id', $request->edition_id);
+
+        if ($request->investor_id)
+            $query->where('investor_id', $request->investor_id);
+
+        if (!$request->include_past)
+            $query->where('status', '!=', 'finished');
+
+        return BookingResource::collection($query->get());
     }
     //==============================================================
-    public function approveBooking($booking_id)//o
+    public function pastEditionBookings($exhibition_id)//حجوزات الإصدارات السابقة
     {
-        $booking = BoothBooking::findOrFail($booking_id);
-        $booth = $booking->booth;
+        $bookings = BoothBooking::with(['booth', 'investor.user', 'copy'])
+            ->whereHas('booth', fn($q) => $q->where('exhibition_id', $exhibition_id))
+            ->where('status', 'finished')
+            ->get();
 
-        if ($booking->status === 'approved')
+        return BookingResource::collection($bookings);
+    }
+    //==============================================================
+    public function show($booking_id)
+    {
+        $booking = BoothBooking::with(['booth', 'investor.user', 'copy'])
+            ->findOrFail($booking_id);
+
+        return new BookingResource($booking);
+    }
+    //==============================================================
+    public function store(StoreBookingRequest $request)
+    {
+        $data = $request->validated();
+
+        $booth = Booth::findOrFail($data['booth_id']);
+
+        $days = Carbon::parse($data['start_date'])
+            ->diffInDays(Carbon::parse($data['end_date'])) + 1;
+
+        $total = $booth->pricing_type === 'daily'
+            ? $booth->price * $days
+            : $booth->price;
+
+        if (!empty($data['service_prices'])) 
         {
-            return response()->json([
-                'message' => 'Booking already approved'
-            ], 400);
+            $total += array_sum($data['service_prices']);
         }
 
+        $booking = BoothBooking::create([
+            'investor_id' => $data['investor_id'],
+            'booth_id' => $data['booth_id'],
+            'start_date' => $data['start_date'],
+            'end_date' => $data['end_date'],
+            'days' => $days,
+            'additional_services' => $data['additional_services'] ?? [],
+            'services_products' => json_encode($data['service_prices'] ?? []),
+            'total_price' => $total,
+            'booked_at' => now()->format('Y-m-d'),
+            'status' => 'pending',
+            'copy_id' => Copy::where('exhibition_id', $booth->exhibition_id)
+                ->where('copy_status', 'active')
+                ->first()?->id,
+        ]);
 
-        $booking->update(['status' => 'approved']);
-        $booth->update(['status_inv' => 'booked']);
-        $booking->update(['approved_at' => now()->format('Y-m-d')]);
-
-        //رفض التضارب
-        $approvedStart = $booking->start_date;
-        $approvedEnd   = $booking->end_date;
-
-        BoothBooking::where('booth_id', $booth->id)
-            ->where('id', '!=', $booking->id)
-            ->where('status', 'pending')
-            ->where(function ($q) use ($approvedStart, $approvedEnd)
-            {
-                $q->where('start_date', '<=', $approvedEnd)
-                ->where('end_date', '>=', $approvedStart);
-            })
-            ->update(['status' => 'rejected']);
-
-        return response()->json([
-            'message' => 'Booking approved successfully',
-            'booth' => $booth,
-            'booking' => $booking
-        ], 200);
+        return new BookingResource($booking);
     }
     //==============================================================
-    public function rejectBooking($booking_id)//o
+    public function approve($booking_id)
     {
         $booking = BoothBooking::findOrFail($booking_id);
-        $booth = $booking->booth;
 
-        if ($booking->status === 'approved')
-        {
-            $booking->booth->update(['status_inv' => 'available']);
-        }
+        $booking->update([
+            'status' => 'approved',
+            'approved_at' => now()->format('Y-m-d'),
+            'paid_amount' => $booking->total_price
+        ]);
 
+        // تحديث حالة البوث
+        $booking->booth->update(['status_inv' => 'booked']);
 
-        $booking->update(['status' => 'rejected']);
-
-        return response()->json([
-            'message' => 'Booking rejected successfully',
-            'booth' => $booth,
-            'booking' => $booking
-        ], 200);
+        return new BookingResource($booking);
     }
     //==============================================================
-    //==============================================================
-    public function activeBookings()//الحجوزات النشطة
+    public function reject(RejectBookingRequest $request, $booking_id)
     {
-        $investor = Auth::user()->investor;
+        $booking = BoothBooking::findOrFail($booking_id);
 
-        $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
-            ->where('investor_id', $investor->id)
-            ->where('status', 'approved')
-            ->get();
+        $booking->update([
+            'status' => 'rejected',
+            'notes' => $request->reason
+        ]);
 
-        return response()->json(['bookings' => $bookings], 200);
+        return new BookingResource($booking);
     }
     //==============================================================
-    public function pendingBookings()//الحجوزات قيد المراجعة
+    public function contractPdf($booking_id)
     {
-        $investor = Auth::user()->investor;
+        $booking = BoothBooking::findOrFail($booking_id);
 
-        $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
-            ->where('investor_id', $investor->id)
-            ->where('status', 'pending')
-            ->get();
+        $pdf = Pdf::loadView('contracts.booking', ['booking' => $booking]);
 
-        return response()->json(['bookings' => $bookings], 200);
+        return $pdf->stream("contract-{$booking->id}.pdf");
     }
+
     //==============================================================
-    public function rejectedBookings()//الحجوزات المرفوضة
-    {
-        $investor = Auth::user()->investor;
-
-        $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
-            ->where('investor_id', $investor->id)
-            ->where('status', 'rejected')
-            ->get();
-
-        return response()->json(['bookings' => $bookings], 200);
-    }
     //==============================================================
-    public function finishedBookings()//الحجوزات المنتهية
-    {
-        $investor = Auth::user()->investor;
 
-        $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
-            ->where('investor_id', $investor->id)
-            ->where('status', 'Finished')
-            ->get();
 
-        return response()->json(['bookings' => $bookings], 200);
-    }
+
+
+
+
+
+    
+    // public function getAllBooking($exhibition_id)//عرض كل الحجوزات الخاصة بمعرض ما//o
+    // {
+    //     $exhibition = Exhibition::with(
+    //         'booths'
+    //     )->findOrFail($exhibition_id);
+
+    //     $bookings = BoothBooking::whereIn('booth_id', $exhibition->booths->pluck('id'))
+    //         ->with(['booth', 'investor.user','investor'])
+    //         ->orderBy('start_date', 'asc')
+    //         ->get();
+
+    //     return response()->json([
+    //         // 'exhibition_id' => $exhibition->id,
+    //         // 'exhibition_name' => $exhibition->name,
+    //         'total_bookings' => $bookings->count(),
+    //         'bookings' => $bookings
+    //     ], 200);
+    // }
+    // //==============================================================
+    // public function approveBooking($booking_id)//o
+    // {
+    //     $booking = BoothBooking::findOrFail($booking_id);
+    //     $booth = $booking->booth;
+
+    //     if ($booking->status === 'approved')
+    //     {
+    //         return response()->json([
+    //             'message' => 'Booking already approved'
+    //         ], 400);
+    //     }
+
+
+    //     $booking->update(['status' => 'approved']);
+    //     $booth->update(['status_inv' => 'booked']);
+    //     $booking->update(['approved_at' => now()->format('Y-m-d')]);
+
+    //     //رفض التضارب
+    //     $approvedStart = $booking->start_date;
+    //     $approvedEnd   = $booking->end_date;
+
+    //     BoothBooking::where('booth_id', $booth->id)
+    //         ->where('id', '!=', $booking->id)
+    //         ->where('status', 'pending')
+    //         ->where(function ($q) use ($approvedStart, $approvedEnd)
+    //         {
+    //             $q->where('start_date', '<=', $approvedEnd)
+    //             ->where('end_date', '>=', $approvedStart);
+    //         })
+    //         ->update(['status' => 'rejected']);
+
+    //     return response()->json([
+    //         'message' => 'Booking approved successfully',
+    //         'booth' => $booth,
+    //         'booking' => $booking
+    //     ], 200);
+    // }
+    // //==============================================================
+    // public function rejectBooking($booking_id)//o
+    // {
+    //     $booking = BoothBooking::findOrFail($booking_id);
+    //     $booth = $booking->booth;
+
+    //     if ($booking->status === 'approved')
+    //     {
+    //         $booking->booth->update(['status_inv' => 'available']);
+    //     }
+
+
+    //     $booking->update(['status' => 'rejected']);
+
+    //     return response()->json([
+    //         'message' => 'Booking rejected successfully',
+    //         'booth' => $booth,
+    //         'booking' => $booking
+    //     ], 200);
+    // }
+    // //==============================================================
+    // //==============================================================
+    // public function activeBookings()//الحجوزات النشطة
+    // {
+    //     $investor = Auth::user()->investor;
+
+    //     $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
+    //         ->where('investor_id', $investor->id)
+    //         ->where('status', 'approved')
+    //         ->get();
+
+    //     return response()->json(['bookings' => $bookings], 200);
+    // }
+    // //==============================================================
+    // public function pendingBookings()//الحجوزات قيد المراجعة
+    // {
+    //     $investor = Auth::user()->investor;
+
+    //     $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
+    //         ->where('investor_id', $investor->id)
+    //         ->where('status', 'pending')
+    //         ->get();
+
+    //     return response()->json(['bookings' => $bookings], 200);
+    // }
+    // //==============================================================
+    // public function rejectedBookings()//الحجوزات المرفوضة
+    // {
+    //     $investor = Auth::user()->investor;
+
+    //     $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
+    //         ->where('investor_id', $investor->id)
+    //         ->where('status', 'rejected')
+    //         ->get();
+
+    //     return response()->json(['bookings' => $bookings], 200);
+    // }
+    // //==============================================================
+    // public function finishedBookings()//الحجوزات المنتهية
+    // {
+    //     $investor = Auth::user()->investor;
+
+    //     $bookings = BoothBooking::with(['booth', 'booth.exhibition'])
+    //         ->where('investor_id', $investor->id)
+    //         ->where('status', 'Finished')
+    //         ->get();
+
+    //     return response()->json(['bookings' => $bookings], 200);
+    // }
     //==============================================================
     //==============================================================
     //==============================================================

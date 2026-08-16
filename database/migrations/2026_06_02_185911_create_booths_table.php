@@ -13,18 +13,21 @@ return new class extends Migration
             $table->id();
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->string('number');
+            $table->string('section')->nullable();
             $table->float('area');
-            $table->enum('status_inv', ['available', 'booked'])->default('available');//تلقائي
+            $table->enum('status_inv', ['available', 'booked','unavailable'])->default('available');//تلقائي
             $table->enum('status', ['available', 'unavailable'])->default('available');//يدوي/o
-            $table->float('price');
-            // $table->date('end_date')->nullable();
+            $table->enum('pricing_type', ['total', 'daily'])->default('total');
+            $table->float('price')->nullable();//daily_price
             $table->string('location')->nullable();//الموقع داخل المعرض
-            $table->json('services');//exhibition->some(extra_services)
-            $table->json('amenities');//الخدمات الاساسية
-            $table->string('image');
+            $table->json('services')->nullable();//exhibition->some(extra_services)
+            $table->json('amenities')->nullable();//الخدمات الاساسية
+            // $table->string('image');//جدول لحال
+            $table->string('description');
             $table->integer('map_x')->nullable();
             $table->integer('map_y')->nullable();
-            $table->integer('map_z')->nullable();
+            $table->integer('map_width')->nullable();
+            $table->integer('map_height')->nullable();
             $table->timestamps();
         });
     }

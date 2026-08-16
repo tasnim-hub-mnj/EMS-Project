@@ -24,6 +24,11 @@ class Organizer extends Model
 
     protected $table = 'organizers';
 
+    protected $casts =
+    [
+        'category' => 'array',
+    ];
+
     // =================Relationships===================
     public function user()
     {

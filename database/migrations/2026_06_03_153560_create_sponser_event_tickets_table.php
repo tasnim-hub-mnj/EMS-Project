@@ -13,10 +13,19 @@ return new class extends Migration
             $table->id();
             $table->foreignId('visitor_id')->constrained('visitors')->cascadeOnDelete();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->cascadeOnDelete();
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+
+            $table->string('type'); // invitation / paid
+            $table->string('holder_name');
+            $table->string('holder_email');
+            $table->string('holder_phone')->nullable();
+            $table->enum('delivery_method', ['email', 'sms', 'manual'])->default('email');
+
+            $table->enum('status', ['pending', 'confirmed', 'attended', 'cancelled'])->default('pending');
             $table->string('qr_code')->nullable();
-            $table->decimal('amount', 12, 2)->nullable();
+            $table->float('amount')->nullable();//paid_amount
             $table->dateTime('booked_at')->nullable();
+            $table->dateTime('attended_at')->nullable();//invitation
+
             $table->timestamps();
         });
     }

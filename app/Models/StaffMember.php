@@ -9,30 +9,26 @@ class StaffMember extends Model
 {
     use HasFactory;
 
-    protected $fillable =
+    protected $guarded = [];
+
+    protected $casts =
     [
-        'user_id',
-        'exhibition_id',
-        'first_name',
-        'last_name',
-        'type',
-        'proffesion',
-        'role',
-        'availability_date',
-        'national_num',
-        'exp_salary',
-        'bio',
-        'scientific_experience',
-        'educational_qualifications',
-        'skills',
-        'status',
-        'team',
-        'schedule',
-        'qr_code',
-        'att_rate',
+        'workDays' => 'array',
     ];
 
     protected $table = 'staff_members';
+
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($staff)
+        {
+            // توليد رقم الموظف s1 / s2 / s3
+            $lastId = StaffMember::max('id') + 1;
+            $staff->number = 's' . $lastId;
+        });
+    }
+
 
     //=================Relationships===================
     public function user()
@@ -40,9 +36,9 @@ class StaffMember extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
     //=====================================================
-    public function exhibition()
+    public function exhibitions()
     {
-        return $this->belongsTo(Exhibition::class);
+        return $this->belongsToMany(Exhibition::class,'staff_roles');
     }
     //=====================================================
     public function tasks()
@@ -60,5 +56,16 @@ class StaffMember extends Model
         return $this->hasMany(AttendanceRecord::class);
     }
     //=====================================================
+    // public function staffRole()
+    // {
+    //     return $this->hasOne(StaffRole::class);
+    // }
+    //=====================================================
+    public function portalLink()
+    {
+        return $this->hasMany(PortalLink::class, 'staff_id');
+    }
+    //=====================================================
+
 
 }

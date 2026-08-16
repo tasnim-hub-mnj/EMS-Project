@@ -20,21 +20,35 @@ class StoreSponsorEventRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-    {
+    {//o
         return
-        [//StoreSponsorEventRequest
+        [
+            'exhibition_id' => 'required|exists:exhibitions,id',
 
-            'name' => 'required|string|max:200',
-            'type' => 'required|string|max:200',
-            'max_participants' => 'required|integer',
-            'description' => 'nullable|string|max:200',
-            'start_time' => 'required|date_format:Y-m-d h:i A',
-            'end_time'   => 'required|date_format:Y-m-d h:i A|after:start_time',
-            'place' => 'required|string|max:300',
-            'is_general_invitation' => 'nullable|boolean',
-            'ticket_price' => 'nullable|numeric',
-            'copy_status' => 'nullable|in:draft,active,archived',
+            'name' => 'required|string|max:255', // title
+            'description' => 'nullable|string',
+            'type' => 'required|string|max:100',
 
+            'start_time' => 'required|date',
+            'end_time' => 'required|date|after_or_equal:start_time',
+
+            'place' => 'required|string|max:255', // venue_name
+
+            'ticket_type' => 'required|in:invitation,paid',
+            'ticket_price' => 'required|numeric|min:0',
+
+            'max_participants' => 'required|integer|min:1',
+
+            'activities' => 'nullable|array',
+            'activities.*.title' => 'required|string',
+            'activities.*.start_time' => 'required|string',
+            'activities.*.end_time' => 'required|string',
+            'activities.*.provider_name' => 'required|string',
+            'activities.*.provider_contact' => 'required|string',
+
+            'photos' => 'nullable|array',
+            'photos.*.image' => 'required|string',
+            'photos.*.caption' => 'nullable|string',
         ];
     }
 }

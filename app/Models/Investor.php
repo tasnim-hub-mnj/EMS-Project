@@ -34,6 +34,18 @@ class Investor extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
     //=====================================================
+    public function booths()
+    {
+        return $this->hasManyThrough(
+            Booth::class,            // الجدول النهائي
+            BoothBooking::class,     // الجدول الوسيط
+            'investor_id',           // BoothBooking.investor_id
+            'id',                    // Booth.id
+            'id',                    // Investor.id
+            'booth_id'               // BoothBooking.booth_id
+        );
+    }
+    //=====================================================
     public function boothBookings()
     {
         return $this->hasMany(BoothBooking::class, 'investor_id');
@@ -49,9 +61,9 @@ class Investor extends Model
         return $this->hasMany(SponsorshipBooking::class);
     }
     //=====================================================
-    public function sponsorshipRequests()
+    public function eventSponsorshipRequests()
     {
-        return $this->hasMany(SponsorshipRequest::class);
+        return $this->hasMany(EventSponsorshipRequest::class);
     }
     //=====================================================
     public function socialLinks()
@@ -79,7 +91,7 @@ class Investor extends Model
         return $this->hasOne(InvestorSponsorshipsReports::class);
     }
     //=================================================
-    
+
 
 
 }

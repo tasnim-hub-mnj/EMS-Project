@@ -9,30 +9,7 @@ class Exhibition extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-        [
-            'organizer_id',
-            'name',
-            'type',
-            'start_date',
-            'end_date',
-            'location',
-            'description',
-            'city',
-            'status',
-            'copy_status',
-            'available_booths',
-            'total_booths',
-            'total_sponser_events',
-            'visitors_count',
-            'sectors',
-            'extra_services',
-            'working_hours',
-            'is_paid',
-            'ticket_price',
-            'image',
-            'map',
-        ];
+    protected $guarded = [];
 
     protected $table = 'exhibitions';
 
@@ -61,6 +38,11 @@ class Exhibition extends Model
         return $this->hasMany(SponsorEvent::class);
     }
     //=====================================================
+    public function eventSponsorshipRequests()
+    {
+        return $this->hasMany(EventSponsorshipRequest::class);
+    }
+    //=====================================================
     public function sponsors()
     {
         return $this->hasMany(Sponsor::class);
@@ -81,6 +63,20 @@ class Exhibition extends Model
         return $this->hasMany(ExhibitionImage::class);
     }
     //=====================================================
+    // public function map()
+    // {
+    //     return $this->hasOne(Map::class)->latestOfMany();
+    // }
+    public function maps()
+    {
+        return $this->hasMany(Map::class);
+    }
+    //_____________________________________________________
+    public function latestMap()
+    {
+        return $this->hasOne(Map::class)->latestOfMany();
+    }
+    //=====================================================
     public function exhibitionReviews()
     {
         return $this->hasMany(ExhibitionReview::class);
@@ -88,7 +84,7 @@ class Exhibition extends Model
     //=====================================================
     public function staffs()
     {
-        return $this->hasMany(StaffMember::class);
+        return $this->belongsToMany(StaffMember::class,'staff_roles');
     }
     //=====================================================
     public function copies()
@@ -96,8 +92,12 @@ class Exhibition extends Model
         return $this->hasMany(Copy::class);
     }
     //=====================================================
-
-
+    public function portalLink()
+    {
+        return $this->hasMany(PortalLink::class, 'exhibition_id');
+    }
+    //=====================================================
+    //=====================================================
 }
 
 

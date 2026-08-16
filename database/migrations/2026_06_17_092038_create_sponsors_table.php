@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {//o//🌿🥺
+    {//o
         Schema::create('sponsors', function (Blueprint $table)
         {
             $table->id();
@@ -31,7 +31,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

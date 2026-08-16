@@ -9,16 +9,7 @@ class StaffSalary extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-    [
-        'exhibition_id',
-        'staff_id',
-        'year',
-        'month',
-        'type_staff',
-        'salary'
-    ];
-
+    protected $guarded = [];
     protected $table = 'staff_salaries';
 
     //===============Relationships==================

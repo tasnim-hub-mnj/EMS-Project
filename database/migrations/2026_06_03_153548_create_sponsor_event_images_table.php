@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
             $table->string('image');
+            $table->string('caption')->nullable();
             $table->timestamps();
         });
     }

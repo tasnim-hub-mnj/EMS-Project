@@ -334,6 +334,27 @@ class DashboardInvestorController extends Controller
     }
     //=====================================================================
     //=====================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     // private function getDateRanges($period)
     // {
     //     // switch ($period)
@@ -514,81 +535,81 @@ class DashboardInvestorController extends Controller
     //=====================================================================
     //o
     //=====================================================================
-    public function getExhibitionInvestorsStatistics()
-    {
-        $organizer = Auth::user()->organizer;
-        $exhibition_id = $organizer->exhibition->id;
+    // public function getExhibitionInvestorsStatistics()
+    // {
+    //     $organizer = Auth::user()->organizer;
+    //     $exhibition_id = $organizer->exhibition->id;
 
-        //الشركات المشاركة في المعرض
-        $investors = Investor::whereHas('boothBookings', function ($q) use ($exhibition_id)
-        {
-            $q->whereHas('booth', function ($q2) use ($exhibition_id)
-            {
-                $q2->where('exhibition_id', $exhibition_id);
-            });
-        })->get();
+    //     //الشركات المشاركة في المعرض
+    //     $investors = Investor::whereHas('boothBookings', function ($q) use ($exhibition_id)
+    //     {
+    //         $q->whereHas('booth', function ($q2) use ($exhibition_id)
+    //         {
+    //             $q2->where('exhibition_id', $exhibition_id);
+    //         });
+    //     })->get();
 
-        $investor_ids = $investors->pluck('id');
+    //     $investor_ids = $investors->pluck('id');
 
-        //جميع حجوزات الأجنحة الخاصة بالمعرض
-        $booth_bookings = BoothBooking::whereIn('investor_id', $investor_ids)
-            ->whereHas('booth', function ($q) use ($exhibition_id)
-            {
-                $q->where('exhibition_id', $exhibition_id);
-            })
-            ->get();
+    //     //جميع حجوزات الأجنحة الخاصة بالمعرض
+    //     $booth_bookings = BoothBooking::whereIn('investor_id', $investor_ids)
+    //         ->whereHas('booth', function ($q) use ($exhibition_id)
+    //         {
+    //             $q->where('exhibition_id', $exhibition_id);
+    //         })
+    //         ->get();
 
 
-        $companies_count = $investors->count();
-        $booked_booths_count = $booth_bookings->count();//$organizer->exhibition->total_booths - $organizer->exhibition->available_booths
-        $total_value = $booth_bookings->sum('total_price');
-        $paid_amount = $booth_bookings->sum('paid_amount');
+    //     $companies_count = $investors->count();
+    //     $booked_booths_count = $booth_bookings->count();//$organizer->exhibition->total_booths - $organizer->exhibition->available_booths
+    //     $total_value = $booth_bookings->sum('total_price');
+    //     $paid_amount = $booth_bookings->sum('paid_amount');
 
-        $companies_data = $investors->map(function ($inv) use ($booth_bookings)
-        {
+    //     $companies_data = $investors->map(function ($inv) use ($booth_bookings)
+    //     {
 
-            $company_bookings = $booth_bookings->where('investor_id', $inv->id);
+    //         $company_bookings = $booth_bookings->where('investor_id', $inv->id);
 
-            $company_total_value = $company_bookings->sum('total_price');
-            $company_paid_amount = $company_bookings->sum('paid_amount');
-            $rest = $company_total_value - $company_paid_amount;
+    //         $company_total_value = $company_bookings->sum('total_price');
+    //         $company_paid_amount = $company_bookings->sum('paid_amount');
+    //         $rest = $company_total_value - $company_paid_amount;
 
-            $payment_rate = $company_total_value > 0
-                ? round(($company_paid_amount / $company_total_value) * 100, 2)
-                : 0;
+    //         $payment_rate = $company_total_value > 0
+    //             ? round(($company_paid_amount / $company_total_value) * 100, 2)
+    //             : 0;
 
-            $booths = $company_bookings->map(function ($booking)
-            {
-                return
-                [
-                    'booth_number' => $booking->booth->number,
-                    'area' => $booking->booth->area,
-                ];
-            });
+    //         $booths = $company_bookings->map(function ($booking)
+    //         {
+    //             return
+    //             [
+    //                 'booth_number' => $booking->booth->number,
+    //                 'area' => $booking->booth->area,
+    //             ];
+    //         });
 
-            return
-            [
-                'company_name' => $inv->company_name,
-                'email' => $inv->user->email,
-                'phone' => $inv->user->phone,
+    //         return
+    //         [
+    //             'company_name' => $inv->company_name,
+    //             'email' => $inv->user->email,
+    //             'phone' => $inv->user->phone,
 
-                'total_value' => $company_total_value,
-                'paid_amount' => $company_paid_amount,
-                'payment_rate' => $payment_rate,
-                'rest' => $rest,
+    //             'total_value' => $company_total_value,
+    //             'paid_amount' => $company_paid_amount,
+    //             'payment_rate' => $payment_rate,
+    //             'rest' => $rest,
 
-                'booths' => $booths,
-            ];
-        });
+    //             'booths' => $booths,
+    //         ];
+    //     });
 
-        return response()->json([
-            'companies_count' => $companies_count,
-            'booked_booths_count' => $booked_booths_count,
-            'total_value' => $total_value,
-            'paid_amount' => $paid_amount,
-            'companies' => $companies_data
-        ], 200);
-    }
+    //     return response()->json([
+    //         'companies_count' => $companies_count,
+    //         'booked_booths_count' => $booked_booths_count,
+    //         'total_value' => $total_value,
+    //         'paid_amount' => $paid_amount,
+    //         'companies' => $companies_data
+    //     ], 200);
+    // }
     //=====================================================================
 
 }

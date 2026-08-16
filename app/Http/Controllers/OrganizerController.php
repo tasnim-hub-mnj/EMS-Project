@@ -3,21 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\OrganizerRegisterRequest;
-use App\Http\Requests\UpdateOrganizeProfileRequest;
 use App\Mail\VerificationCodeMail;
 use App\Models\Organizer;
 use App\Models\OtpCode;
 use App\Models\User;
-use App\Models\VerifyOtp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 
 class OrganizerController extends Controller
 {
-    public function register(OrganizerRegisterRequest $request)
+    public function register(OrganizerRegisterRequest $request)//✅
     {
         $data = $request->validated();
         $user = User::create([
@@ -25,9 +22,24 @@ class OrganizerController extends Controller
             'phone' => $data['phone'],
             'password' => Hash::make($data['password']),
             'role' => 'organizer',
-            'status' => 'approved',
-            // 'token_fcm'=> $data['token_fcm'],
+            'status' => 'pending',
+            'fcm_token' => $data['fcm_token'],
         ]);
+
+        //----------------------------------
+        $newOtp = rand(100000, 999999);
+        while (OtpCode::where('code', $newOtp)->exists())
+        {
+            $newOtp = rand(100000, 999999);
+        }
+        $otp = OtpCode::create([
+            'user_id' => $user->id,
+            'code' => $newOtp,
+            'expires_at' => now()->addMinutes(10),
+            'is_used' => false,
+        ]);
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
+        //----------------------------------
 
         $organizer_data =
         [
@@ -35,33 +47,31 @@ class OrganizerController extends Controller
             'company_name' => $data['company_name'],
             'category' => $data['category'],
             'headquarters' => $data['headquarters'],
-            'reg_number' => $data['reg_number'],
-            'location' => $data['location'],
+            'reg_number' => $data['registration_number'],
+            'location' => $data['exhibition_location'],
             'description' => $data['description'],
         ];
 
-        $pathFile = $request->file('file')->store('organizer_files', 'public');
-        $organizer_data['file'] = $pathFile;
-
-        if ($request->hasFile('logo'))
-        {
-            $path = $request->file('logo')->store('organizer_logo', 'public');
-            $organizer_data['logo'] = $path;
-        }
-
         $organizer = Organizer::create($organizer_data);
 
+        // $data =
+        //     [
+        //         'id' => $user->id,
+        //         'email' => $user->email,
+        //         'company_name' => $organizer->company_name,
+        //     ];
+
         return response()->json([
-            'message' => 'Organizer registered successfully',
-            'user' => $user,
-            'organizer' => $organizer,
+            'status' => $user->status,
+            'userId' => $user->id
         ], 201);
+
     }
     //================================================================
-    public function login(Request $request)
+    public function login(Request $request)//✅
     {
         $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email|exists:users,email',
             'password' => 'required|string',
         ]);
 
@@ -92,133 +102,130 @@ class OrganizerController extends Controller
 
         $token = $user->createToken('organizer_token')->plainTextToken;
 
+        // $data =
+        //     [
+        //         'token' => $token,
+        //         'id' => $user->id,
+        //         'email' => $user->email,
+        //         'company_name' => $organizer->company_name,
+        //     ];
+
+        // return response()->json([
+        //     'message' => 'Login successful',
+        //     'data' => $data,
+        // ], 200);
         return response()->json([
-            'message'  => 'Login successful',
-            'token'    => $token,
-            'user'     => $user,
-            'organizer' => $organizer,
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $organizer->company_name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'permissions' => 
+                [
+                    "exhibitions:read",
+                    "exhibitions:write",
+                    "staff:read",
+                    "staff:write",
+                    "map:write",
+                    "map:publish"
+                ]
+            ]
         ], 200);
     }
     //================================================================
-    public function logout(Request $request)
+    public function updateProfile(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $request->validate([
+            'phone' => 'required|string'
+        ]);
 
+        $user=Auth::user();
+        $user->update([
+            'phone' => $request->phone,
+        ]);
+
+        // return response()->json([
+        //     'message' => 'Profile updated successfully',
+        //     'user' => $user->phone
+        // ], 200);
         return response()->json([
-            'message' => 'Logout successful'
+            'success' => true,
+            'message' => 'Operation completed successfully'
         ], 200);
+
+    }
+    //================================================================
+    public function updateCompany(Request $request)
+    {
+        $request->validate([
+            'company_name'   => 'nullable|string|max:200',
+            'category'     => 'nullable|json',
+            'headquarters'       => 'nullable|string|max:200',
+            'registration_number'        => 'nullable|string|max:200',
+            'exhibition_location'        => 'nullable|string|max:200',
+            'description'      => 'nullable|string|max:500',
+        ]);
+
+        $user=Auth::user();
+        $organizer=$user->organizer;
+        $organizer->update([
+            'company_name'   => $request->company_name,
+            'category'   => $request->category,
+            'headquarters'   => $request->headquarters,
+            'reg_number'   => $request->registration_number,
+            'location'   => $request->exhibition_location,
+            'description'   => $request->description,
+        ]);
+
+        // return response()->json([
+        //     'message' => 'Company Profile updated successfully',
+        //     'organizer' => $organizer
+        // ], 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Operation completed successfully'
+        ], 200);
+
     }
     //================================================================
     public function getPorfile()
     {
         $user=Auth::user();
         $organizer=$user->organizer;
+
+        // return response()->json([
+        //     'data' =>
+        //         [
+        //             'id' => $user->id,
+        //             'name' => $organizer->company_name,
+        //             'email' => $user->email,
+        //             'company_name' => $organizer->company_name,
+        //             'exhibition_location' => $organizer->location,
+        //             'phone' => $user->phone,
+        //             'category'   => $organizer->category,
+        //             'headquarters'   => $organizer->headquarters,
+        //             'registration_number'   => $organizer->reg_number,
+        //         ]
+        // ], 200);
+        
         return response()->json([
-            'user'=>$user,
-            'organizer' =>$organizer,
-        ], 200);
-    }
-    //================================================================
-    public function UpdatePorfile(UpdateOrganizeProfileRequest $request)
-    {
-        $user = Auth::user();
-        $organizer = $user->organizer;
-
-        $user->update($request->only(['email','phone']));
-
-        if ($request->hasFile('logo'))
-        {
-            if ($organizer->logo)
-            {
-                Storage::disk('public')->delete($organizer->logo);
-            }
-            $path = $request->file('logo')->store('organizer_logo', 'public');
-            $organizer->logo = $path;
-            $organizer->update(['logo' => $path]);
-        }
-
-        $organizer->update($request->only(['company_name']));
-
-        return response()->json([
-            'message' => 'Updated profile',
-            'user' => $user,
-            'organizer' => $organizer,
-        ], 200);
-    }
-    //================================================================
-    public function forgotPassword(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-        ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        OtpCode::where('user_id', $user->id)->delete();
-
-        // إنشاء كود جديد
-        $code = rand(100000, 999999);
-        //منشان ما يتكرر
-        while (OtpCode::where('code', $code)->exists())
-        {
-            $code = rand(100000, 999999);
-        }
-
-        OtpCode::create([
-            'user_id' => $user->id,
+            'id' => $user->id,
+            'name' => $organizer->company_name,
             'email' => $user->email,
-            'code' => $code,
-            'expires_at' => now()->addMinutes(10),
-            'is_used' => false,
-        ]);
-
-        Mail::to($user->email)->send(new VerificationCodeMail($code));
-
-        return response()->json([
-            'message' => 'Verification code sent to your email.'
+            'role' => $user->role,
+            'permissions' => [
+                "exhibitions:read",
+                "exhibitions:write",
+                "staff:read",
+                "staff:write",
+                "map:write",
+                "map:publish"
+            ]
         ], 200);
+
     }
     //================================================================
-    public function resetPassword(Request $request)
-    {
-        $request->validate([
-            'token' => 'required|string',
-            'password' => 'required|string|min:6|confirmed',
-        ]);
+    //================================================================
 
-        // البحث عن المستخدم عبر التوكن
-        $otp = OtpCode::where('code', $request->token)
-            ->where('is_used', false)
-            ->where('expires_at', '>', now())
-            ->first();
-
-        if (!$otp)
-        {
-            return response()->json([
-                'message' => 'Invalid or expired token.'
-            ], 400);
-        }
-
-        // جلب المستخدم
-        $user = User::where('email', $otp->email)->first();
-
-        if (!$user)
-        {
-            return response()->json([
-                'message' => 'User not found.'
-            ], 404);
-        }
-
-        // تحديث كلمة المرور
-        $user->update([
-            'password' => Hash::make($request->password),
-        ]);
-
-        // وضع علامة أن التوكن تم استخدامه
-        $otp->update(['is_used' => true]);
-
-        return response()->json([
-            'message' => 'Password changed successfully.'
-        ], 200);
-    }
 }

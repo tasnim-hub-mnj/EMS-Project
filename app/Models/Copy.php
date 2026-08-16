@@ -26,9 +26,15 @@ class Copy extends Model
         return $this->belongsTo(Exhibition::class);
     }
     //=====================================================
-    public function copyReports()
+    public function boothbookings()
     {
-        return $this->hasMany(CopyReport::class);
+        return $this->hasMany(BoothBooking::class);
     }
+    //=====================================================
+    // public function copyReports()
+    // {
+    //     return $this->hasMany(CopyReport::class);
+    // }
+    //=====================================================
     //=====================================================
 }

@@ -14,20 +14,25 @@ return new class extends Migration
         Schema::create('tasks', function (Blueprint $table)
         {
             $table->id();
-            // $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            $table->foreignId('staff_id')->constrained('staff_members')->onDelete('cascade');//full_name
-            $table->string('title')->nullable();
-            $table->string('description')->nullable();
-            $table->enum('priority',['low','medium','high']);
-            $table->date('due_date')->nullable();//موعد انتهاء المهمة
-            $table->enum('status',['pending','in_progress','completed','delayed'])->default('pending');//تخزين الوقت عند انجاز المهمة
-            // $table->foreignId('assigned_to')->constrained('external_teams')->onDelete('cascade');
+            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+
+            // معلومات المهمة
+            $table->string('title');
+            $table->text('description')->nullable();
+
+            // الفريق المسؤول
+            $table->enum('team',['administrative','technical','services','organizational','security'])->nullable();
+            $table->enum('priority', ['low','medium','high'])->default('medium');
+            $table->enum('status', ['pending','in_progress','completed','delayed'])->default('pending');
+            $table->date('due_date')->nullable();
+            $table->json('assigned_staff_ids')->nullable();// الموظفين المعيّنين : ["s2","s3"]
+            // $table->json('assigned_names')->nullable();
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

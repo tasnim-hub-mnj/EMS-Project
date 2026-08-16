@@ -15,19 +15,15 @@ class BoothBookingSeeder extends Seeder
         // 1. جلب أول مستثمر أو إنشاء واحد جديد مرتبط بـ User
         $investor = Investor::first();
 
-        // if (!$investor) {
-        //     $user = User::first() ?? User::create([
-        //         'name' => 'Investor User',
-        //         'email' => 'investor_test@example.com',
-        //         'password' => bcrypt('password'),
-        //     ]);
+        if (!$investor) {
+            $user = User::where('role','investor')->first();
 
-        //     $investor = Investor::create([
-        //         'user_id' => $user->id,
-        //         'company_name' => 'Default Company Ltd',
-        //         'location' => 'Main Office',
-        //     ]);
-        // }
+            $investor = Investor::create([
+                'user_id' => $user->id,
+                'company_name' => 'Default Company Ltd',
+                'location' => 'Main Office',
+            ]);
+        }
 
         // 2. جلب الأكشاك المتاحة
         $booths = Booth::all();

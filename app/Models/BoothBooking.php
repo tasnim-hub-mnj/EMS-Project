@@ -35,7 +35,7 @@ class BoothBooking extends Model
             'booked_at' => 'date',
             'approved_at' => 'date',
             'additional_services' => 'array',
-            // 'additional_services' => 'array',
+            'services_products' => 'array',
         ];
     //=================Relationships===================
     public function investor()
@@ -46,6 +46,11 @@ class BoothBooking extends Model
     public function booth()
     {
         return $this->belongsTo(Booth::class, 'booth_id');
+    }
+    //=================================================
+    public function copy()
+    {
+        return $this->belongsTo(Copy::class, 'copy_id');
     }
     //=================================================
     public function events()

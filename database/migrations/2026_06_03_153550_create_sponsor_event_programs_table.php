@@ -12,9 +12,11 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->onDelete('cascade');
-            $table->string('activity');
-            $table->string('presenter');
-            $table->string('comunication');
+            $table->string('title');
+            $table->string('start_time');
+            $table->string('end_time');
+            $table->string('provider_name');
+            $table->string('provider_contact');
             $table->timestamps();
         });
     }

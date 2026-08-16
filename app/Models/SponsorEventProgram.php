@@ -9,13 +9,7 @@ class SponsorEventProgram extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-    [
-        'sponsor_event_id',
-        'activity',
-        'presenter',
-        'comunication',
-    ];
+    protected $guarded = [];
 
     protected $table = 'sponsor_event_programs';
 

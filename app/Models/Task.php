@@ -9,14 +9,12 @@ class Task extends Model
 {
     use HasFactory;
 
-    protected $fillable =
+    protected $guarded = [];
+
+    protected $casts =
     [
-        'exhibition_id',
-        'staff_id',
-        'title',
-        'description',
-        'due_date',
-        'status'
+        'assigned_names' => 'array',
+        'assigned_staff_ids' => 'array',
     ];
 
     protected $table = 'tasks';

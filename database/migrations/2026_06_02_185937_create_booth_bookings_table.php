@@ -13,7 +13,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('investor_id')->constrained('investors')->onDelete('cascade');
             $table->foreignId('booth_id')->constrained('booths')->onDelete('cascade');
-            $table->string('number')->nullable();
+            $table->foreignId('copy_id')->constrained('copies')->onDelete('cascade');
+            // $table->string('number')->nullable();
             $table->date('start_date');//format('Y-m-d')
             $table->date('end_date');//format('Y-m-d')
             $table->integer('days');//start_date + end_date +1
@@ -21,7 +22,7 @@ return new class extends Migration
             $table->string('notes')->nullable();
             $table->float('total_price');
             $table->float('paid_amount')->default(0.0);
-            $table->text('services_products')->nullable();
+            $table->json('services_products')->nullable();
             $table->integer('visitors_count')->default(0);//scane
             $table->enum('status', ['pending', 'approved', 'rejected', 'cancelled','finished'])->default('pending');
             $table->date('booked_at')->nullable();//now()->format('Y-m-d')//تاريخ طلب الحجز

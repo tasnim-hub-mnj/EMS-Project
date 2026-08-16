@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('sponsorship_requests', function (Blueprint $table)
         {
             $table->id();
-            // $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->foreignId('sponsor_id')->constrained('sponsors')->onDelete('cascade');
 
             $table->string('company_name');
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->date('book_at')->nullable();//تلقائي
-            // $table->string('contact_name')->nullable();//اسم المسؤول
+            $table->string('contact_name')->nullable();//اسم المسؤول
             $table->text('offer_details')->nullable();
             $table->text('conditions')->nullable();
             $table->text('contract_terms')->nullable();
@@ -43,7 +43,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {

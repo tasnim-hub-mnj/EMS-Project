@@ -58,6 +58,11 @@ class Booth extends Model
         return $this->hasMany(BoothReview::class);
     }
     //=====================================================
+    public function boothImages()
+    {
+        return $this->hasMany(BoothImage::class);
+    }
+    //=====================================================
     // public function collectedBooths()
     // {
     //     return $this->hasMany(CollectedBooths::class);

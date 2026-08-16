@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('external_team_members', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('external_teams_id')->constrained('external_teams')->onDelete('cascade');
+            $table->foreignId('external_team_id')->constrained('external_teams')->onDelete('cascade');
             $table->string('name');
             $table->string('role');
             $table->string('phone')->nullable();

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreBoothRequest;
 use App\Http\Requests\UpdateBoothRequest;
+use App\Http\Resources\BoothResource;
 use App\Models\BoothBooking;
 use App\Models\Booth;
+use App\Models\BoothImage;
 use App\Models\Exhibition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,122 +17,93 @@ use App\Notifications\OrderStatusNotification;
 use Illuminate\Support\Facades\Storage;
 
 class BoothController extends Controller
-{
+{ 
+    //===============================================================
+    //**************************----o----****************************
+    //===============================================================
+    public function index($exhibition_id)
+    {
+        $booths = Booth::where('exhibition_id', $exhibition_id)
+            ->with(['boothImages', 'boothBookings.investor'])
+            ->get();
+
+        return BoothResource::collection($booths);
+    }
+    //===========================================
+    public function show($booth_id)
+    {
+        $booth = Booth::with(['boothImages', 'boothBookings.investor'])
+            ->findOrFail($booth_id);
+
+        return new BoothResource($booth);
+    }
+    //===========================================
     public function store(StoreBoothRequest $request, $exhibition_id)
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-            ->findOrFail($exhibition_id);
-
         $data = $request->validated();
+        $data['exhibition_id'] = $exhibition_id;
 
-        $booth = Booth::create([
-            'exhibition_id' => $exhibition->id,
-            'number'        => $data['number'],
-            'area'          => $data['area'],
-            'status'        => $data['status'] ?? 'available',
-            'price'         => $data['price'],
-            'location'      => $data['location'],
-            'services'      => isset($data['services'])
-                                ? json_encode($data['services'])
-                                : json_encode([]),
-            'map_x'         => $data['map_x'] ?? null,
-            'map_y'         => $data['map_y'] ?? null,
-            'map_z'         => $data['map_z'] ?? null,
-        ]);
+        $booth = Booth::create($data);
 
-        if ($request->hasFile('image'))
-        {
-            $path = $request->file('image')->store('booth_images', 'public');
-            $booth->update(['image' => $path]);
-        }
-
-        $exhibition->increment('total_booths');//+1
-
-        return response()->json([
-            'message' => 'Booth created successfully',
-            'booth'   => $booth
-        ], 200);
+        return new BoothResource($booth);
     }
-    //=============================================================================
-    public function update(UpdateBoothRequest $request, $exhibition_id, $booth_id)
+    //===========================================
+    public function update(UpdateBoothRequest $request, $booth_id)
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-            ->findOrFail($exhibition_id);
-
-        $booth = Booth::where('exhibition_id', $exhibition->id)
-            ->findOrFail($booth_id);
+        $booth = Booth::findOrFail($booth_id);
 
         $data = $request->validated();
-
-        // تحويل الخدمات إلى JSON إذا كانت مصفوفة
-        if (isset($data['services']) && is_array($data['services']))
-        {
-            $data['services'] = json_encode($data['services']);
-        }
-
-        if ($request->hasFile('image'))
-        {
-            if ($booth->image)
-            {
-                Storage::disk('public')->delete($booth->image);
-            }
-
-            $path = $request->file('image')->store('booth_images', 'public');
-            $data['image'] = $path;
-        }
-
         $booth->update($data);
 
-        return response()->json([
-            'message' => 'Booth updated successfully',
-            'booth' => $booth
-        ], 200);
+        return new BoothResource($booth);
     }
-
-    //=============================================================================
-    public function index($exhibition_id)//عرض كل الاجنحة الخاصة بمعرض معين
+    //===========================================
+    public function updateWithImage(Request $request, $booth_id)
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-        ->findOrFail($exhibition_id);
+        $booth = Booth::findOrFail($booth_id);
 
-        $booths = Booth::where('exhibition_id', $exhibition->id)->get();
+        if ($request->hasFile('image')) 
+        {
+            $path = $request->file('image')->store('booths', 'public');
 
-        return response()->json([
-            'booths' => $booths
-        ], 200);
+            BoothImage::create([
+                'booth_id' => $booth->id,
+                'image' => $path
+            ]);
+        }
+
+        $booth->update($request->except('image'));
+
+        return new BoothResource($booth);
     }
-    //=============================================================================
-    public function show($exhibition_id, $booth_id)//عرض جناح معين
+    //===========================================
+    public function changeStatus(Request $request, $booth_id)
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-        ->findOrFail($exhibition_id);
+        $request->validate([
+            'status' => 'required|in:available,unavailable'
+        ]);
 
-        $booth = Booth::where('exhibition_id', $exhibition->id)
-        ->findOrFail($booth_id);
+        $booth = Booth::findOrFail($booth_id);
+        $booth->update(['status' => $request->status]);
 
-        return response()->json([
-            'booth' => $booth
-        ], 200);
+        return new BoothResource($booth);
     }
-    //=============================================================================
-    public function delete($exhibition_id, $booth_id)
+    //===========================================
+    public function destroy($booth_id)
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-            ->findOrFail($exhibition_id);
-
-        $booth = Booth::where('exhibition_id', $exhibition->id)
-            ->findOrFail($booth_id);
-
+        $booth = Booth::findOrFail($booth_id);
         $booth->delete();
-        $exhibition->decrement('total_booths');
 
         return response()->json([
+            'success' => true,
             'message' => 'Booth deleted successfully'
-        ], 200);
+        ]);
     }
-    //==============================================================
-    //i
-    //==============================================================
+    //===========================================
+
+    //===============================================================
+    //**************************----i----****************************
+    //===============================================================
     public function getAvailableBooths(Request $request)//✅
     {
         $page  = $request->query('page', 1);
@@ -322,6 +295,120 @@ class BoothController extends Controller
     }
     //==============================================================
     //==============================================================
+    
+    // public function store(StoreBoothRequest $request, $exhibition_id)
+    // {
+    //     $exhibition = Exhibition::where('organizer_id', Auth::id())
+    //         ->findOrFail($exhibition_id);
+
+    //     $data = $request->validated();
+
+    //     $booth = Booth::create([
+    //         'exhibition_id' => $exhibition->id,
+    //         'number'        => $data['number'],
+    //         'area'          => $data['area'],
+    //         'status'        => $data['status'] ?? 'available',
+    //         'price'         => $data['price'],
+    //         'location'      => $data['location'],
+    //         'services'      => isset($data['services'])
+    //                             ? json_encode($data['services'])
+    //                             : json_encode([]),
+    //         'map_x'         => $data['map_x'] ?? null,
+    //         'map_y'         => $data['map_y'] ?? null,
+    //         'map_z'         => $data['map_z'] ?? null,
+    //     ]);
+
+    //     if ($request->hasFile('image'))
+    //     {
+    //         $path = $request->file('image')->store('booth_images', 'public');
+    //         $booth->update(['image' => $path]);
+    //     }
+
+    //     $exhibition->increment('total_booths');//+1
+
+    //     return response()->json([
+    //         'message' => 'Booth created successfully',
+    //         'booth'   => $booth
+    //     ], 200);
+    // }
+    // //=============================================================================
+    // public function update(UpdateBoothRequest $request, $exhibition_id, $booth_id)
+    // {
+    //     $exhibition = Exhibition::where('organizer_id', Auth::id())
+    //         ->findOrFail($exhibition_id);
+
+    //     $booth = Booth::where('exhibition_id', $exhibition->id)
+    //         ->findOrFail($booth_id);
+
+    //     $data = $request->validated();
+
+    //     // تحويل الخدمات إلى JSON إذا كانت مصفوفة
+    //     if (isset($data['services']) && is_array($data['services']))
+    //     {
+    //         $data['services'] = json_encode($data['services']);
+    //     }
+
+    //     if ($request->hasFile('image'))
+    //     {
+    //         if ($booth->image)
+    //         {
+    //             Storage::disk('public')->delete($booth->image);
+    //         }
+
+    //         $path = $request->file('image')->store('booth_images', 'public');
+    //         $data['image'] = $path;
+    //     }
+
+    //     $booth->update($data);
+
+    //     return response()->json([
+    //         'message' => 'Booth updated successfully',
+    //         'booth' => $booth
+    //     ], 200);
+    // }
+
+    // //=============================================================================
+    // public function index($exhibition_id)//عرض كل الاجنحة الخاصة بمعرض معين
+    // {
+    //     $exhibition = Exhibition::where('organizer_id', Auth::id())
+    //     ->findOrFail($exhibition_id);
+
+    //     $booths = Booth::where('exhibition_id', $exhibition->id)->get();
+
+    //     return response()->json([
+    //         'booths' => $booths
+    //     ], 200);
+    // }
+    // //=============================================================================
+    // public function show($exhibition_id, $booth_id)//عرض جناح معين
+    // {
+    //     $exhibition = Exhibition::where('organizer_id', Auth::id())
+    //     ->findOrFail($exhibition_id);
+
+    //     $booth = Booth::where('exhibition_id', $exhibition->id)
+    //     ->findOrFail($booth_id);
+
+    //     return response()->json([
+    //         'booth' => $booth
+    //     ], 200);
+    // }
+    // //=============================================================================
+    // public function delete($exhibition_id, $booth_id)
+    // {
+    //     $exhibition = Exhibition::where('organizer_id', Auth::id())
+    //         ->findOrFail($exhibition_id);
+
+    //     $booth = Booth::where('exhibition_id', $exhibition->id)
+    //         ->findOrFail($booth_id);
+
+    //     $booth->delete();
+    //     $exhibition->decrement('total_booths');
+
+    //     return response()->json([
+    //         'message' => 'Booth deleted successfully'
+    //     ], 200);
+    // }
+    
     
 
 
