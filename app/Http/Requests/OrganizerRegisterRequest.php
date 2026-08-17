@@ -24,9 +24,9 @@ class OrganizerRegisterRequest extends FormRequest
         return
         [
             'email'          => 'required|email|unique:users,email',
-            'phone'          => 'required|string|unique:users,phone',
             'password'       => 'required|string|min:6|confirmed',
-
+            'phone'          => 'required|string|unique:users,phone',
+            
             'company_name'   => 'required|string|max:200',
             'category'     => 'required|array',
             'headquarters'       => 'required|string|max:200',
@@ -36,7 +36,6 @@ class OrganizerRegisterRequest extends FormRequest
             // 'logo'      =>  'nullable|image|mimes:jpg,jpeg,png|max:2048',
             // 'file'        => 'required|file',
 
-            // 'fcm_token'      => 'nullable|string|max:400',
         ];
     }
 }
