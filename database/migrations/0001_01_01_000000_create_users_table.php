@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->enum('role',['organizer','investor','visitor','staff','admin'])->default('visitor');
             $table->enum('status', ['pending','approved','rejected'])->default('pending');//approve admin
             $table->boolean('is_verified')->default(false);
-            $table->string('fcm_token')->nullable();
+            // $table->string('fcm_token')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

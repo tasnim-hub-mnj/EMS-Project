@@ -83,11 +83,11 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::get('/organizer/auth/me', [OrganizerController::class, 'getPorfile']);
 
         //Exhibitions
+        Route::post('/organizer/exhibitions', [ExhibitionController::class, 'store']);//✔️working_hours
+        Route::put('/organizer/exhibitions/{id}', [ExhibitionController::class, 'update']);//✔️working_hours
         Route::get('/organizer/exhibitions', [ExhibitionController::class, 'index']);
         Route::get('/organizer/exhibitions/organizer', [ExhibitionController::class, 'organizerExhibition']);
         Route::get('/organizer/exhibitions/{id}', [ExhibitionController::class, 'showExhibition']);
-        Route::post('/organizer/exhibitions', [ExhibitionController::class, 'store']);
-        Route::put('/organizer/exhibitions/{id}', [ExhibitionController::class, 'update']);
         Route::patch('/organizer/exhibitions/{id}/map-built', [ExhibitionController::class, 'BuiltMap']);
         Route::post('/organizer/exhibitions/{id}/archive', [ExhibitionController::class, 'archive']);
         Route::delete('/organizer/exhibitions/{id}', [ExhibitionController::class, 'destroy']);
@@ -101,36 +101,36 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::get('/organizer/reports/{reportType}/export.pdf', [CopyReportController::class, 'exportPdf']);
 
         //Map builder
-        Route::get('/organizer/exhibitions/{id}/map', [MapController::class, 'show']);
         Route::post('/organizer/exhibitions/{id}/map', [MapController::class, 'store']);
         Route::post('/organizer/exhibitions/{id}/map/{mapId}', [MapController::class, 'update']);
+        Route::get('/organizer/exhibitions/{id}/map', [MapController::class, 'show']);
         Route::post('/organizer/exhibitions/{id}/map/json', [MapController::class, 'saveRaw']);
         Route::get('/organizer/exhibitions/{id}/map/history', [MapController::class, 'history']);
         Route::patch('/organizer/exhibitions/{id}/map/{mapId}/publish', [MapController::class, 'publish']);
 
         //Booths
-        Route::get('/organizer/exhibitions/{exhibitionId}/booths', [BoothController::class, 'index']);
-        Route::get('/organizer/booths/{id}', [BoothController::class, 'show']);
         Route::post('/organizer/exhibitions/{exhibitionId}/booths', [BoothController::class, 'store']);
         Route::put('/organizer/booths/{id}', [BoothController::class, 'update']);
+        Route::get('/organizer/exhibitions/{exhibitionId}/booths', [BoothController::class, 'index']);
+        Route::get('/organizer/booths/{id}', [BoothController::class, 'show']);
         Route::post('/organizer/booths/{id}', [BoothController::class, 'updateWithImage']);
         Route::patch('/organizer/booths/{id}/status', [BoothController::class, 'changeStatus']);
         Route::delete('/organizer/booths/{id}', [BoothController::class, 'destroy']);
 
         //Bookings
+        Route::post('/organizer/bookings', [BoothBookingController::class, 'store']);
         Route::get('/organizer/bookings', [BoothBookingController::class, 'index']);
         Route::get('/organizer/exhibitions/{exhibitionId}/past-edition-bookings', [BoothBookingController::class, 'pastEditionBookings']);
         Route::get('/organizer/bookings/{id}', [BoothBookingController::class, 'show']);
-        Route::post('/organizer/bookings', [BoothBookingController::class, 'store']);
         Route::post('/organizer/bookings/{id}/approve', [BoothBookingController::class, 'approve']);
         Route::post('/organizer/bookings/{id}/reject', [BoothBookingController::class, 'reject']);
         Route::get('/organizer/bookings/{id}/contract.pdf', [BoothBookingController::class, 'contractPdf']);
 
         //Sponsor Events and Invitations
-        Route::get('/organizer/events', [SponsorEventController::class, 'index']);
-        Route::get('/organizer/events/{id}', [SponsorEventController::class, 'show']);
         Route::post('/organizer/events', [SponsorEventController::class, 'store']);
         Route::put('/organizer/events/{id}', [SponsorEventController::class, 'update']);
+        Route::get('/organizer/events', [SponsorEventController::class, 'index']);
+        Route::get('/organizer/events/{id}', [SponsorEventController::class, 'show']);
         Route::post('/organizer/events/{id}/publish', [SponsorEventController::class, 'publish']);
         Route::delete('/organizer/events/{id}', [SponsorEventController::class, 'destroy']);
         Route::get('/organizer/events/{eventId}/analytics', [SponsorEventController::class, 'analytics']);
@@ -145,10 +145,10 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::get('/organizer/investors/summary/{id}', [InvestorsSummaryController::class, 'summaryDetail']);
 
         //Sponsors , sponsorship and event sponsorship
-        Route::get('/sponsors', [SponsorController::class, 'index']);
-        Route::get('/sponsors/{id}', [SponsorController::class, 'show']);
         Route::post('/sponsors', [SponsorController::class, 'store']);
         Route::put('/sponsors/{id}', [SponsorController::class, 'update']);
+        Route::get('/sponsors', [SponsorController::class, 'index']);
+        Route::get('/sponsors/{id}', [SponsorController::class, 'show']);
         Route::delete('/sponsors/{id}', [SponsorController::class, 'delete']);
 
         Route::get('/sponsorship-requests', [SponsorshipRequestController::class, 'index']);
@@ -197,7 +197,7 @@ Route::middleware('auth:sanctum')->group(function ()
 
         Route::post('/staff/portal-invite', [PortalInviteController::class, 'send']);
     });
-    
+
 
     //***********Admin Dashboard & Users Management*************
     Route::middleware('checkAdmin')->group(function()

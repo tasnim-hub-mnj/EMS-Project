@@ -13,15 +13,6 @@ use Illuminate\Support\Facades\Storage;
 
 class MapController extends Controller
 {
-    public function show($exhibition_id)//يرجّع آخر نسخة حسب الـ version.
-    {
-        $map = Map::where('exhibition_id', $exhibition_id)
-            ->orderByDesc('version')
-            ->first();
-
-        return new MapResource($map);
-    }
-    //=========================================================
     public function store(SaveMapRequest $request, $exhibition_id)
     {
         $json = json_decode($request->file('map')->getContent(), true);
@@ -56,6 +47,15 @@ class MapController extends Controller
         $map->update([
             'map_json' => $json
         ]);
+
+        return new MapResource($map);
+    }
+    //=========================================================
+    public function show($exhibition_id)//يرجّع آخر نسخة حسب الـ version.
+    {
+        $map = Map::where('exhibition_id', $exhibition_id)
+            ->orderByDesc('version')
+            ->first();
 
         return new MapResource($map);
     }

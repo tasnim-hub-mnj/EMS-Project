@@ -28,7 +28,7 @@ class OrganizerRegisterRequest extends FormRequest
             'password'       => 'required|string|min:6|confirmed',
 
             'company_name'   => 'required|string|max:200',
-            'category'     => 'required|json',
+            'category'     => 'required|array',
             'headquarters'       => 'required|string|max:200',
             'registration_number'        => 'required|string|max:200',
             'exhibition_location'        => 'required|string|max:200',
@@ -36,7 +36,7 @@ class OrganizerRegisterRequest extends FormRequest
             // 'logo'      =>  'nullable|image|mimes:jpg,jpeg,png|max:2048',
             // 'file'        => 'required|file',
 
-            'fcm_token'      => 'nullable|string|max:400',
+            // 'fcm_token'      => 'nullable|string|max:400',
         ];
     }
 }

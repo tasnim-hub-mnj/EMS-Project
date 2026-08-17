@@ -14,6 +14,7 @@ use App\Models\StaffRole;
 use App\Models\StaffMember;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -23,7 +24,9 @@ class StaffMemberController extends Controller
 {
     public function index()
     {
-        $query = StaffMember::with(['user', 'portalLink']);
+        $organizer = Auth::user()->organizer();
+        $exhibition = $organizer->exhibition();
+        $query = StaffMember::with(['user', 'portalLinks']);
 
         if (request()->has('team'))
         {
@@ -32,7 +35,7 @@ class StaffMemberController extends Controller
 
         if (request()->has('exhibition_id'))
         {
-            $query->whereHas('portalLink', function ($q)
+            $query->whereHas('portalLinks', function ($q)
             {
                 $q->where('exhibition_id', request('exhibition_id'));
             });
@@ -45,13 +48,15 @@ class StaffMemberController extends Controller
     //================================================================
     public function show($staff_id)
     {
-        $staff = StaffMember::with(['user', 'portalLink'])->findOrFail($staff_id);
+        $staff = StaffMember::with(['user', 'portalLinks'])->findOrFail($staff_id);
 
         return new StaffResource($staff);
     }
     //================================================================
     public function store(StoreStaffRequest $request)
     {
+        $organizer = Auth::user()->organizer();
+        $exhibition = $organizer->exhibition();
         $data = $request->validated();
 
         // إنشاء مستخدم للموظف
@@ -82,6 +87,7 @@ class StaffMemberController extends Controller
         // إنشاء الموظف
         $staff = StaffMember::create([
             'user_id'        => $user->id,
+            'exhibition_id'  => $exhibition->id,
             'name'           => $data['name'],
             'type'           => $data['type'] ?? null,
             'role'           => $data['role'] ?? null,

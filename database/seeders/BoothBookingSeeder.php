@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\BoothBooking;
 use App\Models\Booth;
+use App\Models\Copy;
 use App\Models\Investor;
 use App\Models\User;
 
@@ -15,7 +16,8 @@ class BoothBookingSeeder extends Seeder
         // 1. جلب أول مستثمر أو إنشاء واحد جديد مرتبط بـ User
         $investor = Investor::first();
 
-        if (!$investor) {
+        if (!$investor) 
+        {
             $user = User::where('role','investor')->first();
 
             $investor = Investor::create([
@@ -36,9 +38,16 @@ class BoothBookingSeeder extends Seeder
 
         // 3. إنشاء حجوزات الأكشاك
         foreach ($booths as $booth)
-        {
+        { 
+            $copy_id = Copy::where('exhibition_id', $booth->exhibition_id)
+                    ->where('copy_status', 'active')
+                    ->first()?->id;
+
             BoothBooking::firstOrCreate(
-                ['booth_id' => $booth->id],
+                [
+                    'booth_id' => $booth->id,
+                    'copy_id' => $copy_id,
+                ],
                 [
                     'investor_id' => $investor->id,
                     'start_date' => now()->toDateString(),

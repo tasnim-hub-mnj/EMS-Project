@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateExhibitionRequest;
 use App\Http\Resources\ExhibitionResource;
 use App\Models\Booth;
 use App\Models\BoothBooking;
+use App\Models\Copy;
 use App\Models\Event;
 use App\Models\Exhibition;
 use App\Models\ExhibitionImage;
@@ -26,6 +27,37 @@ class ExhibitionController extends Controller
     //===============================================================
     //**************************----o----****************************
     //===============================================================
+    public function store(StoreExhibitionRequest $request)// اضافة معرض
+    {
+
+        $organizer = Auth::user()->organizer;
+        $validate_data = $request->validated();
+        $validate_data['organizer_id'] = $organizer->id;
+
+        $exhibition = Exhibition::create($validate_data);
+
+        // return response()->json([
+        //     'message' => 'Exhibition created successfully',
+        //     'exhibition' => $exhibition
+        // ], 201);
+
+        return new ExhibitionResource($exhibition);
+    }
+    //===============================================================
+    public function update(StoreExhibitionRequest $request, $exhibition_id)//تعديل معرض
+    {
+        $exhibition = Exhibition::where('organizer_id', Auth::id())
+            ->findOrFail($exhibition_id);
+
+        $exhibition->update($request->validated());
+
+        // return response()->json([
+        //     'message' => 'Exhibition updated successfully',
+        //     'exhibition' => $exhibition
+        // ], 200);
+        return new ExhibitionResource($exhibition);
+    }
+    //===============================================================
     public function index()
     {
         $exhibitions = Exhibition::with('copies')->get();
@@ -42,7 +74,7 @@ class ExhibitionController extends Controller
             ->with('copies')
             ->first();
 
-        if (!$exhibition) 
+        if (!$exhibition)
         {
             return response()->json([
                 'message' => 'No exhibition found'
@@ -55,37 +87,6 @@ class ExhibitionController extends Controller
     public function showExhibition($exhibition_id)
     {
         $exhibition = Exhibition::with('copies')->findOrFail($exhibition_id);
-        return new ExhibitionResource($exhibition);
-    }
-    //===============================================================
-    public function store(StoreExhibitionRequest $request)// اضافة معرض
-    {
-
-        $organizer = Auth::user()->organizer;
-        $validate_data = $request->validated();
-        $validate_data['organizer_id'] = $organizer->id;
-
-        $exhibition = Exhibition::create($validate_data);
-
-        // return response()->json([
-        //     'message' => 'Exhibition created successfully',
-        //     'exhibition' => $exhibition
-        // ], 201);
-        
-        return new ExhibitionResource($exhibition);
-    }
-    //===============================================================
-    public function update(StoreExhibitionRequest $request, $exhibition_id)//تعديل معرض
-    {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-            ->findOrFail($exhibition_id);
-
-        $exhibition->update($request->validated());
-
-        // return response()->json([
-        //     'message' => 'Exhibition updated successfully',
-        //     'exhibition' => $exhibition
-        // ], 200);
         return new ExhibitionResource($exhibition);
     }
     //===============================================================
@@ -108,12 +109,18 @@ class ExhibitionController extends Controller
         return new ExhibitionResource($exhibition);
     }
     //===============================================================
-    public function archive($exhibition_id)//ارشفة معرض
+    public function archive(Request $request ,$exhibition_id)//ارشفة معرض
     {
         $exhibition = Exhibition::where('organizer_id', Auth::id())
             ->findOrFail($exhibition_id);
 
-        $exhibition->update([
+        $editionId = $request->edition_id;
+
+        $copy = Copy::where('exhibition_id', $exhibition->id)
+            ->where('id', $editionId)
+            ->firstOrFail();
+
+        $copy->update([
             'copy_status' => 'archived'
         ]);
 
@@ -282,7 +289,7 @@ class ExhibitionController extends Controller
         ], 200);
     }
     //===============================================================
-    
+
 
 
     //===============================================================

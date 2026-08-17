@@ -68,13 +68,13 @@ class verifyOtpController extends Controller
 
         $otp = OtpCode::create([
             'user_id' => $user->id,
-            'email' => $user->email,
+            // 'email' => $user->email,
             'code' => $newOtp,
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'OTP resent successfully',
@@ -101,13 +101,13 @@ class verifyOtpController extends Controller
 
         $otp = OtpCode::create([
             'user_id' => $user->id,
-            'email' => $user->email,
+            // 'email' => $user->email,
             'code' => $code,
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'Verification code sent to your email.',

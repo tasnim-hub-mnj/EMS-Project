@@ -23,7 +23,6 @@ class OrganizerController extends Controller
             'password' => Hash::make($data['password']),
             'role' => 'organizer',
             'status' => 'pending',
-            'fcm_token' => $data['fcm_token'],
         ]);
 
         //----------------------------------
@@ -38,7 +37,7 @@ class OrganizerController extends Controller
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
-        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
         //----------------------------------
 
         $organizer_data =
@@ -63,7 +62,7 @@ class OrganizerController extends Controller
 
         return response()->json([
             'status' => $user->status,
-            'userId' => $user->id
+            'userId' => 'user_'.$user->id
         ], 201);
 
     }
@@ -93,13 +92,6 @@ class OrganizerController extends Controller
 
         $organizer = $user->organizer;
 
-        if ($user->status === 'pending')
-        {
-            return response()->json([
-                'message' => 'Your account is pending review'
-            ], 403);
-        }
-
         $token = $user->createToken('organizer_token')->plainTextToken;
 
         // $data =
@@ -121,7 +113,7 @@ class OrganizerController extends Controller
                 'name' => $organizer->company_name,
                 'email' => $user->email,
                 'role' => $user->role,
-                'permissions' => 
+                'permissions' =>
                 [
                     "exhibitions:read",
                     "exhibitions:write",
@@ -160,7 +152,7 @@ class OrganizerController extends Controller
     {
         $request->validate([
             'company_name'   => 'nullable|string|max:200',
-            'category'     => 'nullable|json',
+            'category'     => 'nullable|array',
             'headquarters'       => 'nullable|string|max:200',
             'registration_number'        => 'nullable|string|max:200',
             'exhibition_location'        => 'nullable|string|max:200',
@@ -208,7 +200,7 @@ class OrganizerController extends Controller
         //             'registration_number'   => $organizer->reg_number,
         //         ]
         // ], 200);
-        
+
         return response()->json([
             'id' => $user->id,
             'name' => $organizer->company_name,

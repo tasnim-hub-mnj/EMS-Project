@@ -23,7 +23,6 @@ class UserSeeder extends Seeder
                     'role' => 'organizer',
                     'status' => 'approved',
                     'is_verified' => true,
-                    'fcm_token' => 'token_organizer_1',
                 ],
                 [
                     'email' => 'organizer2@example.com',
@@ -32,7 +31,6 @@ class UserSeeder extends Seeder
                     'role' => 'organizer',
                     'status' => 'approved',
                     'is_verified' => true,
-                    'fcm_token' => 'token_organizer_2',
                 ],
                 [
                     'email' => 'organizer3@example.com',
@@ -41,7 +39,6 @@ class UserSeeder extends Seeder
                     'role' => 'organizer',
                     'status' => 'approved',
                     'is_verified' => false,
-                    'fcm_token' => 'token_organizer_3',
                 ],
                 [
                     'email' => 'organizer4@example.com',
@@ -50,7 +47,6 @@ class UserSeeder extends Seeder
                     'role' => 'organizer',
                     'status' => 'approved',
                     'is_verified' => true,
-                    'fcm_token' => 'token_organizer_4',
                 ],
                 [
                     'email' => 'organizer5@example.com',
@@ -59,7 +55,6 @@ class UserSeeder extends Seeder
                     'role' => 'organizer',
                     'status' => 'approved',
                     'is_verified' => false,
-                    'fcm_token' => 'token_organizer_5',
                 ],
             ];
 
@@ -77,7 +72,6 @@ class UserSeeder extends Seeder
                 'role' => 'visitor',
                 'status' => 'approved',
                 'is_verified' => true,
-                'fcm_token' => 'token_visitor_1',
             ],
             [
                 'email' => 'visitor2@example.com',
@@ -86,7 +80,6 @@ class UserSeeder extends Seeder
                 'role' => 'visitor',
                 'status' => 'approved',
                 'is_verified' => true,
-                'fcm_token' => 'token_visitor_2',
             ],
         ];
 
@@ -105,7 +98,6 @@ class UserSeeder extends Seeder
                 'role' => 'investor',
                 'status' => 'approved',
                 'is_verified' => true,
-                'fcm_token' => 'token_visitor_1',
             ],
             [
                 'email' => 'investor2@example.com',
@@ -114,7 +106,6 @@ class UserSeeder extends Seeder
                 'role' => 'investor',
                 'status' => 'approved',
                 'is_verified' => true,
-                'fcm_token' => 'token_visitor_2',
             ],
         ];
 

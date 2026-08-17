@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('company_name')->nullable();
             $table->json('category')->nullable();//exhibitoin->sectors
             $table->string('headquarters')->nullable();
-            $table->integer('reg_number')->unique()->nullable();
+            $table->string('reg_number')->unique()->nullable();
             $table->string('location');//EXHIBITION->LOCATION
             $table->string('description')->nullable();
             $table->string('logo')->nullable();

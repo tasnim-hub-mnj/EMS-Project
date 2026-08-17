@@ -18,7 +18,6 @@ class FirebaseSyncController extends Controller
 
         $user = Auth::user();
 
-        // إنشاء أو تحديث الربط
         $sync = FirebaseSync::updateOrCreate(
             [
                 'user_id' => $user->id
@@ -31,7 +30,7 @@ class FirebaseSyncController extends Controller
 
         return response()->json([
             'success' => true,
-            'user' => 
+            'user' =>
             [
                 'id' => $user->id,
                 'email' => $user->email,

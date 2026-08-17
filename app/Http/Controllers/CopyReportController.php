@@ -109,11 +109,11 @@ class CopyReportController extends Controller
         // نسبة إنجاز المهام
         $totalTasks =
         Task::where('exhibition_id', $exhibitionId)->count() +
-        ExternalTeamTask::where('exhibition_teams_id', $exhibitionId)->count();
+        ExternalTeamTask::where('external_team_id', $exhibitionId)->count();
 
         $completedTasks =
             Task::where('exhibition_id', $exhibitionId)->where('status', 'completed')->count() +
-            ExternalTeamTask::where('exhibition_teams_id', $exhibitionId)->where('status', 'completed')->count();
+            ExternalTeamTask::where('external_team_id', $exhibitionId)->where('status', 'completed')->count();
 
         $taskCompletion = $totalTasks > 0
             ? round(($completedTasks / $totalTasks) * 100, 2)
@@ -176,7 +176,8 @@ class CopyReportController extends Controller
     {
         $exhibitionId = $request->exhibitionId;
 
-        $data = [
+        $data =
+        [
             'reportType' => $reportType,
             'exhibitionId' => $exhibitionId,
             'generatedAt' => now()->format('Y-m-d H:i')

@@ -21,23 +21,6 @@ class BoothController extends Controller
     //===============================================================
     //**************************----o----****************************
     //===============================================================
-    public function index($exhibition_id)
-    {
-        $booths = Booth::where('exhibition_id', $exhibition_id)
-            ->with(['boothImages', 'boothBookings.investor'])
-            ->get();
-
-        return BoothResource::collection($booths);
-    }
-    //===========================================
-    public function show($booth_id)
-    {
-        $booth = Booth::with(['boothImages', 'boothBookings.investor'])
-            ->findOrFail($booth_id);
-
-        return new BoothResource($booth);
-    }
-    //===========================================
     public function store(StoreBoothRequest $request, $exhibition_id)
     {
         $data = $request->validated();
@@ -54,6 +37,23 @@ class BoothController extends Controller
 
         $data = $request->validated();
         $booth->update($data);
+
+        return new BoothResource($booth);
+    }
+    //===========================================
+    public function index($exhibition_id)
+    {
+        $booths = Booth::where('exhibition_id', $exhibition_id)
+            ->with(['boothImages', 'boothBookings.investor'])
+            ->get();
+
+        return BoothResource::collection($booths);
+    }
+    //===========================================
+    public function show($booth_id)
+    {
+        $booth = Booth::with(['boothImages', 'boothBookings.investor'])
+            ->findOrFail($booth_id);
 
         return new BoothResource($booth);
     }

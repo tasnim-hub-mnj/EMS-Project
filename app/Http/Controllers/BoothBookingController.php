@@ -288,6 +288,43 @@ class BoothBookingController extends Controller
     //==============================================================
     //*************************----o----****************************
     //==============================================================
+    public function store(StoreBookingRequest $request)
+    {
+        $data = $request->validated();
+
+        $booth = Booth::findOrFail($data['booth_id']);
+
+        $days = Carbon::parse($data['start_date'])
+            ->diffInDays(Carbon::parse($data['end_date'])) + 1;
+
+        $total = $booth->pricing_type === 'daily'
+            ? $booth->price * $days
+            : $booth->price;
+
+        if (!empty($data['service_prices'])) 
+        {
+            $total += array_sum($data['service_prices']);
+        }
+
+        $booking = BoothBooking::create([
+            'investor_id' => $data['investor_id'],
+            'booth_id' => $data['booth_id'],
+            'start_date' => $data['start_date'],
+            'end_date' => $data['end_date'],
+            'days' => $days,
+            'additional_services' => $data['additional_services'] ?? [],
+            'services_products' => json_encode($data['service_prices'] ?? []),
+            'total_price' => $total,
+            'booked_at' => now()->format('Y-m-d'),
+            'status' => 'pending',
+            'copy_id' => Copy::where('exhibition_id', $booth->exhibition_id)
+                ->where('copy_status', 'active')
+                ->first()?->id,
+        ]);
+
+        return new BookingResource($booking);
+    }
+    //==============================================================
     public function index(Request $request)
     {
         $query = BoothBooking::with(['booth', 'investor.user', 'copy']);
@@ -324,43 +361,6 @@ class BoothBookingController extends Controller
     {
         $booking = BoothBooking::with(['booth', 'investor.user', 'copy'])
             ->findOrFail($booking_id);
-
-        return new BookingResource($booking);
-    }
-    //==============================================================
-    public function store(StoreBookingRequest $request)
-    {
-        $data = $request->validated();
-
-        $booth = Booth::findOrFail($data['booth_id']);
-
-        $days = Carbon::parse($data['start_date'])
-            ->diffInDays(Carbon::parse($data['end_date'])) + 1;
-
-        $total = $booth->pricing_type === 'daily'
-            ? $booth->price * $days
-            : $booth->price;
-
-        if (!empty($data['service_prices'])) 
-        {
-            $total += array_sum($data['service_prices']);
-        }
-
-        $booking = BoothBooking::create([
-            'investor_id' => $data['investor_id'],
-            'booth_id' => $data['booth_id'],
-            'start_date' => $data['start_date'],
-            'end_date' => $data['end_date'],
-            'days' => $days,
-            'additional_services' => $data['additional_services'] ?? [],
-            'services_products' => json_encode($data['service_prices'] ?? []),
-            'total_price' => $total,
-            'booked_at' => now()->format('Y-m-d'),
-            'status' => 'pending',
-            'copy_id' => Copy::where('exhibition_id', $booth->exhibition_id)
-                ->where('copy_status', 'active')
-                ->first()?->id,
-        ]);
 
         return new BookingResource($booking);
     }

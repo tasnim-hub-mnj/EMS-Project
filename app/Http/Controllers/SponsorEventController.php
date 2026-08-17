@@ -27,24 +27,6 @@ class SponsorEventController extends Controller
     //===============================================================
     //--------------------------Organizer---------------------------
     //===============================================================
-    public function index()
-    {
-        $events = SponsorEvent::with(['sponsorEventImages', 'programs'])
-            ->when(request('exhibition_id'), fn($q) => $q->where('exhibition_id', request('exhibition_id')))
-            ->orderByDesc('id')
-            ->get();
-
-        return SponsorEventResource::collection($events);
-    }
-    //===============================================================
-    public function show($se_id)
-    {
-        $event = SponsorEvent::with(['sponsorEventImages', 'programs', 'tickets'])
-            ->findOrFail($se_id);
-
-        return new SponsorEventResource($event);
-    }
-    //===============================================================
     public function store(StoreSponsorEventRequest $request)
     {
         $organizer = Auth::user()->organizer;
@@ -165,6 +147,24 @@ class SponsorEventController extends Controller
         }
 
         $event->update($data);
+
+        return new SponsorEventResource($event);
+    }
+    //===============================================================
+    public function index()
+    {
+        $events = SponsorEvent::with(['sponsorEventImages', 'programs'])
+            ->when(request('exhibition_id'), fn($q) => $q->where('exhibition_id', request('exhibition_id')))
+            ->orderByDesc('id')
+            ->get();
+
+        return SponsorEventResource::collection($events);
+    }
+    //===============================================================
+    public function show($se_id)
+    {
+        $event = SponsorEvent::with(['sponsorEventImages', 'programs', 'tickets'])
+            ->findOrFail($se_id);
 
         return new SponsorEventResource($event);
     }

@@ -61,7 +61,7 @@ class StaffMember extends Model
     //     return $this->hasOne(StaffRole::class);
     // }
     //=====================================================
-    public function portalLink()
+    public function portalLinks()
     {
         return $this->hasMany(PortalLink::class, 'staff_id');
     }

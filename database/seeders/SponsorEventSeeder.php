@@ -13,61 +13,52 @@ class SponsorEventSeeder extends Seeder
     {
         $exhibitions = Exhibition::all();
 
-        foreach ($exhibitions as $exhibition)
-        {
+        if ($exhibitions->isEmpty()) {
+            return;
+        }
 
-            // 1
-            SponsorEvent::create([
-                'exhibition_id' => $exhibition->id,
-                'name' => 'Opening Ceremony',
-                'type' => 'food&hospitality',
-                'by' => 'Event Committee',
-                'place' => 'Main Hall',
-                'start_time' => Carbon::now()->addDays(5),
-                'end_time' => Carbon::now()->addDays(5)->addHours(2),
-                'description' => 'A grand opening ceremony for the exhibition.',
-                'is_general_invitation' => true,
-                'ticket_price' => 0,
-                'max_participants' => 200,
-                'duration_days' => 1,
-                'duration_options' => ([
-                    ['label'=>'one day','day' => 1, 'price' => 0]
-                ]),
-                'daily_price' => null,
-                'registered_count' => 0,
-                'total_seats' => 200,
-                'scanned_count' => 0,
-                'status' => 'upcoming',
-                'copy_status' => 'active',
-                'publish_date' => Carbon::now(),
-            ]);
+        foreach ($exhibitions as $exhibition) {
 
-            // 2
-            SponsorEvent::create([
-                'exhibition_id' => $exhibition->id,
-                'name' => 'Brand Showcase',
-                'type' => 'Showcase',
-                'by' => 'Top Sponsors',
-                'place' => 'Showroom A',
-                'start_time' => Carbon::now()->addDays(6),
-                'end_time' => Carbon::now()->addDays(6)->addHours(3),
-                'description' => 'A special showcase event for premium brands.',
-                'is_general_invitation' => false,
-                'ticket_price' => 25,
-                'max_participants' => 150,
-                'duration_days' => 2,
-                'duration_options' => ([
-                    ['label'=>'one day','day' => 1, 'price' => 25],
-                    ['label'=>'full event','day' => 2, 'price' => 40],
-                ]),
-                'daily_price' => 20,
-                'registered_count' => 0,
-                'total_seats' => 150,
-                'scanned_count' => 0,
-                'status' => 'upcoming',
-                'copy_status' => 'active',
-                'publish_date' => Carbon::now(),
-            ]);
+            // إنشاء 2 فعاليات لكل معرض
+            for ($i = 1; $i <= 2; $i++) {
+
+                $start = Carbon::parse($exhibition->start_date)->addDays($i);
+                $end = (clone $start)->addHours(2);
+
+                SponsorEvent::create([
+                    'exhibition_id' => $exhibition->id,
+
+                    'name' => "Sponsor Event $i for {$exhibition->name}",
+                    'type' => 'competition', // أو workshop أو show
+                    'place' => "Hall $i",
+
+                    'start_time' => $start->format('Y-m-d H:i:s'),
+                    'end_time' => $end->format('Y-m-d H:i:s'),
+
+                    'description' => "This is a generated sponsor event number $i for exhibition {$exhibition->name}.",
+
+                    'ticket_type' => $i === 1 ? 'invitation' : 'paid',
+                    'ticket_price' => $i === 1 ? 0 : rand(20, 100),
+
+                    'max_participants' => rand(50, 200),
+
+                    'duration_days' => 1,
+                    'duration_options' => json_encode([
+                        ['day' => 1, 'price' => rand(100, 300)]
+                    ]),
+
+                    'daily_price' => rand(100, 500),
+
+                    'registered_count' => rand(0, 50),
+                    'scanned_count' => rand(0, 30),
+
+                    'status' => 'upcoming',
+                    'copy_status' => 'draft',
+
+                    'publish_date' => null,
+                ]);
+            }
+
         }
     }
 }
