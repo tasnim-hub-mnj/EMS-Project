@@ -22,6 +22,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+
 class ExhibitionController extends Controller
 {
     //===============================================================
@@ -46,9 +47,19 @@ class ExhibitionController extends Controller
     //===============================================================
     public function update(StoreExhibitionRequest $request, $exhibition_id)//تعديل معرض
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-            ->findOrFail($exhibition_id);
+        $organizer = Auth::user()->organizer;
+        $exhibition = Exhibition::where('organizer_id', $organizer->id)
+            ->where('id', $exhibition_id)
+            ->first();
 
+        if (!$exhibition) 
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
+            ], 403);
+        }
+        
         $exhibition->update($request->validated());
 
         // return response()->json([
@@ -111,8 +122,19 @@ class ExhibitionController extends Controller
     //===============================================================
     public function archive(Request $request ,$exhibition_id)//ارشفة معرض
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-            ->findOrFail($exhibition_id);
+        $organizer = Auth::user()->organizer;
+        $exhibition = Exhibition::where('organizer_id', $organizer->id)
+            ->where('id', $exhibition_id)
+            ->first();
+
+        if (!$exhibition) 
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
+            ], 403);
+        }
+        
 
         $editionId = $request->edition_id;
 
@@ -132,8 +154,18 @@ class ExhibitionController extends Controller
     //===============================================================
     public function destroy($exhibition_id)//حذف معرض
     {
-        $exhibition = Exhibition::where('organizer_id', Auth::id())
-            ->findOrFail($exhibition_id);
+        $organizer = Auth::user()->organizer;
+        $exhibition = Exhibition::where('organizer_id', $organizer->id)
+            ->where('id', $exhibition_id)
+            ->first();
+
+        if (!$exhibition) 
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
+            ], 403);
+        }
 
         $exhibition->delete();
 

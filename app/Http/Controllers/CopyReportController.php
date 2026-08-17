@@ -9,6 +9,7 @@ use App\Models\PortalLink;
 use App\Models\StaffMember;
 use App\Models\StaffRole;
 use App\Models\Task;
+use App\Models\Ticket;
 use App\Models\Visitor;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -21,29 +22,42 @@ class CopyReportController extends Controller
 
         $copy = Copy::where('exhibition_id', $exhibitionId)
             ->where('id', $editionId)
-            ->firstOrFail();
+            ->first();
+
+        if (!$copy) 
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this copy because it does not belong to your exhibition.'
+            ], 403);
+        }
+
+        // // إجمالي الزوار
+        // $total = $copy->visitor_count;
 
         // إجمالي الزوار
-        $total = $copy->visitor_count;
+        $total = Ticket::where('exhibition_id', $exhibitionId)->count();
 
         // توزيع حسب الأيام
-        $byDay = Visitor::where('exhibition_id', $exhibitionId)
+        $byDay = Ticket::where('exhibition_id', $exhibitionId)
             ->selectRaw("DAYNAME(created_at) as day, COUNT(*) as count")
             ->groupBy('day')
             ->get()
-            ->map(fn($d) =>
+            ->map(fn($d) => 
             [
                 'day' => $this->arabicDay($d->day),
                 'count' => $d->count
             ]);
 
         // توزيع حسب الاهتمامات
-        $byInterest = Visitor::where('exhibition_id', $exhibitionId)
-            ->selectRaw("JSON_EXTRACT(interests, '$[*]') as interests")
+        $visitorIds = Ticket::where('exhibition_id', $exhibitionId)
+            ->pluck('visitor_id');
+
+        $byInterest = Visitor::whereIn('id', $visitorIds)
             ->get()
             ->flatMap(fn($v) => json_decode($v->interests ?? '[]'))
             ->countBy()
-            ->map(fn($count, $name) =>
+            ->map(fn($count, $name) => 
             [
                 'name' => $name,
                 'value' => $count
@@ -78,7 +92,15 @@ class CopyReportController extends Controller
 
         $copy = Copy::where('exhibition_id', $exhibitionId)
             ->where('id', $editionId)
-            ->firstOrFail();
+            ->first();
+
+        if (!$copy) 
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this copy because it does not belong to your exhibition.'
+            ], 403);
+        }
 
         return
         [
@@ -133,7 +155,15 @@ class CopyReportController extends Controller
 
         $copy = Copy::where('exhibition_id', $exhibitionId)
             ->where('id', $editionId)
-            ->firstOrFail();
+            ->first();
+
+        if (!$copy) 
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this copy because it does not belong to your exhibition.'
+            ], 403);
+        }
 
         $months =
         [
@@ -158,7 +188,8 @@ class CopyReportController extends Controller
     {
         $copies = Copy::where('exhibition_id', $exhibitionId)->get();
 
-        return $copies->map(function ($copy) {
+        return $copies->map(function ($copy) 
+        {
             return [
                 'editionId' => $copy->id . '-ed-' . $copy->year,
                 'label' => $copy->copy_status === 'active'

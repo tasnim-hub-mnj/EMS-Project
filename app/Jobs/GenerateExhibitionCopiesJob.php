@@ -8,6 +8,7 @@ use App\Models\Copy;
 use App\Models\Exhibition;
 use App\Models\Favorite;
 use App\Models\Investor;
+use App\Models\PortalLink;
 use App\Models\SponserEventTicket;
 use App\Models\SponsorEvent;
 use App\Models\SponsorshipBooking;
@@ -202,7 +203,7 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
                 + $revenue;
             //=====================================
             // staff_count
-            $staff_count = StaffRole::where('exhibition_id', $exhibition_id)->count();
+            $staff_count = PortalLink::where('exhibition_id', $exhibition_id)->count();
             //=====================================
             // sponsorship_percent
             $sponsors_ids = $exhibition->sponsors->pluck('id');
