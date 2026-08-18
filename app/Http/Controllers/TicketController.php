@@ -174,7 +174,6 @@ class TicketController extends Controller
     //طلب حجز تذكرة فعالية راعي
     public function bookSponsorEventTicket(Request $request)
     {
-        // جلب الـ ID من الـ Request Body مباشرة
         $sponsor_event_id = $request->input('sponsor_event_id');
 
         $validator = Validator::make($request->all(), [
@@ -198,16 +197,27 @@ class TicketController extends Controller
             ], 403);
         }
 
-        $sponsorEvent = SponsorEvent::find($sponsor_event_id);
+        // جلب الفعالية مع المعرض المرتبط بها مباشرة عبر الـ foreignId
+        $sponsorEvent = SponsorEvent::with('exhibition')->find($sponsor_event_id);
+        $exhibition = $sponsorEvent?->exhibition;
+
         $qrCode = 'SPN-' . strtoupper(Str::random(10));
         $now = now();
         $amount = $request->input('amount', $sponsorEvent?->ticket_price ?? 0.00);
 
-        // إنشاء التذكرة
+        $holderName = trim(($visitor->first_name ?? '') . ' ' . ($visitor->last_name ?? '')) ?: 'Guest';
+        $holderEmail = $request->user()?->email ?? 'guest@example.com';
+        $holderPhone = $visitor->phone ?? null;
+        $ticketType = $amount > 0 ? 'paid' : 'invitation';
+
         $ticket = SponserEventTicket::create([
             'visitor_id' => $visitor->id,
             'sponsor_event_id' => $sponsor_event_id,
-            'status' => 'approved',
+            'type' => $ticketType,
+            'holder_name' => $holderName,
+            'holder_email' => $holderEmail,
+            'holder_phone' => $holderPhone,
+            'status' => 'confirmed',
             'qr_code' => $qrCode,
             'amount' => $amount,
             'booked_at' => $now,
@@ -215,14 +225,14 @@ class TicketController extends Controller
 
         $formattedTicket = [
             'id' => (int) $ticket->id,
-            'exhibition_id' => null,
-            'exhibition_name' => null,
+            'exhibition_id' => $exhibition ? (int) $exhibition->id : null,
+            'exhibition_name' => $exhibition?->name ?? null,
             'qr_data' => (string) $ticket->qr_code,
             'booked_at' => Carbon::parse($ticket->booked_at)->toIso8601String(),
             'type' => 'event',
             'status' => (string) $ticket->status,
             'event_id' => (int) $ticket->sponsor_event_id,
-            'event_name' => $sponsorEvent?->title ?? $sponsorEvent?->name ?? 'فعالية إعلانية',
+            'event_name' => $sponsorEvent?->name ?? 'فعالية إعلانية',
             'paid_amount' => (float) $ticket->amount,
             'seat_number' => null,
         ];
@@ -271,6 +281,7 @@ class TicketController extends Controller
             'seat_number' => null,
         ], 200);
     }
+    //=========================================================
 
     public function getEventTicket(Request $request, $id)
     {

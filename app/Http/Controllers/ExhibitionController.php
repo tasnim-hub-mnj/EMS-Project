@@ -52,14 +52,13 @@ class ExhibitionController extends Controller
             ->where('id', $exhibition_id)
             ->first();
 
-        if (!$exhibition) 
-        {
+        if (!$exhibition) {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
             ], 403);
         }
-        
+
         $exhibition->update($request->validated());
 
         // return response()->json([
@@ -85,8 +84,7 @@ class ExhibitionController extends Controller
             ->with('copies')
             ->first();
 
-        if (!$exhibition)
-        {
+        if (!$exhibition) {
             return response()->json([
                 'message' => 'No exhibition found'
             ], 404);
@@ -101,12 +99,11 @@ class ExhibitionController extends Controller
         return new ExhibitionResource($exhibition);
     }
     //===============================================================
-    public function BuiltMap( $exhibition_id)
+    public function BuiltMap($exhibition_id)
     {
         $exhibition = Exhibition::find($exhibition_id);
 
-        if (!$exhibition)
-        {
+        if (!$exhibition) {
             return response()->json(['message' => 'Exhibition not found'], 404);
         }
 
@@ -120,21 +117,20 @@ class ExhibitionController extends Controller
         return new ExhibitionResource($exhibition);
     }
     //===============================================================
-    public function archive(Request $request ,$exhibition_id)//ارشفة معرض
+    public function archive(Request $request, $exhibition_id)//ارشفة معرض
     {
         $organizer = Auth::user()->organizer;
         $exhibition = Exhibition::where('organizer_id', $organizer->id)
             ->where('id', $exhibition_id)
             ->first();
 
-        if (!$exhibition) 
-        {
+        if (!$exhibition) {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
             ], 403);
         }
-        
+
 
         $editionId = $request->edition_id;
 
@@ -159,8 +155,7 @@ class ExhibitionController extends Controller
             ->where('id', $exhibition_id)
             ->first();
 
-        if (!$exhibition) 
-        {
+        if (!$exhibition) {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
@@ -193,7 +188,7 @@ class ExhibitionController extends Controller
 
         $query = Exhibition::with([
             'sponsorEvents'
-        ])->where('copy_status', 'active');
+        ]);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
