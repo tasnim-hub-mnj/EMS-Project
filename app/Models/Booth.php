@@ -8,22 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Booth extends Model
 {
     use HasFactory;
-    protected $fillable =
-    [
-        'exhibition_id',
-        'number',
-        'area',
-        'status_inv',
-        'status',
-        'price',
-        'location',
-        'services',
-        'amenities',
-        'image',
-        'map_x',
-        'map_y',
-        'map_z'
-    ];
+    protected $guarded = [];
 
     protected $table = 'booths';
 
@@ -45,7 +30,7 @@ class Booth extends Model
     //=====================================================
     public function boothBookings()
     {
-        return $this->hasMany(BoothBooking::class);
+        return $this->hasMany(BoothBooking::class)->where('status', 'approved');
     }
     //=====================================================
     public function favorites()

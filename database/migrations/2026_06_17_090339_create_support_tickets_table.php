@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {//الدعم الفني
-        Schema::create('support_tickets', function (Blueprint $table) {
+        Schema::create('support_tickets', function (Blueprint $table)
+        {
             $table->id();
             $table->foreignId('visitor_id')->constrained('visitors')->onDelete('cascade');
             $table->enum('type', ['message', 'report', 'location'])->default('message');

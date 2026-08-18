@@ -9,9 +9,9 @@ class PortalLink extends Model
 {
     use HasFactory;
 
-    protected $table = 'portal_links';
-
     protected $guarded = [];
+
+    protected $table = 'portal_links';
 
     protected $casts =
     [

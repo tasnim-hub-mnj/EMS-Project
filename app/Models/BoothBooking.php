@@ -8,23 +8,7 @@ class BoothBooking extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-        [
-            'investor_id',
-            'booth_id',
-            'start_date',
-            'end_date',
-            'days',
-            'additional_services',
-            'notes',
-            'total_price',
-            'paid_amount',
-            'services_products',
-            'status',
-            'booked_at',
-            'approved_at',
-            'cover_image'
-        ];
+    protected $guarded = [];
 
     protected $table = 'booth_bookings';
 

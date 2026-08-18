@@ -74,7 +74,7 @@ class verifyOtpController extends Controller
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'OTP resent successfully',
@@ -107,7 +107,7 @@ class verifyOtpController extends Controller
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'Verification code sent to your email.',

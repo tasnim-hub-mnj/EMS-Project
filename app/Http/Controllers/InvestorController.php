@@ -24,7 +24,6 @@ class InvestorController extends Controller
             'phone' => $data['phone'],
             'password' => Hash::make($data['password']),
             'role' => 'investor',
-            'status' => 'approved',
         ]);
 
         //----------------------------------
@@ -39,7 +38,7 @@ class InvestorController extends Controller
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
         //----------------------------------
 
         $investor_data =
