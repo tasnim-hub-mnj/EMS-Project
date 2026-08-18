@@ -27,4 +27,5 @@ class OtpCode extends Model
     {
         return $this->belongsTo(User::class);
     }
+    //=============================================
 }

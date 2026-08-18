@@ -29,9 +29,11 @@ class VisitorSchedule extends Model
     {
         return $this->belongsTo(Visitor::class);
     }
+    //==============================================
 
     public function event()
     {
         return $this->belongsTo(Event::class);
     }
+    //==============================================
 }

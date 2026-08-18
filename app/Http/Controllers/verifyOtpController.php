@@ -26,13 +26,11 @@ class verifyOtpController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
-        {
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
             return response()->json(['message' => 'OTP expired'], 400);
         }
 
@@ -61,8 +59,7 @@ class verifyOtpController extends Controller
         OtpCode::where('user_id', $user->id)->delete();
 
         $newOtp = rand(100000, 999999);
-        while (OtpCode::where('code', $newOtp)->exists())
-        {
+        while (OtpCode::where('code', $newOtp)->exists()) {
             $newOtp = rand(100000, 999999);
         }
 
@@ -94,8 +91,7 @@ class verifyOtpController extends Controller
 
 
         $code = rand(100000, 999999);
-        while (OtpCode::where('code', $code)->exists())
-        {
+        while (OtpCode::where('code', $code)->exists()) {
             $code = rand(100000, 999999);
         }
 
@@ -130,13 +126,11 @@ class verifyOtpController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
-        {
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
             return response()->json([
                 'message' => 'OTP expired'
             ], 400);
@@ -161,12 +155,11 @@ class verifyOtpController extends Controller
 
         $otp = OtpCode::where('user_id', $user->id)
             ->where('code', $request->otp)
-            ->where('is_used', true)
+            ->where('is_used', false)
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
@@ -189,8 +182,7 @@ class verifyOtpController extends Controller
             'new_password' => 'required|string|min:6|confirmed',
         ]);
 
-        if (!Hash::check($request->current_password, $user->password))
-        {
+        if (!Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'message' => 'Invalid password'
             ], 401);
@@ -237,8 +229,7 @@ class verifyOtpController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user)
-        {
+        if (!$user) {
             return response()->json([
                 'message' => 'User not authenticated'
             ], 401);
@@ -246,8 +237,7 @@ class verifyOtpController extends Controller
 
         $user->delete();
 
-        if ($request->user()->currentAccessToken())
-        {
+        if ($request->user()->currentAccessToken()) {
             $request->user()->currentAccessToken()->delete();
         }
 
@@ -273,13 +263,11 @@ class verifyOtpController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        if (!$otp)
-        {
+        if (!$otp) {
             return response()->json(['message' => 'OTP not found'], 404);
         }
 
-        if ($otp->expires_at && now()->greaterThan($otp->expires_at))
-        {
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
             return response()->json([
                 'message' => 'OTP expired'
             ], 400);

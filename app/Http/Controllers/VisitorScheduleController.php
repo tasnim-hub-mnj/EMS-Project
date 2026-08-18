@@ -24,8 +24,9 @@ class VisitorScheduleController extends Controller
         // today | week | all
         $filter = $request->query('filter', 'all');
 
+        // تحميل العلاقات المتاحة
         $query = VisitorSchedule::with([
-            'event.exhibition',
+            'event.exhibition.organizer',
             'event.boothBooking.booth.exhibition'
         ])
             ->where('visitor_id', $visitor->id);
@@ -33,7 +34,7 @@ class VisitorScheduleController extends Controller
         // فلترة حسب اليوم
         if ($filter === 'today') {
             $query->whereHas('event', function ($q) {
-                $q->where('date', now()->toDateString());
+                $q->where('start_date', now()->toDateString());
             });
         }
 
@@ -43,7 +44,7 @@ class VisitorScheduleController extends Controller
             $end = now()->endOfWeek()->toDateString();
 
             $query->whereHas('event', function ($q) use ($start, $end) {
-                $q->whereBetween('date', [$start, $end]);
+                $q->whereBetween('start_date', [$start, $end]);
             });
         }
 
@@ -55,20 +56,23 @@ class VisitorScheduleController extends Controller
                 $booth = $booking?->booth;
                 $exhibition = $event?->exhibition ?? $booth?->exhibition;
 
+                // تحديد المنظم
+                $organizerName = $exhibition?->organizer?->name ?? 'منظم المعرض';
+
                 return [
                     'id' => (int) $event->id,
-                    'title' => $event->title ?? $event->name ?? '',
+                    'title' => $event->name ?? '',
                     'description' => $event->description ?? null,
-                    'organizer' => $event->by ?? $event->organizer ?? null,
-                    'date' => $event->date,
-                    'start_time' => $event->start_time,
-                    'end_time' => $event->end_time,
-                    'type' => $event->type ?? 'event',
+                    'organizer' => $organizerName,
+                    'date' => $event->start_date ?? null,
+                    'start_time' => $event->time ?? null,
+                    'end_time' => $event->end_date ?? null,
+                    'type' => $event->type ?? 'Seminar',
                     'exhibition_id' => $exhibition?->id ? (int) $exhibition->id : null,
                     'exhibition_name' => $exhibition?->name ?? null,
                     'location' => $exhibition?->location ?? null,
                     'city' => $exhibition?->city ?? null,
-                    'hall' => $booth?->hall_name ?? null,
+                    'hall' => $booth?->section ?? null,
                     'is_in_schedule' => true,
                 ];
             });

@@ -24,9 +24,10 @@ class CollectedBooths extends Model
     {
         return $this->belongsTo(Visitor::class, 'user_id');
     }
-
+    //=============================================
     public function booth()
     {
         return $this->belongsTo(Booth::class);
     }
+    //==============================================
 }

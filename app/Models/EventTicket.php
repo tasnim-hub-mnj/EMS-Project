@@ -19,6 +19,7 @@ class EventTicket extends Model
     | العلاقات
     |--------------------------------------------------------------------------
     */
+    //==========================================
 
 
     // علاقة مع المستثمر صاحب الجناح
@@ -26,12 +27,14 @@ class EventTicket extends Model
     {
         return $this->belongsTo(Investor::class);
     }
+    //============================================
 
     // علاقة مع الفعالية داخل الجناح
     public function sponsorEvent()
     {
         return $this->belongsTo(SponsorEvent::class, 'sponsorEvent_id');
     }
+    //============================================
 
 
     protected $table = 'event_tickets';

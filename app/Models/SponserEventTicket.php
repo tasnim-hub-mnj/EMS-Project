@@ -9,10 +9,11 @@ class SponserEventTicket extends Model
     protected $guarded = [];
 
     protected $casts =
-    [
-        'booked_at' => 'datetime',
-        'amount' => 'float',
-    ];
+        [
+            'booked_at' => 'datetime',
+            'amount' => 'float',
+        ];
+    //==========================================
 
     //============================================
     public function sponsorEvent()
