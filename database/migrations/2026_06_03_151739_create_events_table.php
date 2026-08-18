@@ -19,7 +19,7 @@ return new class extends Migration
             $table->date('end_date');
             // $table->date('date')->nullable();
             $table->time('time')->nullable();
-            $table->string('place')->nullable();//موقع الفعالية هو موقع الجناح
+            $table->string('place')->nullable();//venue_name
             $table->integer('duration_days')->default(1);//مدة الحدث بالأيام(ايام الحجز)
             $table->text('description')->nullable();
             $table->string('video_promo_url')->nullable();//في صور للفعالية

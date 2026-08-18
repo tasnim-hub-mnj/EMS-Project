@@ -22,27 +22,15 @@ class StoreExhibitionRequest extends FormRequest
     public function rules(): array
     {
         return
-        [//StoreExhibitionRequest
-            'name' => 'required|string|max:255',
-            // 'type' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            // 'location' => 'required|string',
-            'description' => 'nullable|string',
-            'city' => 'nullable|string',
-            'status' => 'nullable|string|in:far,upcoming,ongoing,finished',//00
-            'copy_status' => 'nullable|string|in:draft,active,archived',//00
-            'available_booths' => 'nullable|integer|min:0',
-            'total_booths' => 'nullable|integer|min:0',
-            'total_sponser_events' => 'nullable|integer|min:0',
-            'visitors_count' => 'nullable|integer|min:0',
-            'sectors' => 'nullable|array',
-            'extra_services' => 'nullable|array',
+        [
+            'name' => 'nullable|string|max:255',
+            'location' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
             'working_hours'=>'nullable|numeric|min:0',
-            'is_paid'=>'nullable|boolean',
-            'ticket_price'=>'nullable|numeric|min:0',
-            'map'=>'nullable|json'
-
+            'total_booths' => 'nullable|integer|min:0',
+            'type' => 'nullable|string|max:255',
+            'status' => 'nullable|string|in:far,upcoming,ongoing,finished,hidden',
         ];
     }
 }

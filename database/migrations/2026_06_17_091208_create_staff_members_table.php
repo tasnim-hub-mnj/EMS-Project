@@ -16,25 +16,33 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
-            $table->string('first_name');
-            $table->string('last_name');
-            $table->enum('type',['administrative','technical','services','organizational','security'])->default('services')->nullable();
-            $table->string('proffesion')->nullable();
-            $table->enum('role',['manager','supervisor','specicialist','employee'])->nullable()->default('employee');
-            $table->date('availability_date');
-            $table->integer('national_num');
-            $table->float('exp_salary');
-            $table->text('bio');
-            $table->text('scientific_experience');
-            $table->text('educational_qualifications');
-            $table->text('skills');
-            $table->enum('status', ['new','pending','approved','rejected'])->default('new');
+            $table->string('number');
+            $table->string('name');
+            // $table->string('email')->nullable();
+            // $table->string('phone')->nullable();
 
-            
-            $table->string('team');
-            $table->json('schedule');//ايام و اوقات العمل
-            $table->string('qr_code');
-            $table->float('att_rate');//معدل الحضور
+            $table->enum('type',['permanent','temporary'])->nullable();
+            $table->string('role')->nullable();//"مدير العمليات"
+            $table->string('rank')->nullable();//الرتبة
+            $table->enum('team',['administrative','organizational','services','external'])->default('administrative')->nullable();
+            // $table->string('qrCode')->nullable();//تم نقله
+            $table->string('schedule')->nullable();//"08:00 - 17:00"
+            $table->float('attendanceRate')->default(0);
+            $table->integer('tasksCompleted')->default(0);
+            $table->integer('tasksTotal')->default(0);
+            $table->string('nationalId')->nullable();
+            $table->string('idImage')->nullable();
+            $table->string('profileImage')->nullable();
+            $table->float('salary')->default(0);
+            $table->enum('paymentPeriod',['monthly','bi-weekly','weekly','daily','hourly'])->default('monthly');
+            $table->json('workDays')->nullable();//["sun","mon","tue","wed","thu"]
+            // $table->enum('status', ['new','pending','approved','rejected'])->default('pending');//new:pending
+            // $table->string('applied_at')->nullable();
+
+            $table->string('cvFile')->nullable();
+            $table->string('cvFileName')->nullable();
+            $table->string('contractFile')->nullable();//ملف العقد
+            $table->string('contractFileName')->nullable();
 
             $table->timestamps();
         });

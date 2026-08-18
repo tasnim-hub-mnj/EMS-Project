@@ -20,11 +20,12 @@ class AttendanceRecord extends Model
     ];
     protected $table = 'attendance_records';
 
+
     protected $casts =
     [
         'date'    => 'date',
-        'check_in'   => 'time',
-        'check_out'    => 'time',
+        'check_in'   => 'datetime',
+        'check_out'    => 'datetime',
     ];
     //===============Relationships==================
     public function staff()
@@ -32,4 +33,5 @@ class AttendanceRecord extends Model
         return $this->belongsTo(StaffMember::class);
     }
     //=====================================================
+
 }

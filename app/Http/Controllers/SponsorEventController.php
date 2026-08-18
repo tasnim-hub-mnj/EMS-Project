@@ -6,7 +6,11 @@ use App\Http\Requests\StoreSponsorEventImageRequest;
 use App\Http\Requests\StoreSponsorEventInvitationRequest;
 use App\Http\Requests\StoreSponsorEventProgramRequest;
 use App\Http\Requests\StoreSponsorEventRequest;
+use App\Http\Requests\StoreSponsorEventTicketRequest;
 use App\Http\Requests\UpdateSponsorEventRequest;
+use App\Http\Requests\UpdateSponsorEventTicketRequest;
+use App\Http\Resources\SponsorEventResource;
+use App\Http\Resources\SponsorEventTicketResource;
 use App\Models\Exhibition;
 use Illuminate\Http\Request;
 use App\Models\SponserEventTicket;
@@ -19,21 +23,24 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class SponsorEventController extends Controller
-{//o
+{
+    //===============================================================
+    //--------------------------Organizer---------------------------
+    //===============================================================
     public function store(StoreSponsorEventRequest $request)
     {
         $organizer = Auth::user()->organizer;
-        $validate_data = $request->validated();
+        $data = $request->validated();
 
-        $validate_data['exhibition_id'] = $organizer->exhibition->id;
+        $data['exhibition_id'] = $organizer->exhibition->id;
 
+        // التحقق من أن الفعالية ضمن مدة المعرض
         $exhibition_start = Carbon::parse($organizer->exhibition->start_date);
         $exhibition_end   = Carbon::parse($organizer->exhibition->end_date);
 
-        $start = Carbon::parse($validate_data['start_time']);
-        $end   = Carbon::parse($validate_data['end_time']);
+        $start = Carbon::parse($data['start_time']);
+        $end   = Carbon::parse($data['end_time']);
 
-        // مدة الفعالية لا تتجاوز مدة المعرض
         if ($start->lt($exhibition_start) || $end->gt($exhibition_end))
         {
             return response()->json([
@@ -43,99 +50,71 @@ class SponsorEventController extends Controller
             ], 422);
         }
 
-        $validate_data['duration_days'] = $start->diffInDays($end) + 1;
-        $validate_data['total_seats'] = $validate_data['max_participants'];
+        // حساب مدة الفعالية
+        $data['duration_days'] = $start->diffInDays($end) + 1;
 
-        // تحديد الحالة
-        if ($start->isToday())
+        // المقاعد المتاحة = max_participants
+        $data['total_seats'] = $data['max_participants'];
+
+        // إنشاء الفعالية
+        $event = SponsorEvent::create($data);
+
+        // حفظ الأنشطة
+        if (!empty($data['activities']))
         {
-            $validate_data['status'] = 'ongoing';
-        }
-        elseif ($start->isFuture())
-        {
-            $validate_data['status'] = 'upcoming';
-        }
-        else
-        {
-            $validate_data['status'] = 'finished';
+            foreach ($data['activities'] as $act)
+            {
+                SponsorEventProgram::create([
+                    'sponsor_event_id' => $event->id,
+                    'title' => $act['title'],
+                    'start_time' => $act['start_time'],
+                    'end_time' => $act['end_time'],
+                    'provider_name' => $act['provider_name'],
+                    'provider_contact' => $act['provider_contact'],
+                ]);
+            }
         }
 
-        $sponsor_event = SponsorEvent::create($validate_data);
+        // حفظ الصور
+        if (!empty($data['photos']))
+        {
+            foreach ($data['photos'] as $photo)
+            {
+                SponsorEventImage::create([
+                    'sponsor_event_id' => $event->id,
+                    'image' => $photo['image'],
+                    'caption' => $photo['caption'] ?? null,
+                ]);
+            }
+        }
 
-        return response()->json([
-            'message' => 'Sponsor Event created successfully',
-            'sponsor_event' => $sponsor_event,
-        ], 201);
+        return new SponsorEventResource($event);
     }
     //===============================================================
-    public function storeImages(StoreSponsorEventImageRequest $request,$sponsor_event_id)
+    public function update(UpdateSponsorEventRequest $request, $se_id)
     {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+        $event = SponsorEvent::findOrFail($se_id);
 
-        $validated = $request->validated();
-        $validated['sponsor_event_id'] = $sponsor_event_id;
-        $images = $validated['images'];
-
-        $images_s = [];
-        foreach ($images as $image)
-        {
-            $path = $image->store('sponsor_event_images', 'public');
-
-            $img = SponsorEventImage::create([
-                'sponsor_event_id' => $sponsor_event_id,
-                'image' => $path,
-            ]);
-
-            $images_s[] = $img;
-        }
-
-        return response()->json([
-            'message' => $sponsor_event->name.' '.'Images uploaded successfully',
-            'images' => $images_s
-        ], 201);
-    }
-    //===============================================================
-    public function storeProgram(StoreSponsorEventProgramRequest $request, $sponsor_event_id)
-    {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
-        $validated = $request->validated();
-
-        $program = SponsorEventProgram::create([
-            'sponsor_event_id' => $sponsor_event_id,
-            'activity' => $validated['activity'],
-            'presenter' => $validated['presenter'],
-            'comunication' => $validated['comunication'],
-        ]);
-
-        return response()->json([
-            'message' => $sponsor_event->name.' '.'Program added successfully',
-            'program' => $program
-        ], 201);
-    }
-    //===============================================================
-    public function update(UpdateSponsorEventRequest $request, $sponsor_event_id)
-    {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
-
-        // التعديل مسموح فقط إذا كانت الفعالية مسودة
-        if ($sponsor_event->copy_status !== 'draft')
+        // التعديل مسموح فقط إذا كانت مسودة
+        if ($event->copy_status !== 'draft')
         {
             return response()->json([
                 'message' => 'Cannot update event after publishing',
-                'status' => $sponsor_event->copy_status
+                'status' => $event->copy_status
             ], 403);
         }
 
-        $validated = $request->validated();
+        $data = $request->validated();
 
-        $exhibition_start = Carbon::parse($sponsor_event->exhibition->start_date);
-        $exhibition_end   = Carbon::parse($sponsor_event->exhibition->end_date);
-
-        // إذا تم تعديل الوقت
-        if (isset($validated['start_time']) && isset($validated['end_time']))
+        // التحقق من الوقت إذا تم تعديله
+        if (isset($data['start_time']) && isset($data['end_time']))
         {
-            $start = Carbon::parse($validated['start_time']);
-            $end   = Carbon::parse($validated['end_time']);
+
+            $exhibition_start = Carbon::parse($event->exhibition->start_date);
+            $exhibition_end   = Carbon::parse($event->exhibition->end_date);
+
+            $start = Carbon::parse($data['start_time']);
+            $end   = Carbon::parse($data['end_time']);
 
             if ($start->lt($exhibition_start) || $end->gt($exhibition_end))
             {
@@ -146,343 +125,666 @@ class SponsorEventController extends Controller
                 ], 422);
             }
 
-            $validated['duration_days'] = $start->diffInDays($end) + 1;
+            $data['duration_days'] = $start->diffInDays($end) + 1;
 
-            //تحديث الحالة
+            // تحديث حالة الفعالية
             if ($start->isToday())
             {
-                $validated['status'] = 'ongoing';
+                $data['status'] = 'ongoing';
             } elseif ($start->isFuture())
             {
-                $validated['status'] = 'upcoming';
+                $data['status'] = 'upcoming';
             } else
             {
-                $validated['status'] = 'finished';
+                $data['status'] = 'finished';
             }
         }
 
-        // إذا تم تعديل عدد المقاعد
-        if (isset($validated['max_participants']))
+        // تعديل المقاعد
+        if (isset($data['max_participants']))
         {
-            $validated['total_seats'] = $validated['max_participants'];
+            $data['total_seats'] = $data['max_participants'];
         }
 
-        $sponsor_event->update($validated);
+        $event->update($data);
 
-        return response()->json([
-            'message' => 'Sponsor Event updated successfully',
-            'sponsor_event' => $sponsor_event
-        ], 200);
+        return new SponsorEventResource($event);
     }
     //===============================================================
-    public function storeInvitation(StoreSponsorEventInvitationRequest $request, $sponsor_event_id)
+    public function index()
     {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
-        $validated = $request->validated();
+        $events = SponsorEvent::with(['sponsorEventImages', 'programs'])
+            ->when(request('exhibition_id'), fn($q) => $q->where('exhibition_id', request('exhibition_id')))
+            ->orderByDesc('id')
+            ->get();
 
-        $invitation = SponsorEventInvitation::create([
-            'sponsor_event_id' => $sponsor_event_id,
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'method_send' => $validated['method_send'],
-            'status' => 'pending',
-        ]);
-
-        $qr = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=ticket_id:" . $invitation->id;
-        $invitation->update(['qr_code' => $qr,]);
-
-        return response()->json([
-            'message' => $sponsor_event->name.' '.'Invitation added successfully',
-            'invitation' => $invitation
-        ], 201);
+        return SponsorEventResource::collection($events);
     }
     //===============================================================
-    public function publish($sponsor_event_id)//نشر فعالية
+    public function show($se_id)
     {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+        $event = SponsorEvent::with(['sponsorEventImages', 'programs', 'tickets'])
+            ->findOrFail($se_id);
+
+        return new SponsorEventResource($event);
+    }
+    //===============================================================
+    public function publish($se_id)
+    {
+        $event = SponsorEvent::findOrFail($se_id);
 
         // النشر مسموح فقط إذا كانت مسودة
-        if ($sponsor_event->copy_status !== 'draft')
+        if ($event->copy_status !== 'draft')
         {
             return response()->json([
                 'message' => 'Cannot publish event unless it is in draft status',
-                'current_status' => $sponsor_event->copy_status
+                'current_status' => $event->copy_status
             ], 403);
         }
 
         // لا يمكن نشر فعالية بدأت أو انتهت
-        if (Carbon::parse($sponsor_event->start_time)->lte(now()))
+        if (Carbon::parse($event->start_time)->lte(now()))
         {
             return response()->json([
-                'message' => 'Cannot publish an sponsor event that has already started or finished',
-                'sponsor_event_start_time' => $sponsor_event->start_time,
+                'message' => 'Cannot publish an event that has already started or finished',
+                'event_start_time' => $event->start_time,
                 'now' => now()->toDateTimeString(),
             ], 422);
         }
 
-        $exhibition_start = Carbon::parse($sponsor_event->exhibition->start_date);
-        $exhibition_end   = Carbon::parse($sponsor_event->exhibition->end_date);
+        // نشر الفعالية
+        $event->copy_status = 'published';
+        $event->publish_date = now();
+        $event->save();
 
-        $start = Carbon::parse($sponsor_event->start_time);
-        $end   = Carbon::parse($sponsor_event->end_time);
-
-        // التحقق أن الفعالية ضمن مدة المعرض
-        if ($start->lt($exhibition_start) || $end->gt($exhibition_end))
-        {
-            return response()->json([
-                'message' => 'Event duration must be within exhibition dates before publishing',
-                'exhibition_start' => $exhibition_start->toDateTimeString(),
-                'exhibition_end' => $exhibition_end->toDateTimeString(),
-            ], 422);
-        }
-
-        // نشر
-        $sponsor_event->copy_status = 'active';
-        $sponsor_event->publish_date = Carbon::now()
-        ->locale('en')
-        ->translatedFormat('l, j F Y');
-
-        $sponsor_event->save();
-
-        return response()->json([
-            'message' => 'Sponsor Event published successfully',
-            'sponsor_event' => $sponsor_event
-        ], 200);
+        return
+        [
+            'success' => true,
+            'message' => 'Event published successfully'
+        ];
     }
     //===============================================================
-    public function delete($sponsor_event_id)
+    public function destroy($se_id)
     {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+        $event = SponsorEvent::findOrFail($se_id);
 
-        // الحذف مسموح فقط إذا كانت مسودة
-        if ($sponsor_event->copy_status !== 'draft')
+        if ($event->copy_status !== 'draft')
         {
             return response()->json([
                 'message' => 'Cannot delete event unless it is in draft status',
-                'current_status' => $sponsor_event->copy_status
+                'current_status' => $event->copy_status
             ], 403);
         }
 
-        $sponsor_event->delete();
+        $event->delete();
 
-        return response()->json([
-            'message' => 'Sponsor Event deleted successfully'
-        ], 200);
+        return
+        [
+            'success' => true,
+            'message' => 'Event deleted successfully'
+        ];
     }
     //===============================================================
-    public function getMySponsorEvents()//o
+    public function analytics($se_id)
     {
-        $organizer = Auth::user()->organizer;
-        $my_exhibition =$organizer->exhibition;
+        $event = SponsorEvent::with('tickets')->findOrFail($se_id);
 
-        $sponsor_events = SponsorEvent::where('exhibition_id', $my_exhibition->id)
-            ->orderBy('start_time', 'asc')
+        $totalCapacity = $event->max_participants;
+        $totalReserved = $event->registered_count;
+        $totalAttended = $event->scanned_count;
+        $totalAvailable = $totalCapacity - $totalReserved;
+
+        $totalTicketsSold = $event->tickets->count();
+        $totalRevenue = $event->tickets->sum('amount');
+
+        $byStatus =
+        [
+            'pending' => $event->tickets->where('status', 'pending')->count(),
+            'confirmed' => $event->tickets->where('status', 'confirmed')->count(),
+            'cancelled' => $event->tickets->where('status', 'cancelled')->count(),
+            'attended' => $event->tickets->where('status', 'attended')->count(),
+        ];
+
+        return
+        [
+            'totalCapacity' => $totalCapacity,
+            'totalReserved' => $totalReserved,
+            'totalAvailable' => $totalAvailable,
+            'totalAttended' => $totalAttended,
+            'totalTicketsSold' => $totalTicketsSold,
+            'totalRevenue' => $totalRevenue,
+            'occupancyRate' => $totalCapacity ? round(($totalReserved / $totalCapacity) * 100) : 0,
+            'attendanceRate' => $totalReserved ? round(($totalAttended / $totalReserved) * 100) : 0,
+            'byStatus' => $byStatus,
+        ];
+    }
+    
+    //--------------------------Invitation---------------------------
+    
+    public function getAllInvitation($se_id)
+    {
+        $invitations = SponserEventTicket::where('sponsor_event_id', $se_id)
+            ->where('type', 'invitation')//invitation//****
+            ->orderByDesc('id')
             ->get();
 
-        $sponsor_events_data =  $sponsor_events->map(function ($sp_ev)
-        {
-            return
-            [
-                'name' => $sp_ev->name,
-                'type' => $sp_ev->type,
-                'copy_status' => $sp_ev->copy_status,
-                'is_general_invitation' => $sp_ev->is_general_invitation,
-                'description' => $sp_ev->description,
-                'start_time' => Carbon::parse($sp_ev->start_time)->format('Y-m-d'),
-                'place' => $sp_ev->place,
-                'rate_registration' => $sp_ev->registered_count.'/'.$sp_ev->max_participants,
-            ];
-
-        });
-
-        return response()->json([
-            'sponsor_events' => $sponsor_events_data
-        ], 200);
+        return SponsorEventTicketResource::collection($invitations);
     }
     //===============================================================
-    public function show($sponsor_event_id)//عرض فعالية اعلانية معينة/o
+    public function storeInvitation(StoreSponsorEventTicketRequest $request, $se_id)
     {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+        $event = SponsorEvent::findOrFail($se_id);
+        $data = $request->validated();
 
-        $sponsor_event_data =
-        [
-            'name' => $sponsor_event->name,
-            'type' => $sponsor_event->type,
-            'publish_date' => $sponsor_event->publish_date,
-            'start_time' => $sponsor_event->start_time,
-            'end_time' => $sponsor_event->end_time,
-            'place' => $sponsor_event->place,
-
-            'rate_registration' => $sponsor_event->registered_count.'/'.$sponsor_event->max_participants,
-            'booking_rate'=> $sponsor_event->max_participants > 0
-                ? round(($sponsor_event->registered_count / $sponsor_event->max_participants) * 100, 2)
-                : 0,
-
-            'description' => $sponsor_event->description,
-            'is_general_invitation' => $sponsor_event->is_general_invitation,
-            'sponsor_event_programs' => $sponsor_event->Programs()->orderBy('id', 'asc')->get(),
-            'sponsor_event_images' => $sponsor_event->sponsorEventImages,
-        ];
-
-        return response()->json([
-            'sponsor_event' => $sponsor_event_data
-        ], 200);
-    }
-    //===============================================================
-    public function getStatisticsSponsorEvent($sponsor_event_id)//احصائيات فعالية اعلانية
-    {
-        $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
-        $tickets = SponserEventTicket::where('sponsor_event_id', $sponsor_event_id);
-
-        // عدد التذاكر
-        $approved_ticket = $tickets->clone()->where('status', 'approved')->count();
-        $pending_ticket  = $tickets->clone()->where('status', 'pending')->count();
-        $rejected_ticket = $tickets->clone()->where('status', 'rejected')->count();
-
-        // الإيرادات (مجموع المبالغ للتذاكر الموافق عليها)
-        $revenue = $tickets->clone()->where('status', 'approved')->sum('total_price');
-
-        $statistics =
-        [
-            'max_participants' => $sponsor_event->max_participants,
-            'registered_count' => $sponsor_event->registered_count,
-            'total_seats'      => $sponsor_event->total_seats,
-            'scanned_count'    => $sponsor_event->scanned_count,
-            'approved_ticket'  => $approved_ticket,
-            'revenue'          => $revenue,
-
-            'registered_rate'  => $approved_ticket > 0
-                ? round(($sponsor_event->scanned_count / $approved_ticket) * 100, 2)
-                : 0,
-            'booking_rate' => $sponsor_event->max_participants > 0
-                ? round(($sponsor_event->registered_count / $sponsor_event->max_participants) * 100, 2)
-                : 0,
-
-            'pending_ticket'   => $pending_ticket,
-            'rejected_ticket'  => $rejected_ticket,
-        ];
-
-        return response()->json([
-            'statistics' => $statistics
-        ], 200);
-    }
-
-    //--------------------------------Invitation/o-------------------------------------------
-    public function statisticsSponsorEventInvitations($sponsor_event_id)//احصائيات الدعوات في فعالية ما
-    {
-        $invitations = SponsorEventInvitation::where('sponsor_event_id', $sponsor_event_id);
-
-        $confirmed_count = $invitations->clone()->where('status', 'confirmed')->count();
-        $pending_count = $invitations->clone()->where('status', 'pending')->count();
-        $attended_count = $invitations->clone()->where('status', 'attended')->count();
-        $cancelled_count = $invitations->clone()->where('status', 'cancelled')->count();
-
-        $statistics=
-        [
-            'confirmed_count'=>$confirmed_count,
-            'pending_count'=>$pending_count,
-            'attended_count'=>$attended_count,
-            'cancelled_count'=>$cancelled_count,
-        ];
-
-        return response()->json([
-            'statistics' => $statistics
-        ], 200);
-    }
-    //===============================================================
-    public function getAllInvitations($sponsor_event_id)
-    {
-        $invitations = SponsorEventInvitation::where('sponsor_event_id', $sponsor_event_id)->get();
-
-        return response()->json([
-            'invitations' => $invitations
-        ], 200);
-    }
-    //===============================================================
-    public function showInvitation($invitation_id)
-    {
-        $invitation = SponsorEventInvitation::findOrFail($invitation_id);
-
-        $invitation_data=
-        [
-            'method_send' => $invitation->method_send,
-            'sponsor_event_name' => $invitation->sponsorEvent->name,
-            'description' => $invitation->sponsorEvent->description,
-            'start_time' => Carbon::parse($invitation->sponsorEvent->start_time)->format('Y-m-d'),
-            'time' => Carbon::parse($invitation->sponsorEvent->start_time)->format('h:i A').' _ '.Carbon::parse($invitation->sponsorEvent->end_time)->format('h:i A'),
-            'place' => $invitation->sponsorEvent->place,
-            'name' => $invitation->name,
-            'email' => $invitation->email,
-            'qr_code' => $invitation->qr_code,
-        ];
-
-        return response()->json([
-            'invitation' => $invitation_data
-        ], 200);
-    }
-    //===============================================================
-    public function confirmInvitation($invitation_id)
-    {
-        $invitation = SponsorEventInvitation::findOrFail($invitation_id);
-
-        // لا يمكن تأكيد دعوة ملغاة أو مسجلة حضور
-        if (in_array($invitation->status, ['attended', 'cancelled']))
+        if ($data['type'] === 'invitation' && !Auth::user()->organizer)
         {
             return response()->json([
-                'message' => 'Cannot confirm this invitation'
+                'success' => false,
+                'message' => 'Only managers can create invitation tickets'
             ], 403);
         }
 
-        $invitation->status = 'confirmed';
-        $invitation->save();
+        $invitation = SponserEventTicket::create([
+            'sponsor_event_id' => $se_id,
+            'visitor_id' => null,
+            'type' => $data['type'],
+            'holder_name' => $data['holder_name'],
+            'holder_email' => $data['holder_email'],
+            'holder_phone' => $data['holder_phone'] ?? null,
+            'delivery_method' => $data['delivery_method'],
+            'amount' => $data['paid_amount'] ?? 0,
+            'status' => 'confirmed',
+            'qr_code' => 'QR:ev-' . $se_id . ':T' . uniqid(),
+            'booked_at' => now(),
+        ]);
 
-        return response()->json([
-            'message' => 'Invitation confirmed successfully',
-            'invitation' => $invitation
-        ], 200);
+        $event->increment('registered_count');
+
+        return new SponsorEventTicketResource($invitation);
+    }
+    //===============================================================
+    public function updateInvitation(UpdateSponsorEventTicketRequest $request, $invitation_id)
+    {
+        $invitation = SponserEventTicket::findOrFail($invitation_id);
+
+        $invitation->update($request->validated());
+
+        return new SponsorEventTicketResource($invitation);
     }
     //===============================================================
     public function attendInvitation($invitation_id)
     {
-        $invitation = SponsorEventInvitation::findOrFail($invitation_id);
+        $invitation = SponserEventTicket::findOrFail($invitation_id);
 
-        if ($invitation->status !== 'confirmed')
-        {
-            return response()->json([
-                'message' => 'Only confirmed invitations can be marked as attended'
-            ], 403);
-        }
+        $invitation->update([
+            'status' => 'attended',
+            'attended_at' => now(),
+        ]);
 
-        $invitation->status = 'attended';
-        $invitation->attended_date = now()->format('Y-m-d h:i A');
-        $invitation->save();
+        $invitation->sponsorEvent->increment('scanned_count');
 
-        return response()->json([
-            'message' => 'Invitation marked as attended',
-            'invitation' => $invitation
-        ], 200);
+        return
+        [
+            'success' => true,
+            'message' => 'Attendance recorded successfully'
+        ];
     }
     //===============================================================
-    public function cancelInvitation($invitation_id)
-    {
-        $invitation = SponsorEventInvitation::findOrFail($invitation_id);
+    //===============================================================
 
-        if ($invitation->status === 'attended')
-        {
-            return response()->json([
-                'message' => 'Cannot cancel an attended invitation'
-            ], 403);
-        }
 
-        $invitation->status = 'cancelled';
-        $invitation->save();
 
-        return response()->json([
-            'message' => 'Invitation cancelled successfully',
-            'invitation' => $invitation
-        ], 200);
-    }
+
+    // public function store(StoreSponsorEventRequest $request)
+    // {
+    //     $organizer = Auth::user()->organizer;
+    //     $validate_data = $request->validated();
+
+    //     $validate_data['exhibition_id'] = $organizer->exhibition->id;
+
+    //     $exhibition_start = Carbon::parse($organizer->exhibition->start_date);
+    //     $exhibition_end   = Carbon::parse($organizer->exhibition->end_date);
+
+    //     $start = Carbon::parse($validate_data['start_time']);
+    //     $end   = Carbon::parse($validate_data['end_time']);
+
+    //     // مدة الفعالية لا تتجاوز مدة المعرض
+    //     if ($start->lt($exhibition_start) || $end->gt($exhibition_end))
+    //     {
+    //         return response()->json([
+    //             'message' => 'Event duration must be within exhibition dates',
+    //             'exhibition_start' => $exhibition_start->toDateTimeString(),
+    //             'exhibition_end' => $exhibition_end->toDateTimeString(),
+    //         ], 422);
+    //     }
+
+    //     $validate_data['duration_days'] = $start->diffInDays($end) + 1;
+    //     $validate_data['total_seats'] = $validate_data['max_participants'];
+
+
+    //     $sponsor_event = SponsorEvent::create($validate_data);
+
+    //     return response()->json([
+    //         'message' => 'Sponsor Event created successfully',
+    //         'sponsor_event' => $sponsor_event,
+    //     ], 201);
+    // }
+    // //===============================================================
+    // public function storeImages(StoreSponsorEventImageRequest $request,$sponsor_event_id)
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+
+    //     $validated = $request->validated();
+    //     $validated['sponsor_event_id'] = $sponsor_event_id;
+    //     $images = $validated['images'];
+
+    //     $images_s = [];
+    //     foreach ($images as $image)
+    //     {
+    //         $path = $image->store('sponsor_event_images', 'public');
+
+    //         $img = SponsorEventImage::create([
+    //             'sponsor_event_id' => $sponsor_event_id,
+    //             'image' => $path,
+    //         ]);
+
+    //         $images_s[] = $img;
+    //     }
+
+    //     return response()->json([
+    //         'message' => $sponsor_event->name.' '.'Images uploaded successfully',
+    //         'images' => $images_s
+    //     ], 201);
+    // }
+    // //===============================================================
+    // public function storeProgram(StoreSponsorEventProgramRequest $request, $sponsor_event_id)
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+    //     $validated = $request->validated();
+
+    //     $program = SponsorEventProgram::create([
+    //         'sponsor_event_id' => $sponsor_event_id,
+    //         'activity' => $validated['activity'],
+    //         'presenter' => $validated['presenter'],
+    //         'comunication' => $validated['comunication'],
+    //     ]);
+
+    //     return response()->json([
+    //         'message' => $sponsor_event->name.' '.'Program added successfully',
+    //         'program' => $program
+    //     ], 201);
+    // }
+    // //===============================================================
+    // public function update(UpdateSponsorEventRequest $request, $sponsor_event_id)
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+
+    //     // التعديل مسموح فقط إذا كانت الفعالية مسودة
+    //     if ($sponsor_event->copy_status !== 'draft')
+    //     {
+    //         return response()->json([
+    //             'message' => 'Cannot update event after publishing',
+    //             'status' => $sponsor_event->copy_status
+    //         ], 403);
+    //     }
+
+    //     $validated = $request->validated();
+
+    //     $exhibition_start = Carbon::parse($sponsor_event->exhibition->start_date);
+    //     $exhibition_end   = Carbon::parse($sponsor_event->exhibition->end_date);
+
+    //     // إذا تم تعديل الوقت
+    //     if (isset($validated['start_time']) && isset($validated['end_time']))
+    //     {
+    //         $start = Carbon::parse($validated['start_time']);
+    //         $end   = Carbon::parse($validated['end_time']);
+
+    //         if ($start->lt($exhibition_start) || $end->gt($exhibition_end))
+    //         {
+    //             return response()->json([
+    //                 'message' => 'Event duration must be within exhibition dates',
+    //                 'exhibition_start' => $exhibition_start->toDateTimeString(),
+    //                 'exhibition_end' => $exhibition_end->toDateTimeString(),
+    //             ], 422);
+    //         }
+
+    //         $validated['duration_days'] = $start->diffInDays($end) + 1;
+
+    //         //تحديث الحالة
+    //         if ($start->isToday())
+    //         {
+    //             $validated['status'] = 'ongoing';
+    //         } elseif ($start->isFuture())
+    //         {
+    //             $validated['status'] = 'upcoming';
+    //         } else
+    //         {
+    //             $validated['status'] = 'finished';
+    //         }
+    //     }
+
+    //     // إذا تم تعديل عدد المقاعد
+    //     if (isset($validated['max_participants']))
+    //     {
+    //         $validated['total_seats'] = $validated['max_participants'];
+    //     }
+
+    //     $sponsor_event->update($validated);
+
+    //     return response()->json([
+    //         'message' => 'Sponsor Event updated successfully',
+    //         'sponsor_event' => $sponsor_event
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function storeInvitation(StoreSponsorEventInvitationRequest $request, $sponsor_event_id)
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+    //     $validated = $request->validated();
+
+    //     $invitation = SponsorEventInvitation::create([
+    //         'sponsor_event_id' => $sponsor_event_id,
+    //         'name' => $validated['name'],
+    //         'email' => $validated['email'],
+    //         'phone' => $validated['phone'] ?? null,
+    //         'method_send' => $validated['method_send'],
+    //         'status' => 'pending',
+    //     ]);
+
+    //     $qr = "https://chart.googleapis.com/chart?chs=300x300&cht=qr&chl=ticket_id:" . $invitation->id;
+    //     $invitation->update(['qr_code' => $qr,]);
+
+    //     return response()->json([
+    //         'message' => $sponsor_event->name.' '.'Invitation added successfully',
+    //         'invitation' => $invitation
+    //     ], 201);
+    // }
+    // //===============================================================
+    // public function publish($sponsor_event_id)//نشر فعالية
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+
+    //     // النشر مسموح فقط إذا كانت مسودة
+    //     if ($sponsor_event->copy_status !== 'draft')
+    //     {
+    //         return response()->json([
+    //             'message' => 'Cannot publish event unless it is in draft status',
+    //             'current_status' => $sponsor_event->copy_status
+    //         ], 403);
+    //     }
+
+    //     // لا يمكن نشر فعالية بدأت أو انتهت
+    //     if (Carbon::parse($sponsor_event->start_time)->lte(now()))
+    //     {
+    //         return response()->json([
+    //             'message' => 'Cannot publish an sponsor event that has already started or finished',
+    //             'sponsor_event_start_time' => $sponsor_event->start_time,
+    //             'now' => now()->toDateTimeString(),
+    //         ], 422);
+    //     }
+
+    //     $exhibition_start = Carbon::parse($sponsor_event->exhibition->start_date);
+    //     $exhibition_end   = Carbon::parse($sponsor_event->exhibition->end_date);
+
+    //     $start = Carbon::parse($sponsor_event->start_time);
+    //     $end   = Carbon::parse($sponsor_event->end_time);
+
+    //     // التحقق أن الفعالية ضمن مدة المعرض
+    //     if ($start->lt($exhibition_start) || $end->gt($exhibition_end))
+    //     {
+    //         return response()->json([
+    //             'message' => 'Event duration must be within exhibition dates before publishing',
+    //             'exhibition_start' => $exhibition_start->toDateTimeString(),
+    //             'exhibition_end' => $exhibition_end->toDateTimeString(),
+    //         ], 422);
+    //     }
+
+    //     // نشر
+    //     $sponsor_event->copy_status = 'active';
+    //     $sponsor_event->publish_date = Carbon::now()
+    //     ->locale('en')
+    //     ->translatedFormat('l, j F Y');
+
+    //     $sponsor_event->save();
+
+    //     return response()->json([
+    //         'message' => 'Sponsor Event published successfully',
+    //         'sponsor_event' => $sponsor_event
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function delete($sponsor_event_id)
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+
+    //     // الحذف مسموح فقط إذا كانت مسودة
+    //     if ($sponsor_event->copy_status !== 'draft')
+    //     {
+    //         return response()->json([
+    //             'message' => 'Cannot delete event unless it is in draft status',
+    //             'current_status' => $sponsor_event->copy_status
+    //         ], 403);
+    //     }
+
+    //     $sponsor_event->delete();
+
+    //     return response()->json([
+    //         'message' => 'Sponsor Event deleted successfully'
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function getMySponsorEvents()//o
+    // {
+    //     $organizer = Auth::user()->organizer;
+    //     $my_exhibition =$organizer->exhibition;
+
+    //     $sponsor_events = SponsorEvent::where('exhibition_id', $my_exhibition->id)
+    //         ->orderBy('start_time', 'asc')
+    //         ->get();
+
+    //     $sponsor_events_data =  $sponsor_events->map(function ($sp_ev)
+    //     {
+    //         return
+    //         [
+    //             'name' => $sp_ev->name,
+    //             'type' => $sp_ev->type,
+    //             'copy_status' => $sp_ev->copy_status,
+    //             'is_general_invitation' => $sp_ev->is_general_invitation,
+    //             'description' => $sp_ev->description,
+    //             'start_time' => Carbon::parse($sp_ev->start_time)->format('Y-m-d'),
+    //             'place' => $sp_ev->place,
+    //             'rate_registration' => $sp_ev->registered_count.'/'.$sp_ev->max_participants,
+    //         ];
+
+    //     });
+
+    //     return response()->json([
+    //         'sponsor_events' => $sponsor_events_data
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function show($sponsor_event_id)//عرض فعالية اعلانية معينة/o
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+
+    //     $sponsor_event_data =
+    //     [
+    //         'name' => $sponsor_event->name,
+    //         'type' => $sponsor_event->type,
+    //         'publish_date' => $sponsor_event->publish_date,
+    //         'start_time' => $sponsor_event->start_time,
+    //         'end_time' => $sponsor_event->end_time,
+    //         'place' => $sponsor_event->place,
+
+    //         'rate_registration' => $sponsor_event->registered_count.'/'.$sponsor_event->max_participants,
+    //         'booking_rate'=> $sponsor_event->max_participants > 0
+    //             ? round(($sponsor_event->registered_count / $sponsor_event->max_participants) * 100, 2)
+    //             : 0,
+
+    //         'description' => $sponsor_event->description,
+    //         'is_general_invitation' => $sponsor_event->is_general_invitation,
+    //         'sponsor_event_programs' => $sponsor_event->Programs()->orderBy('id', 'asc')->get(),
+    //         'sponsor_event_images' => $sponsor_event->sponsorEventImages,
+    //     ];
+
+    //     return response()->json([
+    //         'sponsor_event' => $sponsor_event_data
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function getStatisticsSponsorEvent($sponsor_event_id)//احصائيات فعالية اعلانية
+    // {
+    //     $sponsor_event = SponsorEvent::findOrFail($sponsor_event_id);
+    //     $tickets = SponserEventTicket::where('sponsor_event_id', $sponsor_event_id);
+
+    //     // عدد التذاكر
+    //     $approved_ticket = $tickets->clone()->where('status', 'approved')->count();
+    //     $pending_ticket  = $tickets->clone()->where('status', 'pending')->count();
+    //     $rejected_ticket = $tickets->clone()->where('status', 'rejected')->count();
+
+    //     // الإيرادات (مجموع المبالغ للتذاكر الموافق عليها)
+    //     $revenue = $tickets->clone()->where('status', 'approved')->sum('total_price');
+
+    //     $statistics =
+    //     [
+    //         'max_participants' => $sponsor_event->max_participants,
+    //         'registered_count' => $sponsor_event->registered_count,
+    //         'total_seats'      => $sponsor_event->total_seats,
+    //         'scanned_count'    => $sponsor_event->scanned_count,
+    //         'approved_ticket'  => $approved_ticket,
+    //         'revenue'          => $revenue,
+
+    //         'registered_rate'  => $approved_ticket > 0
+    //             ? round(($sponsor_event->scanned_count / $approved_ticket) * 100, 2)
+    //             : 0,
+    //         'booking_rate' => $sponsor_event->max_participants > 0
+    //             ? round(($sponsor_event->registered_count / $sponsor_event->max_participants) * 100, 2)
+    //             : 0,
+
+    //         'pending_ticket'   => $pending_ticket,
+    //         'rejected_ticket'  => $rejected_ticket,
+    //     ];
+
+    //     return response()->json([
+    //         'statistics' => $statistics
+    //     ], 200);
+    // }
+
+    //--------------------------------Invitation/o-------------------------------------------
+    // public function statisticsSponsorEventInvitations($sponsor_event_id)//احصائيات الدعوات في فعالية ما
+    // {
+    //     $invitations = SponsorEventInvitation::where('sponsor_event_id', $sponsor_event_id);
+
+    //     $confirmed_count = $invitations->clone()->where('status', 'confirmed')->count();
+    //     $pending_count = $invitations->clone()->where('status', 'pending')->count();
+    //     $attended_count = $invitations->clone()->where('status', 'attended')->count();
+    //     $cancelled_count = $invitations->clone()->where('status', 'cancelled')->count();
+
+    //     $statistics=
+    //     [
+    //         'confirmed_count'=>$confirmed_count,
+    //         'pending_count'=>$pending_count,
+    //         'attended_count'=>$attended_count,
+    //         'cancelled_count'=>$cancelled_count,
+    //     ];
+
+    //     return response()->json([
+    //         'statistics' => $statistics
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function getAllInvitations($sponsor_event_id)
+    // {
+    //     $invitations = SponsorEventInvitation::where('sponsor_event_id', $sponsor_event_id)->get();
+
+    //     return response()->json([
+    //         'invitations' => $invitations
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function showInvitation($invitation_id)
+    // {
+    //     $invitation = SponsorEventInvitation::findOrFail($invitation_id);
+
+    //     $invitation_data=
+    //     [
+    //         'method_send' => $invitation->method_send,
+    //         'sponsor_event_name' => $invitation->sponsorEvent->name,
+    //         'description' => $invitation->sponsorEvent->description,
+    //         'start_time' => Carbon::parse($invitation->sponsorEvent->start_time)->format('Y-m-d'),
+    //         'time' => Carbon::parse($invitation->sponsorEvent->start_time)->format('h:i A').' _ '.Carbon::parse($invitation->sponsorEvent->end_time)->format('h:i A'),
+    //         'place' => $invitation->sponsorEvent->place,
+    //         'name' => $invitation->name,
+    //         'email' => $invitation->email,
+    //         'qr_code' => $invitation->qr_code,
+    //     ];
+
+    //     return response()->json([
+    //         'invitation' => $invitation_data
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function confirmInvitation($invitation_id)
+    // {
+    //     $invitation = SponsorEventInvitation::findOrFail($invitation_id);
+
+    //     // لا يمكن تأكيد دعوة ملغاة أو مسجلة حضور
+    //     if (in_array($invitation->status, ['attended', 'cancelled']))
+    //     {
+    //         return response()->json([
+    //             'message' => 'Cannot confirm this invitation'
+    //         ], 403);
+    //     }
+
+    //     $invitation->status = 'confirmed';
+    //     $invitation->save();
+
+    //     return response()->json([
+    //         'message' => 'Invitation confirmed successfully',
+    //         'invitation' => $invitation
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function attendInvitation($invitation_id)
+    // {
+    //     $invitation = SponsorEventInvitation::findOrFail($invitation_id);
+
+    //     if ($invitation->status !== 'confirmed')
+    //     {
+    //         return response()->json([
+    //             'message' => 'Only confirmed invitations can be marked as attended'
+    //         ], 403);
+    //     }
+
+    //     $invitation->status = 'attended';
+    //     $invitation->attended_date = now()->format('Y-m-d h:i A');
+    //     $invitation->save();
+
+    //     return response()->json([
+    //         'message' => 'Invitation marked as attended',
+    //         'invitation' => $invitation
+    //     ], 200);
+    // }
+    // //===============================================================
+    // public function cancelInvitation($invitation_id)
+    // {
+    //     $invitation = SponsorEventInvitation::findOrFail($invitation_id);
+
+    //     if ($invitation->status === 'attended')
+    //     {
+    //         return response()->json([
+    //             'message' => 'Cannot cancel an attended invitation'
+    //         ], 403);
+    //     }
+
+    //     $invitation->status = 'cancelled';
+    //     $invitation->save();
+
+    //     return response()->json([
+    //         'message' => 'Invitation cancelled successfully',
+    //         'invitation' => $invitation
+    //     ], 200);
+    // }
     //-------------------Ticekt/o-----------------------
 
 

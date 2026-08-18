@@ -14,9 +14,14 @@ return new class extends Migration
         Schema::create('notifications', function (Blueprint $table)
         {
             $table->uuid('id')->primary();
-            $table->string('type');//اسم فئة الاشعارات bookingNotification
-            $table->morphs('notifiable');//لتحديد من يتلقى الاشعار/علاقة مورف
-            $table->text('data');//body/محتوى الاشعار
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->string('title');
+            $table->text('body')->nullable();
+            $table->string('type'); // system, task, attendance, message, booking, event, sponsor, map, report
+            $table->boolean('read')->default(false);
+            $table->json('data')->nullable(); //بيانات تانية
+            $table->string('action_url')->nullable();
+
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

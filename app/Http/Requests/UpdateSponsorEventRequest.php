@@ -20,19 +20,25 @@ class UpdateSponsorEventRequest extends FormRequest
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
-    {
+    {//o
         return
         [
-            'name' => 'nullable|string|max:200',
-            'type' => 'nullable|string|max:200',
-            'max_participants' => 'nullable|integer',
-            'description' => 'nullable|string|max:200',
-            'start_time' => 'nullable|date_format:Y-m-d h:i A',
-            'end_time' => 'nullable|date_format:Y-m-d h:i A|after:start_time',
-            'place' => 'nullable|string|max:300',
-            'is_general_invitation' => 'nullable|boolean',
-            'ticket_price' => 'nullable|numeric',
-            'copy_status' => 'nullable|in:draft,active,archived',
+            'name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string|nullable',
+            'type' => 'sometimes|string|max:100',
+
+            'start_time' => 'sometimes|date',
+            'end_time' => 'sometimes|date|after_or_equal:start_time',
+
+            'place' => 'sometimes|string|max:255',
+
+            'ticket_type' => 'sometimes|in:invitation,paid',
+            'ticket_price' => 'sometimes|numeric|min:0',
+
+            'max_participants' => 'sometimes|integer|min:1',
+
+            'activities' => 'nullable|array',
+            'photos' => 'nullable|array',
         ];
     }
 }

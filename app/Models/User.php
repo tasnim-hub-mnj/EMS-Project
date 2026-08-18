@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Override;
 
 class User extends Authenticatable
 {
@@ -60,7 +61,7 @@ class User extends Authenticatable
         return $this->fcm_token;
     }
 
-    // =================Relationships===================
+    //=================Relationships===================
     public function organizer()
     {
         return $this->hasOne(Organizer::class, 'user_id');
@@ -81,19 +82,29 @@ class User extends Authenticatable
         return $this->hasOne(StaffMember::class, 'user_id');
     }
     //=====================================================
-    public function favorites()
+    public function favorites()//v-i
     {
         return $this->hasMany(Favorite::class, 'user_id');
     }
     //=====================================================
-    public function exhibitionReviews()
+    public function exhibitionReviews()//v
     {
         return $this->hasMany(ExhibitionReview::class, 'user_id');
     }
     //=====================================================
-    public function boothReviews()
+    public function boothReviews()//v
     {
         return $this->hasMany(BoothReview::class, 'user_id');
+    }
+    //=====================================================
+    public function map()//o
+    {
+        return $this->hasOne(Map::class);
+    }
+    //=====================================================
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
     }
     //=====================================================
     public function otpCodes()
@@ -101,8 +112,16 @@ class User extends Authenticatable
         return $this->hasMany(OtpCode::class);
     }
     //=====================================================
-
-
-
+    public function fcmToken()
+    {
+        return $this->hasOne(FcmToken::class);
+    }
+    //=====================================================
+    public function firebaseSync()
+    {
+        return $this->hasOne(FirebaseSync::class);
+    }
+    //=====================================================
+    
 }
 

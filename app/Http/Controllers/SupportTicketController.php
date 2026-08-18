@@ -14,7 +14,8 @@ class SupportTicketController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $formattedTickets = $tickets->map(function ($ticket) {
+        $formattedTickets = $tickets->map(function ($ticket) 
+        {
             return [
                 'id' => (int) $ticket->id,
                 'user_id' => (int) $ticket->visitor?->user_id,

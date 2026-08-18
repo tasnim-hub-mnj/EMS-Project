@@ -21,7 +21,7 @@ class CheckInvestorRole
             return $next($request);
         }
         return response()->json([
-            'message' => 'Unauthenticated, you are not investor 🙊'
+            'message' => 'Unauthenticated, you are not investor'
         ], 403);
     }
 }

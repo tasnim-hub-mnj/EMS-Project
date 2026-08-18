@@ -326,7 +326,7 @@ class TicketController extends Controller
     //عرض حجوزات الزائر ككل 
     public function myTickets()
     {
-        $visitor = auth()->user()?->visitor;
+        $visitor = Auth::user()?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -419,7 +419,7 @@ class TicketController extends Controller
 
     public function cancelTicket($id)
     {
-        $visitor = auth()->user()?->visitor;
+        $visitor = Auth::user()?->visitor;
 
         if (!$visitor) {
             return response()->json([

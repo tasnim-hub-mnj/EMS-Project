@@ -10,7 +10,8 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('users', function (Blueprint $table)
+        {
             $table->id();
             $table->string('email')->unique()->nullable();
             $table->string('phone')->unique()->nullable();
@@ -18,7 +19,7 @@ return new class extends Migration {
             $table->enum('role',['organizer','investor','visitor','staff','admin'])->default('visitor');
             $table->enum('status', ['pending','approved','rejected'])->default('pending');//approve admin
             $table->boolean('is_verified')->default(false);
-            $table->string('fcm_token')->nullable();
+            // $table->string('fcm_token')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
@@ -40,7 +41,7 @@ return new class extends Migration {
     }
 
     /**
-     * Reverse the migrations
+     * Reverse the migrations.
      */
     public function down(): void
     {

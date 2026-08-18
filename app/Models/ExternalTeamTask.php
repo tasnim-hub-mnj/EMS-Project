@@ -9,22 +9,15 @@ class ExternalTeamTask extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-    [
-        'title',
-        'external_teams_id',
-        'external_team_member_id',
-        'due_date',
-        'status',
-    ];
+    protected $guarded = [];
 
     protected $table = 'external_team_tasks';
 
     //===============Relationships==================
-    // public function externalTeam()
-    // {
-    //     return $this->belongsTo(ExternalTeam::class);
-    // }
+    public function externalTeam()
+    {
+        return $this->belongsTo(ExternalTeam::class);
+    }
     //=====================================================
     public function externalTeamMember()
     {

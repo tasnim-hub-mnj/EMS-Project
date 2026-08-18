@@ -14,12 +14,15 @@ return new class extends Migration
         Schema::create('staff_salaries', function (Blueprint $table)
         {
             $table->id();
-            // $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+            $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->foreignId('staff_id')->constrained('staff_members')->onDelete('cascade');//full_name
             $table->string('year');
             $table->string('month');
             $table->enum('type_staff',['administrative','technical','services','organizational','security'])->nullable();
-            $table->float('salary');
+            $table->float('gross')->nullable();       // الراتب الإجمالي
+            $table->float('deductions')->nullable();  // الحسميات
+            $table->float('net')->nullable();         // الصافي
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

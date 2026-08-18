@@ -9,11 +9,7 @@ class SponsorEventImage extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-    [
-        'sponsor_event_id',
-        'image',
-    ];
+    protected $guarded = [];
 
     protected $table = 'sponsor_event_images';
 
@@ -23,5 +19,4 @@ class SponsorEventImage extends Model
         return $this->belongsTo(SponsorEvent::class);
     }
     //=====================================================
-
 }

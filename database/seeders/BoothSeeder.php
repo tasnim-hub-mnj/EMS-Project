@@ -28,10 +28,10 @@ class BoothSeeder extends Seeder
                     'location' => 'Hall ' . chr(64 + $i),
                     'services' => ['Electricity', 'Internet'],
                     'amenities' => ['Chairs', 'Table', 'Lighting'],
-                    'image' => 'default_image/default.png',
                     'map_x' => rand(10, 100),
                     'map_y' => rand(10, 100),
-                    'map_z' => rand(1, 10),
+                    'map_width' => rand(1, 10),
+                    'map_height' => rand(1, 10),
                 ]);
             }
         }

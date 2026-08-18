@@ -6,6 +6,7 @@ use App\Console\Commands\UpdateExhibitionStatus;
 use App\Console\Commands\UpdateSponsorEventStatus;
 
 use App\Jobs\GenerateBoothReportsJob;
+use App\Jobs\GenerateExhibitionCopiesJob;
 use App\Jobs\GenerateEventReportsJob;
 use App\Jobs\GenerateSponsorshipReportsJob;
 use App\Jobs\GenerateVisitorReportsJob;
@@ -23,10 +24,14 @@ Schedule::command(UpdateEventStatus::class)->dailyAt('00:00');
 Schedule::command(UpdateSponsorEventStatus::class)->dailyAt('00:00');
 Schedule::command(UpdateBookingStatus::class)->dailyAt('00:00');
 
-Schedule::job(new GenerateVisitorReportsJob)->everyTenMinutes();
-Schedule::job(new GenerateBoothReportsJob)->everyTenMinutes();
-Schedule::job(new GenerateEventReportsJob)->everyTenMinutes();
-Schedule::job(new GenerateSponsorshipReportsJob)->everyTenMinutes();
+Schedule::job(new GenerateVisitorReportsJob)->everyTwoHours();
+Schedule::job(new GenerateBoothReportsJob)->everyTwoHours();
+Schedule::job(new GenerateEventReportsJob)->everyTwoHours();
+Schedule::job(new GenerateSponsorshipReportsJob)->everyTwoHours();
+
+Schedule::job(new GenerateExhibitionCopiesJob)->everyTwoHours();
+
+// Schedule::job(new GenerateExhibitionCopiesJob)->yearlyOn();
 
 
 

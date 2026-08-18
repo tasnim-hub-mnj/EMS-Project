@@ -17,12 +17,12 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             OrganizerSeeder::class,
             ExhibitionSeeder::class,
+            CopySeeder::class,
             BoothSeeder::class,
             BoothBookingSeeder::class,
             SponsorEventSeeder::class,
             EventSeeder::class,
             TicketEventSeeder::class,
-            ReportInvestorSeeder::class,
         ]);
     }
 }

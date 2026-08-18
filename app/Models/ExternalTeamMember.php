@@ -11,7 +11,7 @@ class ExternalTeamMember extends Model
 
     protected $fillable =
     [
-        'external_teams_id',
+        'external_team_id',
         'name',
         'role',
         'phone',

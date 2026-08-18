@@ -10,37 +10,16 @@ class SponsorEvent extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-        [
-            'exhibition_id',
-            'name',
-            'type',
-            'by',
-            'place',
-            'start_time',
-            'end_time',
-            'description',
-            'is_general_invitation',
-            'ticket_price',
-            'max_participants',
-            'listing_days',
-            'duration_options',
-            'registered_count',
-            'total_seats',
-            'scanned_count',
-            'status',
-            'copy_status'
-        ];
+    protected $guarded = [];
 
     protected $table = 'sponsor_events';
 
     protected $casts =
-        [
-            'duration_options' => 'array',
-        ];
+    [
+        'duration_options' => 'array',
+    ];
 
     //================================================
-
     public function getEndDateAttribute()
     {
         if (!$this->date || !$this->listing_days)
@@ -64,12 +43,17 @@ class SponsorEvent extends Model
         return $this->hasMany(SponsorshipBooking::class);
     }
     //=====================================================
+    public function eventSponsorshipRequests()
+    {
+        return $this->hasMany(EventSponsorshipRequest::class);
+    }
+    //=====================================================
     public function sponsorEventImages()
     {
         return $this->hasMany(SponsorEventImage::class);
     }
     //=====================================================
-    public function Programs()
+    public function programs()
     {
         return $this->hasMany(SponsorEventProgram::class);
     }
@@ -79,10 +63,10 @@ class SponsorEvent extends Model
         return $this->morphMany(Favorite::class, 'favoritable');
     }
     //=====================================================
-    public function invitations()
-    {
-        return $this->hasMany(SponsorEventInvitation::class);
-    }
+    // public function invitations()
+    // {
+    //     return $this->hasMany(SponsorEventInvitation::class);
+    // }
     //=====================================================
     public function tickets()
     {

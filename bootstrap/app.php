@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\CheckAdminRole;
 use App\Http\Middleware\CheckInvestorRole;
+use App\Http\Middleware\CheckOrganizerRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,7 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void 
     {
         $middleware->alias([
-            'checkInvestor' => CheckInvestorRole::class
+            'checkAdmin' => CheckAdminRole::class,
+            'checkOrganizer' => CheckOrganizerRole::class,
+            'checkInvestor' => CheckInvestorRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

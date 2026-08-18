@@ -6,35 +6,24 @@ use Illuminate\Database\Eloquent\Model;
 
 class SponserEventTicket extends Model
 {
-    protected $fillable = [
-        'sponsor_event_id',
-        'visitor_id',
-        'name',
-        'email',
-        'phone',
-        'status',
-        'qr_code',
-        'amount',
-        'booked_at',
-    ];
+    protected $guarded = [];
 
-    protected $casts = [
-        'booked_at' => 'datetime',
-        'amount' => 'decimal:2',
-    ];
+    protected $casts =
+        [
+            'booked_at' => 'datetime',
+            'amount' => 'float',
+        ];
     //==========================================
 
-    // الفعالية الراعية
+    //============================================
     public function sponsorEvent()
     {
         return $this->belongsTo(SponsorEvent::class, 'sponsor_event_id');
     }
-    //==========================================
+    //============================================
     public function visitor()
     {
         return $this->belongsTo(Visitor::class, 'visitor_id');
     }
-    //=========================================
-
-
+    //============================================
 }
