@@ -50,27 +50,24 @@ class Visitor extends Model
     // {
     //     return $this->hasMany(Conversation::class);
     // }
+    //====================================================
 
     public function messages()
     {
         return $this->hasMany(Message::class, 'sender_id');
     }
+    //===============================================
 
     public function schedule()
     {
         return $this->hasMany(VisitorSchedule::class);
     }
     //===========================================
-    // الزائر له اجنحة محفوظة
-
+  
     public function collectedBooths()
     {
         return $this->hasMany(CollectedBooths::class);
     }
-    //============================================
-
-
-    //التقييمات
     //============================================
 
     //الزائر له تذاكر دعم
@@ -94,11 +91,13 @@ class Visitor extends Model
     {
         return $this->hasMany(SponserEventTicket::class);
     }
+    //=============================================
     public function favorites()
     {
         return $this->morphMany(Favorite::class, 'favoritable');
 
     }
+    //==============================================
 
 
 

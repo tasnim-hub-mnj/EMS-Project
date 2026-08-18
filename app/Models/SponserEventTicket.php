@@ -22,16 +22,19 @@ class SponserEventTicket extends Model
         'booked_at' => 'datetime',
         'amount' => 'decimal:2',
     ];
+    //==========================================
 
     // الفعالية الراعية
     public function sponsorEvent()
     {
         return $this->belongsTo(SponsorEvent::class, 'sponsor_event_id');
     }
+    //==========================================
     public function visitor()
     {
         return $this->belongsTo(Visitor::class, 'visitor_id');
     }
+    //=========================================
 
 
 }
