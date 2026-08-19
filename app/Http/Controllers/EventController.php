@@ -35,16 +35,30 @@ class EventController extends Controller
             ->where('status', 'approved')
             ->first();
 
-        if (!$booking) {
+        if (!$booking)
+        {
             return response()->json([
                 'message' => 'You do not have an approved booking for this booth.'
             ], 400);
         }
 
+        // منع إنشاء فعالية بنفس التاريخ والوقت لنفس الحجز
+        $conflict = Event::where('booth_booking_id', $booking->id)
+            ->where('start_date', $data['start_date'])
+            ->where('time', $data['time'])
+            ->exists();
+
+        if ($conflict) {
+            return response()->json([
+                'message' => 'You already have an event at the same date and time for this booth.'
+            ], 409);
+        }
+
         //التحقق أن الفعالية ضمن فترة الحجز
         $start = Carbon::parse($data['start_date']);
         $end = Carbon::parse($data['end_date']);
-        if ($start < $booking->start_date || $end > $booking->end_date) {
+        if ($start < $booking->start_date || $end > $booking->end_date)
+        {
             return response()->json([
                 'message' => 'Event dates must be within your booth booking period.'
             ], 400);
@@ -52,7 +66,43 @@ class EventController extends Controller
 
         $duration_days = $start->diffInDays($end) + 1;
 
-        $status = $start->isToday() ? 'ongoing' : 'upcoming';//هل تبدأ اليوم ام بعدين
+        //الحالة -_-
+        $eventDate = Carbon::parse($data['start_date']);
+        $eventDateTime = Carbon::parse($data['start_date'] . ' ' . $data['time']);
+        $now = now();
+
+        // إذا كانت الفعالية اليوم
+        if ($eventDate->isToday()) {
+
+            // إذا وقت الفعالية إجا أو مرّ → جارية
+            if ($eventDateTime->lessThanOrEqualTo($now)) {
+                $status = 'ongoing';
+            }
+            // إذا وقت الفعالية لسا ما إجا → قادمة
+            else {
+                $status = 'upcoming';
+            }
+        }
+        // إذا كانت الفعالية بعد اليوم → قادمة
+        else {
+            $status = 'upcoming';
+        }
+
+
+        // شرط: إذا كانت الفعالية ليوم واحد وفي نفس تاريخ اليوم، يجب أن يكون وقت الفعالية بعد 6 ساعات من الآن
+        if ($start->isToday() && $start->equalTo($end))
+        {
+
+            $eventTime = Carbon::parse($data['time']); // وقت الفعالية
+            $minAllowedTime = now()->addHours(6);      // الوقت الحالي + 6 ساعات
+
+            if ($eventTime->lessThan($minAllowedTime))
+            {
+                return response()->json([
+                    'message' => 'Event time must be at least 6 hours from now for same‑day events.'
+                ], 422);
+            }
+        }
 
         $event = Event::create([
             'booth_booking_id' => $booking->id,
@@ -70,13 +120,15 @@ class EventController extends Controller
             'max_participants' => $data['max_participants'],
             'ticket_price' => $data['ticket_price'] ?? 0,
             'total_seats' => $data['total_seats'] ?? $data['max_participants'],
-            'video_promo_url' => $data['video_promo_url'],
+            'video_promo_url' => $data['video_promo_url'] ?? null,
             'status' => $status,
         ]);
 
         $images = [];
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $img) {
+        if ($request->hasFile('images'))
+        {
+            foreach ($request->file('images') as $img)
+            {
                 $path = $img->store('event_images', 'public');
 
                 $images[] = EventImage::create([
@@ -86,10 +138,35 @@ class EventController extends Controller
             }
         }
 
+        $data =
+        [
+            'booth_booking_id' => $booking->id,
+            'name' => $event->name,
+            'type' =>  $event->type,
+            'booth_number' => $booking->booth->number,
+            'exhibition_name' => $booking->booth->exhibition->name,
+            'start_date' =>  $event->start_date,
+            'end_date' =>  $event->end_date,
+            'time' =>  $event->time,
+            'place' => $booking->booth->number . ' - ' . $booking->booth->location,
+            'duration_days' => $event->duration_days,
+            'description' => $event->description,
+            'is_general_invitation' => $event->is_general_invitation,
+            'has_bookable_seats' => $event->has_bookable_seats,
+            'requires_booking' => $event->requires_booking,
+            'max_participants' => $event->max_participants,
+            'ticket_price' => $event->ticket_price,
+            'total_seats' => $event->total_seats,
+            'video_promo_url' => $event->video_promo_url,
+            'status' => $event->status,
+        ];
+
+
+
         return response()->json([
             'message' => 'Event created successfully.',
-            'event' => $event,
-            'images' => $images
+            'event' => $data,
+            'image' => $images
         ], 201);
     }
     //===========================================================

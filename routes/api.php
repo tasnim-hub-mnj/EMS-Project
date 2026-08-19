@@ -262,13 +262,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/investor/booth/events', [BoothManagementController::class, 'getBoothEvents']);
 
         //Event
-        Route::post('/investor/events', [EventController::class, 'createEvent']);//❌
+        Route::post('/investor/events', [EventController::class, 'createEvent']);
         Route::get('/investor/events', [EventController::class, 'getInvestorEvents']);
         Route::get('/investor/events/{id}/ticket-requests', [EventController::class, 'getTicketRequests']);
         Route::patch('/investor/events/{eventId}/ticket-requests/{requestId}', [EventController::class, 'ticketRequestAction']);
         //SponsorEvent
         Route::get('/investor/sponsor-events', [SponsorEventController::class, 'getSponsorEvents']);
-        Route::post('/investor/sponsorships', [SponsorshipBookingController::class, 'createSponsorship']);//❌
+        Route::post('/investor/sponsorships', [SponsorshipBookingController::class, 'createSponsorship']);
         Route::patch('/investor/sponsorships/{id}/cancel', [SponsorshipBookingController::class, 'cancelSponsorship']);
         Route::get('/investor/sponsorships', [SponsorshipBookingController::class, 'getMySponsorships']);
 

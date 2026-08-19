@@ -51,4 +51,5 @@ class Event extends Model
             'exhibition_id'
         );
     }
+    //=====================================================
 }

@@ -28,25 +28,43 @@ class UpdateEventStatus extends Command
     public function handle()
     {
         $events = Event::all();
-        /*
-        upcoming قبل البداية
-        ongoing خلال الحدث
-        finished بعد الانتهاء مباشرة
-        */
-        foreach( $events as $event)
-        {
-            $today = now()->startOfDay();
-            $startDate = Carbon::parse($event->start_date);
-            $endDate = Carbon::parse($event->end_date);
 
+        foreach ($events as $event)
+        {
+            $now = now();
+            $today = now()->startOfDay();
+
+            $startDate = Carbon::parse($event->start_date);
+            $endDate   = Carbon::parse($event->end_date);
+
+            // دمج التاريخ + الوقت
+            $eventStartDateTime = Carbon::parse($event->start_date . ' ' . $event->time);
+
+            /*
+                upcoming  قبل بداية الوقت
+                ongoing   خلال الحدث (بعد بداية الوقت)
+                finished  بعد نهاية التاريخ
+            */
+
+            // 1) إذا اليوم قبل تاريخ البداية → قادمة
             if ($today->lt($startDate))
             {
                 $event->status = 'upcoming';
             }
-            elseif ($today->between($startDate, $endDate))
+
+            // 2) إذا اليوم هو يوم البداية لكن الوقت لسا ما إجا → قادمة
+            elseif ($today->equalTo($startDate) && $now->lt($eventStartDateTime))
+            {
+                $event->status = 'upcoming';
+            }
+
+            // 3) إذا الوقت إجا أو مرّ، وكان اليوم ضمن فترة الحدث → جارية
+            elseif ($now->greaterThanOrEqualTo($eventStartDateTime) && $today->between($startDate, $endDate))
             {
                 $event->status = 'ongoing';
             }
+
+            // 4) إذا اليوم بعد تاريخ النهاية → منتهية
             elseif ($today->gt($endDate))
             {
                 $event->status = 'finished';

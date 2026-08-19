@@ -37,8 +37,10 @@ class GenerateBoothReportsJob implements ShouldQueue
         {
             $start = Carbon::parse($booking->start_date);
             $end = Carbon::parse($booking->end_date);
-            $startDate = $start->format('Y-m-d');
-            $endDate = $end->format('Y-m-d');
+            // $startDate = $start->format('Y-m-d');
+            // $endDate = $end->format('Y-m-d');
+            $startDate = $start->copy()->format('Y-m-d');
+            $endDate = $end->copy()->format('Y-m-d');
 
             if($startDate <= $today && $endDate >= $today)
             {

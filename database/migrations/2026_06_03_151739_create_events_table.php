@@ -14,26 +14,25 @@ return new class extends Migration
             $table->foreignId('booth_booking_id')->constrained('booth_bookings')->onDelete('cascade');
             $table->string('name');
             $table->string('type')->nullable();//ندوة/مسابقة/عرض تقديمي/ورشة/بث مباشر
-            // $table->string('by');//اسم المقدم/لجنة التحكيم
             $table->date('start_date');
             $table->date('end_date');
-            // $table->date('date')->nullable();
             $table->time('time')->nullable();
-            $table->string('place')->nullable();//venue_name
-            $table->integer('duration_days')->default(1);//مدة الحدث بالأيام(ايام الحجز)
-            $table->text('description')->nullable();
-            $table->string('video_promo_url')->nullable();//في صور للفعالية
-            $table->boolean('is_general_invitation')->default(true);//هل الحدث مفتوح للجميع
-            $table->boolean('has_bookable_seats')->default(false);//هل العدد محدود
             $table->integer('max_participants')->nullable();//عدد المقاعد الكلي
+            $table->text('description')->nullable();
             $table->boolean('requires_booking')->default(false);//هل يتطلب الحدث حجز مسبق
+            $table->boolean('has_bookable_seats')->default(false);//هل العدد محدود
+            $table->integer('total_seats')->nullable();//المتبقي//default(max_participants)
             $table->float('ticket_price')->default(0)->nullable();
+            $table->boolean('is_general_invitation')->default(true);//هل الحدث مفتوح للجميع
             $table->enum('ticket_type', ['paid', 'free'])->nullable();
             $table->integer('free_ticket_limit')->nullable();
-            $table->integer('registered_count')->default(0);//المحجوز//المسجلون
-            $table->integer('total_seats')->nullable();//المتبقي//default(max_participants)
-            $table->integer('scanned_count')->default(0);//عدد الحضور
+            $table->string('video_promo_url')->nullable();//في صور للفعالية
             $table->enum('status',['upcoming', 'ongoing', 'finished'])->default('upcoming');
+
+            $table->string('place')->nullable();//venue_name
+            $table->integer('duration_days')->default(1);//مدة الحدث بالأيام(ايام الحجز)
+            $table->integer('registered_count')->default(0);//المحجوز//المسجلون
+            $table->integer('scanned_count')->default(0);//عدد الحضور
             $table->integer('current_day')->default(1);//اليوم الحالي من الفعالية
             $table->json('daily_attendees')->nullable();
             $table->timestamps();
@@ -41,7 +40,7 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migrations
      */
     public function down(): void
     {
