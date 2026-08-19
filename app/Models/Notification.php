@@ -14,23 +14,25 @@ class Notification extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = 
-    [
-        'id',
-        'user_id',
-        'title',
-        'body',
-        'type',
-        'read',
-        'data',
-        'action_url',
-    ];
+    protected $fillable =
+        [
+            'id',
+            'user_id',
+            'title',
+            'body',
+            'type',
+            'read',
+            'data',
+            'action_url',
+        ];
 
-    protected $casts = 
-    [
-        'read' => 'boolean',
-        'data' => 'array',
-    ];
+    protected $casts =
+        [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'read' => 'boolean',
+            'data' => 'array',
+        ];
 
     //============================================
     public function user()

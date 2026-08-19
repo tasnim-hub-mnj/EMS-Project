@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Booth;
 use App\Models\CollectedBooths;
+use App\Models\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class CollectedBoothController extends Controller
 {
@@ -64,7 +66,8 @@ class CollectedBoothController extends Controller
             'booth_id' => 'required|exists:booths,id',
         ]);
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -83,14 +86,16 @@ class CollectedBoothController extends Controller
                 'message' => 'هذا الجناح مضاف مسبقاً في قائمتك المجمعة',
             ], 409);
         }
+
         $booth = Booth::find($data['booth_id']);
 
-        CollectedBooths::create([
+        $collected = CollectedBooths::create([
             'visitor_id' => $visitor->id,
             'booth_id' => $booth->id,
-            'qr_data' => (string) $booth->number, // أو كود QR التابع له
+            'qr_data' => (string) $booth->number,
             'scanned_at' => now(),
         ]);
+
 
         $amenities = $booth->services;
         if (is_string($amenities)) {
@@ -118,18 +123,17 @@ class CollectedBoothController extends Controller
         ], 201);
     }
 
-
     //================================================
     //مسح qr الجناح
 
     public function scan(Request $request)
     {
-
         $data = $request->validate([
             'qr_data' => 'required|string',
         ]);
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -141,6 +145,7 @@ class CollectedBoothController extends Controller
         $booth = Booth::where('id', $data['qr_data'])
             ->orWhere('number', $data['qr_data'])
             ->first();
+
         $exists = CollectedBooths::where('visitor_id', $visitor->id)
             ->where(function ($query) use ($data, $booth) {
                 $query->where('qr_data', $data['qr_data']);
@@ -163,6 +168,8 @@ class CollectedBoothController extends Controller
             'qr_data' => $data['qr_data'],
             'scanned_at' => now(),
         ]);
+        $boothIdentifier = $booth?->number ?? $data['qr_data'];
+
 
         $amenities = $booth?->services;
         if (is_string($amenities)) {
@@ -195,7 +202,8 @@ class CollectedBoothController extends Controller
     //حذف الجناح من المجموعة 
     public function destroy(Request $request, $id)
     {
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -204,7 +212,6 @@ class CollectedBoothController extends Controller
             ], 403);
         }
 
-        // البحث عن السجل المجمع الخاص بالزائر بـ booth_id أو بـ id السجل نفسه
         $collected = CollectedBooths::where('visitor_id', $visitor->id)
             ->where(function ($query) use ($id) {
                 $query->where('booth_id', $id)
@@ -219,7 +226,10 @@ class CollectedBoothController extends Controller
             ], 404);
         }
 
+        $boothNumber = $collected->booth?->number ?? $collected->qr_data ?? '';
+
         $collected->delete();
+
 
         return response()->json([
             'status' => true,

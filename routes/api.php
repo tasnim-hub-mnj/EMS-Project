@@ -46,11 +46,13 @@ use Illuminate\Support\Facades\Route;
 Route::post('/notifications/fcm-token', [FcmTokenController::class, 'store']);
 
 //Notifications
-Route::get('/notifications', [NotificationController::class, 'index']);
-Route::get('/notifications/unread', [NotificationController::class, 'unread']);
-Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
-Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
-Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+});
 
 //Firebase Sync
 Route::post('/auth/firebase-sync', [FirebaseSyncController::class, 'syncO']);
@@ -295,14 +297,13 @@ Route::middleware('auth:sanctum')->group(function () {
 //**********************************HANAN😁Visitor****************************
 //****************************************************************************
 
-Route::post('/auth/login', [VisitorController::class, 'login']);
+Route::post('/auth/login', [VisitorController::class, 'login'])->middleware('throttle:log');
 Route::post('/auth/register', [VisitorController::class, 'register']);
 Route::post('/visitor/auth/verify-otp', [verifyOtpController::class, 'verifyOtp']);
 Route::post('/visitor/auth/resend-otp', [verifyOtpController::class, 'resendOtp']);
 Route::post('/visitor/auth/forgot-password', [verifyOtpController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
 Route::post('/visitor/auth/forgot-password/verify-otp', [verifyOtpController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
 Route::post('/visitor/auth/reset-password', [verifyOtpController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
-
 
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -365,7 +366,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/booking/event/{id}', [TicketController::class, 'getEventTicket']);
         Route::delete('/bookings/{id}/cancel', [TicketController::class, 'cancelTicket']);
         Route::get('/booking/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
-
         Route::post('/booking/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
 
 

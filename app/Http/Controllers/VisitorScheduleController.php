@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Booth;
 use App\Models\CollectedBooths;
+use Illuminate\Support\Str;
+use App\Models\Event;
+use App\Models\Notification;
 use App\Models\VisitorSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -24,7 +27,6 @@ class VisitorScheduleController extends Controller
         // today | week | all
         $filter = $request->query('filter', 'all');
 
-        // تحميل العلاقات المتاحة
         $query = VisitorSchedule::with([
             'event.exhibition.organizer',
             'event.boothBooking.booth.exhibition'
@@ -100,7 +102,8 @@ class VisitorScheduleController extends Controller
             ], 422);
         }
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -109,12 +112,16 @@ class VisitorScheduleController extends Controller
             ], 403);
         }
 
+        $event = Event::find($request->event_id);
+        $eventName = $event->title ?? $event->name ?? 'فعالية غير محددة';
+
         $schedule = VisitorSchedule::firstOrCreate([
             'visitor_id' => $visitor->id,
             'event_id' => $request->event_id,
         ], [
             'added_at' => now(),
         ]);
+
 
         return response()->json([
             'status' => true,
@@ -126,7 +133,8 @@ class VisitorScheduleController extends Controller
     // حذف موعد
     public function removeFromSchedule(Request $request, $eventId)
     {
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -134,6 +142,7 @@ class VisitorScheduleController extends Controller
                 'message' => 'غير مصرح لك، يجب تسجيل الدخول كزائر'
             ], 403);
         }
+
         $schedule = VisitorSchedule::where('visitor_id', $visitor->id)
             ->where('event_id', $eventId)
             ->first();
@@ -145,7 +154,12 @@ class VisitorScheduleController extends Controller
             ], 404);
         }
 
+        $event = Event::find($eventId);
+        $eventName = $event->title ?? $event->name ?? 'فعالية غير محددة';
+
+        // حذف الموعد
         $schedule->delete();
+
         return response()->json([
             'status' => true,
             'message' => 'تمت إزالة الفعالية من مواعيدك بنجاح'
