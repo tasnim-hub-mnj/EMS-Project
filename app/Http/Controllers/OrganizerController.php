@@ -37,7 +37,7 @@ class OrganizerController extends Controller
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
         //----------------------------------
 
         $organizer_data =
@@ -218,6 +218,5 @@ class OrganizerController extends Controller
 
     }
     //================================================================
-    //================================================================
-
+    //================================================================  
 }

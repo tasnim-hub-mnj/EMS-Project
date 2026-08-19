@@ -14,6 +14,14 @@ class BoothResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $booking = $this->boothBookings
+            ->where('status', 'approved')
+            ->filter(function ($b) {
+                return $b->start_date <= now() && $b->end_date >= now();
+            })
+            ->first();
+        
+
         return 
         [
             'id' => 'b' . $this->id,
@@ -34,16 +42,20 @@ class BoothResource extends JsonResource
             'dailyPrice' => $this->pricing_type === 'daily' ? $this->price : null,
 
             // الخدمات الإضافية (services)
-            'services' => $this->services ? collect($this->services)->map(function ($price, $name) {
-                return [
+            'services' => $this->services ? collect($this->services)->map(function ($price, $name) 
+            {
+                return 
+                [
                     'name' => $name,
                     'price' => $price
                 ];
             })->values() : [],
 
             // الخدمات الأساسية (amenities)
-            'amenities' => $this->amenities ? collect($this->amenities)->map(function ($price, $name) {
-                return [
+            'amenities' => $this->amenities ? collect($this->amenities)->map(function ($price, $name) 
+            {
+                return 
+                [
                     'name' => $name,
                     'price' => $price
                 ];
@@ -61,18 +73,19 @@ class BoothResource extends JsonResource
             'mapHeight' => $this->map_height,
 
             // بيانات المستثمر (إن وجد حجز Approved)
-            'investorId' => optional($this->boothBookings)->investor_id,
-            'investorName' => optional(optional($this->boothBookings)->investor)->company_name,
+            // بيانات المستثمر للحجز الفعّال
+            'investorId' => optional($booking)->investor_id,
+            'investorName' => optional(optional($booking)->investor)->company_name,
 
-            // بيانات الحجز (إن وجد)
-            'booking' => $this->boothBookings ? 
+            // بيانات الحجز الفعّال
+            'booking' => $booking ? 
             [
-                'companyName' => optional($this->boothBookings->investor)->company_name,
-                'contactName' => $this->boothBookings->contact_name,
-                'contactEmail' => $this->boothBookings->contact_email,
-                'contactPhone' => $this->boothBookings->contact_phone,
-                'bookedDays' => $this->boothBookings->days,
-                'events' => [] // ما في فعاليات داخل البوث الآن
+                'companyName' => optional($booking->investor)->company_name,
+                // 'contactName' => $booking->contact_name,
+                'contactEmail' => optional($booking->investor->user)->email,
+                'contactPhone' => optional($booking->investor->user)->phone,
+                'bookedDays' => $booking->days,
+                'events' => []
             ] : null
         ];
     }

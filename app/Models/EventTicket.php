@@ -7,20 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class EventTicket extends Model
 {
-    protected $fillable =
-        [
-            'investor_id',
-            'sponsorEvent_id',
-            'visitor_id',
-            'event_id',
-            'name',
-            'email',
-            'phone',
-            'status',
-            'qr_code',
-            'amount',
-            'booked_at',
-        ];
+    protected $guarded = [];
 
     protected $casts = [
         'booked_at' => 'datetime',

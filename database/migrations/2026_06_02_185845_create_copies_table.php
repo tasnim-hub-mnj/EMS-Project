@@ -21,7 +21,6 @@ return new class extends Migration
             $table->date('end_date');//exhibition->end_date
             $table->enum('copy_status', ['archived','active', 'finished'])->default('active');
 
-            // NEW FIELDS
             $table->boolean('announced')->default(true);
             $table->integer('total_booths')->default(0);//exhibition->total_booths
             $table->integer('booked_booths')->default(0);//total_booths - available_booths

@@ -53,7 +53,8 @@ Route::post('/notifications/mark-all-read', [NotificationController::class, 'mar
 Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
 //Firebase Sync
-Route::post('/auth/firebase-sync', [FirebaseSyncController::class, 'sync']);
+Route::post('/auth/firebase-sync', [FirebaseSyncController::class, 'syncO']);
+Route::post('/auth/firebase-sync', [FirebaseSyncController::class, 'syncI']);
 
 //================================================================
 //***********************Organizer*********************************
