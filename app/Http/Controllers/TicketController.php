@@ -197,7 +197,6 @@ class TicketController extends Controller
             ], 403);
         }
 
-        // جلب الفعالية مع المعرض المرتبط بها مباشرة عبر الـ foreignId
         $sponsorEvent = SponsorEvent::with('exhibition')->find($sponsor_event_id);
         $exhibition = $sponsorEvent?->exhibition;
 

@@ -294,7 +294,7 @@ Route::middleware('auth:sanctum')->group(function () {
 //**********************************HANAN😁Visitor****************************
 //****************************************************************************
 
-Route::post('/auth/login', [VisitorController::class, 'login']);
+Route::post('/auth/login', [VisitorController::class, 'login'])->middleware('throttle:log');
 Route::post('/auth/register', [VisitorController::class, 'register']);
 Route::post('/visitor/auth/verify-otp', [verifyOtpController::class, 'verifyOtp']);
 Route::post('/visitor/auth/resend-otp', [verifyOtpController::class, 'resendOtp']);
@@ -364,7 +364,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/booking/event/{id}', [TicketController::class, 'getEventTicket']);
         Route::delete('/bookings/{id}/cancel', [TicketController::class, 'cancelTicket']);
         Route::get('/booking/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
-
         Route::post('/booking/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
 
 
