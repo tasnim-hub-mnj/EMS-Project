@@ -20,8 +20,9 @@ class VisitorController extends Controller
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|unique:users,phone',
             'password' => 'required|string|min:6',
-            'first_name' => 'required|string|max:255', // 👈 تم التعديل إلى snake_case
-            'last_name' => 'required|string|max:255', // 👈 تم التعديل إلى snake_case
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+
         ]);
 
         if ($validator->fails()) {

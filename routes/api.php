@@ -46,11 +46,13 @@ use Illuminate\Support\Facades\Route;
 Route::post('/notifications/fcm-token', [FcmTokenController::class, 'store']);
 
 //Notifications
-Route::get('/notifications', [NotificationController::class, 'index']);
-Route::get('/notifications/unread', [NotificationController::class, 'unread']);
-Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
-Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
-Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+});
 
 //Firebase Sync
 Route::post('/auth/firebase-sync', [FirebaseSyncController::class, 'syncO']);
@@ -302,7 +304,6 @@ Route::post('/visitor/auth/resend-otp', [verifyOtpController::class, 'resendOtp'
 Route::post('/visitor/auth/forgot-password', [verifyOtpController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
 Route::post('/visitor/auth/forgot-password/verify-otp', [verifyOtpController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
 Route::post('/visitor/auth/reset-password', [verifyOtpController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
-
 
 
 Route::middleware('auth:sanctum')->group(function () {

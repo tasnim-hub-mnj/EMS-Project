@@ -6,6 +6,8 @@ use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Exhibition;
 use App\Models\SponserEventTicket;
+use App\Models\Notification;
+use App\Notifications\SponsorNotification;
 use App\Models\SponsorEvent;
 use Illuminate\Http\Request;
 use App\Models\Ticket;
@@ -23,7 +25,7 @@ class TicketController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'exhibition_id' => 'required|exists:exhibitions,id',
-            ' ticket_type' => 'nullable|string',
+            'ticket_type' => 'nullable|string', // 👈 تم إصلاح المسافة الزائدة
             'quantity' => 'nullable|integer|min:1',
             'paid_amount' => 'nullable|numeric',
         ]);
@@ -35,7 +37,8 @@ class TicketController extends Controller
             ], 422);
         }
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -53,7 +56,9 @@ class TicketController extends Controller
 
         $createdTickets = [];
 
-        DB::transaction(function () use ($quantity, $visitor, $request, $unitPrice, $exhibition, &$createdTickets) {
+        DB::transaction(function () use ($quantity, $user, $visitor, $request, $unitPrice, $exhibition, &$createdTickets) {
+            $exhibitionName = $exhibition?->name ?? 'معرض غير محدد';
+
             for ($i = 0; $i < $quantity; $i++) {
                 $qrCode = 'EXH-' . strtoupper(Str::random(10));
                 $now = now();
@@ -70,7 +75,7 @@ class TicketController extends Controller
                 $createdTickets[] = [
                     'id' => (int) $ticket->id,
                     'exhibition_id' => (int) $ticket->exhibition_id,
-                    'exhibition_name' => $exhibition?->name ?? 'معرض غير محدد',
+                    'exhibition_name' => $exhibitionName,
                     'qr_data' => (string) $ticket->qr_code,
                     'booked_at' => Carbon::parse($ticket->booked_at)->toIso8601String(),
                     'type' => 'exhibition',
@@ -81,6 +86,21 @@ class TicketController extends Controller
                     'seat_number' => null,
                 ];
             }
+
+            // 🟢 إنشاء الإشعار وحفظه في جدول notifications
+            Notification::create([
+                'id' => (string) Str::uuid(),
+                'user_id' => $user->id,
+                'title' => 'تأكيد حجز المعرض',
+                'body' => "تم تأكيد حجز تذكرتك بنجاح للمعرض: {$exhibitionName}",
+                'type' => 'exhibition',
+                'read' => false,
+                'data' => [
+                    'exhibition_id' => $exhibition->id,
+                    'quantity' => $quantity,
+                ],
+                'action_url' => "/exhibitions/{$exhibition->id}",
+            ]);
         });
 
         return response()->json([
@@ -104,7 +124,8 @@ class TicketController extends Controller
             ], 422);
         }
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -133,7 +154,9 @@ class TicketController extends Controller
 
         $createdTickets = [];
 
-        DB::transaction(function () use ($quantity, $visitor, $event, $exhibition, $unitPrice, &$createdTickets) {
+        DB::transaction(function () use ($quantity, $user, $visitor, $event, $exhibition, $unitPrice, &$createdTickets) {
+            $eventName = $event->title ?? $event->name ?? 'فعالية غير محددة';
+
             for ($i = 0; $i < $quantity; $i++) {
                 $qrCode = 'EVT-' . strtoupper(Str::random(10));
                 $now = now();
@@ -156,13 +179,27 @@ class TicketController extends Controller
                     'type' => 'event',
                     'status' => (string) $ticket->status,
                     'event_id' => (int) $ticket->event_id,
-                    'event_name' => $event->title ?? $event->name ?? 'فعالية غير محددة',
+                    'event_name' => $eventName,
                     'paid_amount' => (float) $ticket->amount,
                     'seat_number' => null,
                 ];
             }
 
             $event->increment('registered_count', $quantity);
+
+            Notification::create([
+                'id' => (string) Str::uuid(),
+                'user_id' => $user->id,
+                'title' => 'تأكيد حجز التذكرة',
+                'body' => "تم تأكيد حجز تذكرتك بنجاح لفعالية: {$eventName}",
+                'type' => 'event',
+                'read' => false,
+                'data' => [
+                    'event_id' => $event->id,
+                    'quantity' => $quantity,
+                ],
+                'action_url' => "/events/{$event->id}",
+            ]);
         });
 
         return response()->json([
@@ -188,7 +225,8 @@ class TicketController extends Controller
             ], 422);
         }
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -205,7 +243,7 @@ class TicketController extends Controller
         $amount = $request->input('amount', $sponsorEvent?->ticket_price ?? 0.00);
 
         $holderName = trim(($visitor->first_name ?? '') . ' ' . ($visitor->last_name ?? '')) ?: 'Guest';
-        $holderEmail = $request->user()?->email ?? 'guest@example.com';
+        $holderEmail = $user?->email ?? 'guest@example.com';
         $holderPhone = $visitor->phone ?? null;
         $ticketType = $amount > 0 ? 'paid' : 'invitation';
 
@@ -222,6 +260,22 @@ class TicketController extends Controller
             'booked_at' => $now,
         ]);
 
+        $eventName = $sponsorEvent?->name ?? 'الفعالية الإعلانية';
+
+        Notification::create([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'title' => "تأكيد حجز التذكرة",
+            'body' => "تم تأكيد حجز تذكرتك بنجاح لفعالية: {$eventName}.",
+            'type' => 'sponsor',
+            'read' => false,
+            'data' => [
+                'ticket_id' => $ticket->id,
+                'event_id' => $sponsor_event_id,
+            ],
+            'action_url' => "/sponsor-events/{$sponsor_event_id}",
+        ]);
+
         $formattedTicket = [
             'id' => (int) $ticket->id,
             'exhibition_id' => $exhibition ? (int) $exhibition->id : null,
@@ -231,7 +285,7 @@ class TicketController extends Controller
             'type' => 'event',
             'status' => (string) $ticket->status,
             'event_id' => (int) $ticket->sponsor_event_id,
-            'event_name' => $sponsorEvent?->name ?? 'فعالية إعلانية',
+            'event_name' => $eventName,
             'paid_amount' => (float) $ticket->amount,
             'seat_number' => null,
         ];
@@ -242,7 +296,7 @@ class TicketController extends Controller
             'data' => $formattedTicket
         ], 201);
     }
-    //=============================================================
+    //====================================================
 
     //==========================================================
     public function getExhibitionTicket(Request $request, $id)

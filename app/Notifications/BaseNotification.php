@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Str;
 
 class BaseNotification extends Notification
 {
@@ -40,3 +41,4 @@ class BaseNotification extends Notification
         ];
     }
 }
+
