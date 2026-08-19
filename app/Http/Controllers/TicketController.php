@@ -25,7 +25,7 @@ class TicketController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'exhibition_id' => 'required|exists:exhibitions,id',
-            'ticket_type' => 'nullable|string', // 👈 تم إصلاح المسافة الزائدة
+            'ticket_type' => 'nullable|string',
             'quantity' => 'nullable|integer|min:1',
             'paid_amount' => 'nullable|numeric',
         ]);
@@ -86,21 +86,6 @@ class TicketController extends Controller
                     'seat_number' => null,
                 ];
             }
-
-            // 🟢 إنشاء الإشعار وحفظه في جدول notifications
-            Notification::create([
-                'id' => (string) Str::uuid(),
-                'user_id' => $user->id,
-                'title' => 'تأكيد حجز المعرض',
-                'body' => "تم تأكيد حجز تذكرتك بنجاح للمعرض: {$exhibitionName}",
-                'type' => 'exhibition',
-                'read' => false,
-                'data' => [
-                    'exhibition_id' => $exhibition->id,
-                    'quantity' => $quantity,
-                ],
-                'action_url' => "/exhibitions/{$exhibition->id}",
-            ]);
         });
 
         return response()->json([
@@ -186,20 +171,6 @@ class TicketController extends Controller
             }
 
             $event->increment('registered_count', $quantity);
-
-            Notification::create([
-                'id' => (string) Str::uuid(),
-                'user_id' => $user->id,
-                'title' => 'تأكيد حجز التذكرة',
-                'body' => "تم تأكيد حجز تذكرتك بنجاح لفعالية: {$eventName}",
-                'type' => 'event',
-                'read' => false,
-                'data' => [
-                    'event_id' => $event->id,
-                    'quantity' => $quantity,
-                ],
-                'action_url' => "/events/{$event->id}",
-            ]);
         });
 
         return response()->json([
@@ -261,20 +232,6 @@ class TicketController extends Controller
         ]);
 
         $eventName = $sponsorEvent?->name ?? 'الفعالية الإعلانية';
-
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'user_id' => $user->id,
-            'title' => "تأكيد حجز التذكرة",
-            'body' => "تم تأكيد حجز تذكرتك بنجاح لفعالية: {$eventName}.",
-            'type' => 'sponsor',
-            'read' => false,
-            'data' => [
-                'ticket_id' => $ticket->id,
-                'event_id' => $sponsor_event_id,
-            ],
-            'action_url' => "/sponsor-events/{$sponsor_event_id}",
-        ]);
 
         $formattedTicket = [
             'id' => (int) $ticket->id,
@@ -468,7 +425,6 @@ class TicketController extends Controller
                 ];
             });
 
-        // 4. دمج كل التذاكر في مصفوفة واحدة
         $allTickets = $exhibitionTickets
             ->concat($eventTickets)
             ->concat($sponsorTickets)

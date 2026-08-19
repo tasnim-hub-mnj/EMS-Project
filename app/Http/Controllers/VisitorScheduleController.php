@@ -27,7 +27,6 @@ class VisitorScheduleController extends Controller
         // today | week | all
         $filter = $request->query('filter', 'all');
 
-        // تحميل العلاقات المتاحة
         $query = VisitorSchedule::with([
             'event.exhibition.organizer',
             'event.boothBooking.booth.exhibition'
@@ -123,21 +122,6 @@ class VisitorScheduleController extends Controller
             'added_at' => now(),
         ]);
 
-        if ($schedule->wasRecentlyCreated) {
-            Notification::create([
-                'id' => (string) Str::uuid(),
-                'user_id' => $user->id,
-                'title' => 'إضافة إلى المواعيد',
-                'body' => "تمت إضافة الفعالية \"{$eventName}\" إلى جدول مواعيدك بنجاح",
-                'type' => 'schedule',
-                'read' => false,
-                'data' => [
-                    'event_id' => $event->id,
-                    'schedule_id' => $schedule->id,
-                ],
-                'action_url' => "/schedules/{$schedule->id}",
-            ]);
-        }
 
         return response()->json([
             'status' => true,
@@ -175,19 +159,6 @@ class VisitorScheduleController extends Controller
 
         // حذف الموعد
         $schedule->delete();
-
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'user_id' => $user->id,
-            'title' => 'إزالة من المواعيد',
-            'body' => "تمت إزالة الفعالية \"{$eventName}\" من جدول مواعيدك",
-            'type' => 'schedule',
-            'read' => false,
-            'data' => [
-                'event_id' => $eventId,
-            ],
-            'action_url' => "/schedules",
-        ]);
 
         return response()->json([
             'status' => true,

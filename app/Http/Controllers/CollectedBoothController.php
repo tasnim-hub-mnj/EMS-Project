@@ -96,20 +96,6 @@ class CollectedBoothController extends Controller
             'scanned_at' => now(),
         ]);
 
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'user_id' => $user->id,
-            'title' => 'إضافة جناح جديد',
-            'body' => "تم مسح وإضافة الجناح رقم ({$booth->number}) بنجاح إلى قائمتك المجمعة",
-            'type' => 'booth',
-            'read' => false,
-            'data' => [
-                'booth_id' => $booth->id,
-                'booth_number' => $booth->number,
-                'collected_id' => $collected->id,
-            ],
-            'action_url' => "/collected-booths/{$collected->id}",
-        ]);
 
         $amenities = $booth->services;
         if (is_string($amenities)) {
@@ -184,20 +170,6 @@ class CollectedBoothController extends Controller
         ]);
         $boothIdentifier = $booth?->number ?? $data['qr_data'];
 
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'user_id' => $user->id,
-            'title' => 'مسح رمز الجناح',
-            'body' => "تم مسح كود الجناح ({$boothIdentifier}) بنجاح وإضافته لقائمتك",
-            'type' => 'booth_scan',
-            'read' => false,
-            'data' => [
-                'booth_id' => $booth?->id,
-                'qr_data' => $data['qr_data'],
-                'collected_id' => $collected->id,
-            ],
-            'action_url' => "/collected-booths/{$collected->id}",
-        ]);
 
         $amenities = $booth?->services;
         if (is_string($amenities)) {
@@ -257,20 +229,7 @@ class CollectedBoothController extends Controller
         $boothNumber = $collected->booth?->number ?? $collected->qr_data ?? '';
 
         $collected->delete();
-        Notification::create([
-            'id' => (string) Str::uuid(),
-            'user_id' => $user->id,
-            'title' => 'إزالة جناح مجمع',
-            'body' => $boothNumber
-                ? "تمت إزالة الجناح رقم ({$boothNumber}) من قائمتك المجمعة"
-                : "تمت إزالة الجناح من قائمتك المجمعة بنجاح",
-            'type' => 'booth_remove',
-            'read' => false,
-            'data' => [
-                'booth_id' => $collected->booth_id,
-            ],
-            'action_url' => "/collected-booths",
-        ]);
+
 
         return response()->json([
             'status' => true,
