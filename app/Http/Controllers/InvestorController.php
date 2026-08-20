@@ -38,7 +38,7 @@ class InvestorController extends Controller
             'expires_at' => now()->addMinutes(10),
             'is_used' => false,
         ]);
-        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
+        Mail::to($user->email)->sendNow(new VerificationCodeMail($otp));
         //----------------------------------
 
         $investor_data =
@@ -65,6 +65,82 @@ class InvestorController extends Controller
             'message' => 'Investor registered successfully',
             'data' => $data,
         ], 201);
+    }
+
+    public function resendOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $user = User::where('email', $request->email)
+            ->where('role', 'investor')
+            ->firstOrFail();
+
+        OtpCode::where('user_id', $user->id)->delete();
+
+        do {
+            $newOtp = rand(100000, 999999);
+        } while (OtpCode::where('code', $newOtp)->exists());
+
+        $otp = OtpCode::create([
+            'user_id' => $user->id,
+            'code' => $newOtp,
+            'expires_at' => now()->addMinutes(10),
+            'is_used' => false,
+        ]);
+
+        Mail::to($user->email)->sendNow(new VerificationCodeMail($otp));
+
+        return response()->json([
+            'message' => 'OTP resent successfully',
+        ], 200);
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'otp' => 'required|string',
+        ]);
+
+        $user = User::where('email', $request->email)
+            ->where('role', 'investor')
+            ->firstOrFail();
+
+        $otp = OtpCode::where('user_id', $user->id)
+            ->where('code', $request->otp)
+            ->where('is_used', false)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$otp) {
+            return response()->json(['message' => 'OTP not found'], 404);
+        }
+
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
+            return response()->json(['message' => 'OTP expired'], 400);
+        }
+
+        $otp->update(['is_used' => true]);
+        $user->update([
+            'is_verified' => true,
+            'status' => 'pending',
+        ]);
+
+        $investor = $user->investor;
+        $token = $user->createToken('investor_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'OTP verified successfully',
+            'data' => [
+                'token' => $token,
+                'id' => $user->id,
+                'email' => $user->email,
+                'company_name' => $investor?->company_name,
+                'avatar_url' => $investor?->logo,
+            ],
+        ], 200);
     }
     //================================================================
     public function login(Request $request)//✅
@@ -143,6 +219,31 @@ class InvestorController extends Controller
                     'bio' => $investor->bio,
                     'social' => $social,
                 ]
+        ], 200);
+    }
+
+    public function getMap(int $id)
+    {
+        $map = \App\Models\Map::where('exhibition_id', $id)
+            ->where('status', 'published')
+            ->latest('published_at')
+            ->first();
+
+        if (!$map) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Published map not found for this exhibition',
+            ], 404);
+        }
+
+        $mapData = is_array($map->map_json) ? $map->map_json : [];
+        $mapData['map_id'] = (int) $map->id;
+        $mapData['exhibition_id'] = $id;
+        $mapData['exhibition_name'] = $map->exhibition?->name ?? '';
+
+        return response()->json([
+            'status' => true,
+            'data' => $mapData,
         ], 200);
     }
     //================================================================

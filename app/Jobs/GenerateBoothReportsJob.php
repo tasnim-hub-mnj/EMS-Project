@@ -10,6 +10,7 @@ use App\Models\CollectedBooths;
 use App\Models\Event;
 use App\Models\Favorite;
 use App\Models\InvestorBoothReports;
+use App\Services\NotificationService;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Carbon;
 
@@ -206,6 +207,18 @@ class GenerateBoothReportsJob implements ShouldQueue
                     'data_recommendations' => $data_recommendations,
                 ]
                 );
+
+                if ($report->wasRecentlyCreated && $booking->investor?->user_id) {
+                    app(NotificationService::class)->forUserId(
+                        $booking->investor?->user_id,
+                        'التقرير جاهز',
+                        'تم تجهيز تقرير أداء جناحك ويمكنك الاطلاع عليه الآن.',
+                        'report',
+                        ['report_id' => $report->id, 'booking_id' => $booking->id],
+                        '/reports',
+                        $booth->exhibition_id,
+                    );
+                }
                 //__________________________________________________________
             }
         }

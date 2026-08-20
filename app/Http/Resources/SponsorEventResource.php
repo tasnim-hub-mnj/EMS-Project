@@ -37,6 +37,9 @@ class SponsorEventResource extends JsonResource
 
             'ticketType' => $this->ticket_type,
             'ticketPrice' => $this->ticket_price,
+            'durationDays' => $this->duration_days,
+            'dailyPrice' => $this->daily_price,
+            'sponsorshipOptions' => $this->duration_options ?? [],
 
             'activities' => SponsorEventProgramResource::collection($this->programs),
             'photos' => SponsorEventImageResource::collection($this->sponsorEventImages),

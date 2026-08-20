@@ -23,6 +23,7 @@ use App\Models\SponsorEventProgram;
 use App\Models\SponsorshipBooking;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 use App\Services\NotificationService;
 
@@ -56,6 +57,13 @@ class SponsorEventController extends Controller
 
         // حساب مدة الفعالية
         $data['duration_days'] = $start->diffInDays($end) + 1;
+        $data['duration_options'] = $this->normalizeDurationOptions(
+            $data['duration_options'],
+            $start,
+            $data['duration_days']
+        );
+        $data['daily_price'] = collect($data['duration_options'])
+            ->firstWhere('days', 1)['price'] ?? null;
 
         // These are stored in their own tables, not as sponsor_events columns.
         $activities = $data['activities'] ?? [];
@@ -146,6 +154,18 @@ class SponsorEventController extends Controller
             {
                 $data['status'] = 'finished';
             }
+        }
+
+        if (array_key_exists('duration_options', $data)) {
+            $start = Carbon::parse($data['start_time'] ?? $event->start_time);
+            $durationDays = $data['duration_days'] ?? $event->duration_days;
+            $data['duration_options'] = $this->normalizeDurationOptions(
+                $data['duration_options'],
+                $start,
+                $durationDays
+            );
+            $data['daily_price'] = collect($data['duration_options'])
+                ->firstWhere('days', 1)['price'] ?? null;
         }
 
         $activities = $data['activities'] ?? null;
@@ -270,6 +290,37 @@ class SponsorEventController extends Controller
                 $exhibition, $title, $body, 'event', 'org.events', ['event' => $event], '/events', ['org.sponsors']
             );
         }
+    }
+
+    private function normalizeDurationOptions(array $options, Carbon $start, int $durationDays): array
+    {
+        $normalized = [];
+        foreach ($options as $option) {
+            $days = (int) ($option['days'] ?? 0);
+            if ($days < 1 || $days > $durationDays) {
+                throw ValidationException::withMessages([
+                    'duration_options' => "خيار الرعاية يجب أن يكون بين يوم واحد و{$durationDays} أيام.",
+                ]);
+            }
+
+            $optionStart = $start->copy()->startOfDay();
+            $optionEnd = $optionStart->copy()->addDays($days - 1);
+            $normalized[$days] = [
+                'days' => $days,
+                'start_date' => $optionStart->toDateString(),
+                'end_date' => $optionEnd->toDateString(),
+                'price' => round((float) $option['price'], 2),
+            ];
+        }
+
+        if (!$normalized) {
+            throw ValidationException::withMessages([
+                'duration_options' => 'يجب إدخال سعر رعاية واحد على الأقل.',
+            ]);
+        }
+
+        ksort($normalized);
+        return array_values($normalized);
     }
     //===============================================================
     public function analytics($se_id)
@@ -862,8 +913,9 @@ class SponsorEventController extends Controller
         $dateEnd    = $request->query('date_end');
         $search     = $request->query('search');
 
-        $query = SponsorEvent::with(['exhibition', 'sponsorEventImages'])
-            ->where('copy_status', 'active');
+        $query = SponsorEvent::with(['exhibition', 'sponsorEventImages', 'programs'])
+            ->where('copy_status', 'published')
+            ->whereIn('status', ['upcoming', 'ongoing']);
 
         if ($type)
         {
@@ -905,7 +957,9 @@ class SponsorEventController extends Controller
 
                 'exhibition_id' => $ev->exhibition_id,
                 'exhibition_name' => $ev->exhibition->name,
-                'exhibition_image_url' => optional($ev->exhibition->exhibitionImages->first())->image,
+                'exhibition_image_url' => $this->publicImageUrl(
+                    optional($ev->exhibition->exhibitionImages->first())->image
+                ),
 
                 'date' => Carbon::parse($ev->start_time)->format('Y-m-d'),
                 'start_time' => Carbon::parse($ev->start_time)->format('H:i'),
@@ -914,11 +968,35 @@ class SponsorEventController extends Controller
                 'place' => $ev->place,
                 'listing_days' => $ev->duration_days ?? 1,
                 'description' => $ev->description,
+                'capacity' => $ev->max_participants,
+                'registered_count' => $ev->registered_count,
+                'scanned_count' => $ev->scanned_count,
+                'ticket_type' => $ev->ticket_type,
+                'ticket_price' => $ev->ticket_price,
+                'status' => $ev->status,
+                'copy_status' => $ev->copy_status,
+                'publish_date' => $ev->publish_date,
 
                 //if exsist
-                'duration_options' => $ev->duration_options ? $ev->duration_options : [],
+                'duration_days' => $ev->duration_days ?? 1,
+                'daily_price' => $ev->daily_price,
+                'duration_options' => $this->normalizeInvestorDurationOptions($ev),
+                'durationOptions' => $this->normalizeInvestorDurationOptions($ev),
 
-                'images' => $ev->sponsorEventImages->pluck('image')->toArray(),
+                'images' => $ev->sponsorEventImages->map(fn ($image) => [
+                    'id' => $image->id,
+                    'url' => $this->publicImageUrl($image->image),
+                    'caption' => $image->caption,
+                ])->values()->all(),
+
+                'activities' => $ev->programs->map(fn ($program) => [
+                    'id' => $program->id,
+                    'title' => $program->title,
+                    'start_time' => $program->start_time,
+                    'end_time' => $program->end_time,
+                    'provider_name' => $program->provider_name,
+                    'provider_contact' => $program->provider_contact,
+                ])->values()->all(),
 
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $ev->id)
@@ -936,6 +1014,43 @@ class SponsorEventController extends Controller
                 'last_page' => $events->lastPage(),
             ]
         ], 200);
+    }
+
+    private function normalizeInvestorDurationOptions(SponsorEvent $event): array
+    {
+        if (is_string($event->duration_options)) {
+            $decoded = json_decode($event->duration_options, true);
+            $event->duration_options = is_array($decoded) ? $decoded : [];
+        }
+
+        if (is_array($event->duration_options) && count($event->duration_options) > 0) {
+            return array_values(array_map(function ($option) {
+                $days = (int) ($option['days'] ?? 1);
+                return [
+                    'label' => $days === 1 ? 'يوم واحد' : "{$days} أيام",
+                    'days' => $days,
+                    'start_date' => $option['start_date'] ?? null,
+                    'end_date' => $option['end_date'] ?? null,
+                    'price' => (float) ($option['price'] ?? 0),
+                ];
+            }, $event->duration_options));
+        }
+
+        return $event->daily_price === null ? [] : [[
+            'label' => 'يوم واحد',
+            'days' => 1,
+            'start_date' => Carbon::parse($event->start_time)->toDateString(),
+            'end_date' => Carbon::parse($event->start_time)->toDateString(),
+            'price' => (float) $event->daily_price,
+        ]];
+    }
+
+    private function publicImageUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        return str_starts_with($path, 'data:') || filter_var($path, FILTER_VALIDATE_URL)
+            ? $path
+            : asset('storage/' . ltrim($path, '/'));
     }
     //===============================================================
     // public function getUpcomingSponsorEvents()//للمعارض القادمة

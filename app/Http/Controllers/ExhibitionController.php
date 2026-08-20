@@ -295,7 +295,9 @@ class ExhibitionController extends Controller
             ->orderBy('exhibitions.start_date', 'asc')
             ->with([
                 'sponsorEvents',
-                'publishedMap'
+                'publishedMap',
+                'booths',
+                'copies'
             ])
             ->select('exhibitions.*');
 
@@ -351,7 +353,7 @@ class ExhibitionController extends Controller
                 'location'         => $exhibition->location,
                 'city'             => $exhibition->city,
                 'status'           => $exhibition->status,
-                'available_booths' => $exhibition->available_booths,
+                'available_booths' => $this->investorAvailableBooths($exhibition),
                 'sectors'          => $exhibition->sectors ?? [],
                 'is_favorite'      => $user ? $user->favorites()
                     ->where('favoritable_id', $exhibition->id)
@@ -369,6 +371,24 @@ class ExhibitionController extends Controller
                 'last_page'    => $exhibitions->lastPage(),
             ]
         ], 200);
+    }
+
+    private function investorAvailableBooths(Exhibition $exhibition): int
+    {
+        $available = $exhibition->booths
+            ->whereIn('status_inv', ['available', null])
+            ->whereIn('status', ['available', null])
+            ->count();
+
+        if ($available > 0) {
+            return $available;
+        }
+
+        return (int) ($exhibition->copies
+            ->where('copy_status', 'active')
+            ->sortByDesc('year')
+            ->first()
+            ?->available_booths ?? 0);
     }
     //===============================================================
     public function show($exhibition_id)//✅
@@ -416,10 +436,14 @@ class ExhibitionController extends Controller
             'location' => $exhibition->location,
             'city' => $exhibition->city,
             'status' => $exhibition->status,
-            'available_booths' => $exhibition->available_booths,
+            'available_booths' => $user?->role === 'investor'
+                ? $this->investorAvailableBooths($exhibition)
+                : $exhibition->available_booths,
             'sectors' => $exhibition->sectors ?? [],
             'is_favorite' => $is_favorite,
-            'map_data' => $map_data,
+            'map_data' => $user?->role === 'investor'
+                ? $map_data?->map_json
+                : $map_data,
             'sponsor_events' => $sponsor_events,
         ], 200);
     }

@@ -31,14 +31,24 @@ class DashboardInvestorController extends Controller
         ->where('exhibitions.location', $investor->location)
         ->where('exhibitions.type', $investor->activity_type)
         ->whereIn('exhibitions.status', ['upcoming', 'ongoing'])
-        ->where('exhibitions.available_booths', '>', 0)
+        ->where(function ($q) {
+            $q->whereHas('booths', function ($booths) {
+                $booths->where(function ($status) {
+                    $status->whereIn('status_inv', ['available', null])
+                        ->whereIn('status', ['available', null]);
+                });
+            })->orWhereHas('copies', function ($copies) {
+                $copies->where('copy_status', 'active')
+                    ->where('available_booths', '>', 0);
+            });
+        })
         ->orderBy('exhibitions.start_date', 'asc')
         ->select('exhibitions.*') // مهم حتى يرجع موديل Exhibition كامل
         ->paginate($per_page, ['*'], 'page', $page);
 
-        $data = $query->map(function ($ex) 
+        $data = $query->map(function ($ex)
         {
-            return 
+            return
             [
                 'id'               => $ex->id,
                 'name'             => $ex->name,
@@ -48,14 +58,19 @@ class DashboardInvestorController extends Controller
                 'location'         => $ex->location,
                 'city'             => $ex->city,
                 'status'           => $ex->status,
-                'available_booths' => $ex->available_booths,
+                'available_booths' => $ex->booths()
+                    ->whereIn('status_inv', ['available', null])
+                    ->whereIn('status', ['available', null])
+                    ->count() ?: (int) ($ex->copies()
+                        ->where('copy_status', 'active')
+                        ->value('available_booths') ?? 0),
                 'sectors'          => $ex->sectors ?? [],
             ];
         });
 
         return response()->json([
             'data' => $data,
-            'meta' => 
+            'meta' =>
             [
                 'current_page' => $query->currentPage(),
                 'last_page'    => $query->lastPage(),
@@ -73,18 +88,25 @@ class DashboardInvestorController extends Controller
         $page     = $request->query('page', 1);
         $per_page = $request->query('per_page', 5);
 
-        // 1) جلب المعارض المميزة للمستثمر (نفس شروط featuredExhibitions)
+        // 1) جلب المعارض المميزة للمستثمر بنفس شروط لوحة المعارض.
+        // لا نعتمد على exhibitions.available_booths لأنها قديمة في بعض النسخ؛
+        // التوفر الفعلي يحسب من الأجنحة والنسخ النشطة.
         $featuredExhibitionsIds = Exhibition::query()
             ->join('copies', 'copies.exhibition_id', '=', 'exhibitions.id')
             ->where('copies.copy_status', 'active')
             ->where('exhibitions.location', $investor->location)
             ->where('exhibitions.type', $investor->activity_type)
-            ->whereIn('exhibitions.status', ['upcoming', 'ongoing'])
-            ->where('exhibitions.available_booths', '>', 0)
+            ->whereIn('exhibitions.status', ['far', 'upcoming', 'ongoing'])
+            ->where(function ($query) {
+                $query->whereHas('copies', function ($copies) {
+                    $copies->where('copy_status', 'active');
+                });
+            })
             ->pluck('exhibitions.id');
 
         // 2) جلب الفعاليات التابعة لهذه المعارض فقط
         $events = SponsorEvent::query()
+            ->with(['exhibition.exhibitionImages', 'sponsorEventImages', 'programs'])
             ->whereIn('exhibition_id', $featuredExhibitionsIds)
             ->where('copy_status', 'published')
             ->whereIn('status', ['upcoming', 'ongoing'])
@@ -101,14 +123,39 @@ class DashboardInvestorController extends Controller
                 'type'                  => $ev->type,
                 'exhibition_id'         => $ev->exhibition_id,
                 'exhibition_name'       => $ex->name ?? null,
-                'exhibition_image_url'  => $ex->exhibitionImages->pluck('image')->first() ?? null,
+                'exhibition_image_url'  => $this->publicImageUrl($ex->exhibitionImages->pluck('image')->first()),
                 'date'                  => Carbon::parse($ev->start_time)->format('Y-m-d'),
                 'start_time'            => Carbon::parse($ev->start_time)->format('H:i'),
                 'end_time'              => Carbon::parse($ev->end_time)->format('H:i'),
                 'place'                 => $ev->place,
                 'listing_days'          => $ev->duration_days,
                 'description'           => $ev->description,
+                'capacity'              => $ev->max_participants,
+                'registered_count'      => $ev->registered_count,
+                'scanned_count'         => $ev->scanned_count,
+                'ticket_type'           => $ev->ticket_type,
+                'ticket_price'          => $ev->ticket_price,
+                'status'                => $ev->status,
+                'copy_status'           => $ev->copy_status,
+                'publish_date'          => $ev->publish_date,
+                'images'                => $ev->sponsorEventImages
+                    ->map(fn ($image) => [
+                        'id' => $image->id,
+                        'url' => $this->publicImageUrl($image->image),
+                        'caption' => $image->caption,
+                    ])->values()->all(),
+                'activities'            => $ev->programs->map(fn ($program) => [
+                    'id' => $program->id,
+                    'title' => $program->title,
+                    'start_time' => $program->start_time,
+                    'end_time' => $program->end_time,
+                    'provider_name' => $program->provider_name,
+                    'provider_contact' => $program->provider_contact,
+                ])->values()->all(),
+                'duration_days'         => $ev->duration_days,
+                'daily_price'           => $ev->daily_price,
                 'duration_options'      => $this->buildDurationOptions($ev), // ← هنا التابع المطلوب
+                'durationOptions'       => $this->buildDurationOptions($ev),
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $ev->id)
                     ->where('favoritable_type', SponsorEvent::class)
@@ -129,6 +176,29 @@ class DashboardInvestorController extends Controller
     //=====================================================================
     private function buildDurationOptions($event)//↕️
     {
+        if (is_string($event->duration_options)) {
+            $decoded = json_decode($event->duration_options, true);
+            $event->duration_options = is_array($decoded) ? $decoded : [];
+        }
+
+        if (is_array($event->duration_options) && count($event->duration_options) > 0) {
+            return array_map(function ($option) {
+                return [
+                    'label' => ((int) $option['days'] === 1)
+                        ? 'يوم واحد'
+                        : ((int) $option['days'] . ' أيام'),
+                    'days' => (int) $option['days'],
+                    'start_date' => $option['start_date'] ?? null,
+                    'end_date' => $option['end_date'] ?? null,
+                    'price' => (float) $option['price'],
+                ];
+            }, $event->duration_options);
+        }
+
+        if ($event->daily_price === null) {
+            return [];
+        }
+
         $options = [];
 
         $daily = $event->daily_price;
@@ -178,6 +248,14 @@ class DashboardInvestorController extends Controller
 
         return $options;
     }
+
+    private function publicImageUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        return str_starts_with($path, 'data:') || filter_var($path, FILTER_VALIDATE_URL)
+            ? $path
+            : asset('storage/' . ltrim($path, '/'));
+    }
     //=====================================================================
     private function getDateRanges($period)//↕️
     {
@@ -205,6 +283,22 @@ class DashboardInvestorController extends Controller
 
                 $previous_start = now()->subMonth()->startOfMonth();
                 $previous_end   = now()->subMonth()->endOfMonth();
+                break;
+
+            case 'quarter':
+                $current_start = now()->subMonths(2)->startOfMonth();
+                $current_end   = now()->endOfMonth();
+
+                $previous_start = now()->subMonths(5)->startOfMonth();
+                $previous_end   = now()->subMonths(3)->endOfMonth();
+                break;
+
+            case 'year':
+                $current_start = now()->startOfYear();
+                $current_end   = now()->endOfYear();
+
+                $previous_start = now()->subYear()->startOfYear();
+                $previous_end   = now()->subYear()->endOfYear();
                 break;
 
             default:
@@ -277,7 +371,14 @@ class DashboardInvestorController extends Controller
             'total_bookings' => $current_total_bookings,
             'active_booths' => $current_active_booths,
             'published_events' => $current_published_events,
-            'total_engagement' => $current_engagement
+            'total_engagement' => $current_engagement,
+            'growth' => [
+                'total_bookings' => $growth_total_bookings,
+                'active_booths' => $growth_active_booths,
+                'published_events' => $growth_published_events,
+                'total_engagement' => $growth_engagement,
+            ],
+            'period' => $period,
         ], 200);
 
         // return response()->json([
@@ -337,7 +438,7 @@ class DashboardInvestorController extends Controller
         ->orderBy('exhibitions.start_date', 'asc')
         ->select('exhibitions.*')
         ->get() ;// مهم حتى يرجع موديل Exhibition كامل
-        
+
 
         $exhibitions_data = $exhibitions->map(function ($exhibition)
         {
@@ -374,20 +475,20 @@ class DashboardInvestorController extends Controller
         // // 2) تجميع المعارض التابعة لكل نسخة وتنفيذ الشروط
         // $exhibitionsCollection = collect();
 
-        // foreach ($copies as $copy) 
+        // foreach ($copies as $copy)
         // {
 
         //     $ex = $copy->exhibition;
 
         //     if (!$ex) continue; // احتياط لو نسخة بدون معرض
-            
+
         //     // تطبيق الشروط
         //     if (
         //         $ex->location === $investor->location &&
         //         $ex->type === $investor->activity_type &&
         //         in_array($ex->status, ['upcoming', 'ongoing']) &&
         //         $ex->available_booths > 0
-        //     ) 
+        //     )
         //     {
         //         $exhibitionsCollection->push($ex);
         //     }
@@ -406,9 +507,9 @@ class DashboardInvestorController extends Controller
         // );
 
         // // 5) تجهيز البيانات
-        // $data = $paginated->map(function ($ex) 
+        // $data = $paginated->map(function ($ex)
         // {
-        //     return 
+        //     return
         //     [
         //         'id'               => $ex->id,
         //         'name'             => $ex->name,
@@ -451,7 +552,7 @@ class DashboardInvestorController extends Controller
 
 
 
-    
+
     // private function getDateRanges($period)
     // {
     //     // switch ($period)

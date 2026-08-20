@@ -77,6 +77,12 @@ class BoothBookingController extends Controller
         ]);
 
         $this->notifyBooking($booth->exhibition_id, 'تم استلام حجز جديد', 'تم استلام طلب حجز جديد لأحد الأجنحة.', 'booking.created');
+        $this->notifyInvestorBooking(
+            $booking,
+            'تم استلام طلب الحجز',
+            'تم استلام طلب حجز الجناح وسيتم مراجعته من إدارة المعرض.',
+            'booking.created'
+        );
 
         $services = $booth->services ?? [];
         $amenities = $booth->amenities ?? [];
@@ -162,6 +168,13 @@ class BoothBookingController extends Controller
 
         $booking->status = 'cancelled';
         $booking->save();
+
+        $this->notifyBooking(
+            $booking->booth->exhibition_id,
+            'تم إلغاء حجز',
+            'تم إلغاء حجز جناح من قبل المستثمر.',
+            'booking.cancelled'
+        );
 
         return response()->json([
             'message' => 'Booking canceled successfully',
@@ -314,7 +327,7 @@ class BoothBookingController extends Controller
         {
             $total += array_sum($data['service_prices']);
         }
-        
+
         $booking = BoothBooking::create([
             'investor_id' => $data['investor_id'],
             'booth_id' => $data['booth_id'],
@@ -388,6 +401,12 @@ class BoothBookingController extends Controller
         $booking->booth->update(['status_inv' => 'booked']);
 
         $this->notifyBooking($booking->booth->exhibition_id, 'تمت الموافقة على حجز', 'تمت الموافقة على طلب حجز جناح.', 'booking.approved');
+        $this->notifyInvestorBooking(
+            $booking,
+            'تمت الموافقة على الحجز',
+            'تمت الموافقة على طلب حجز الجناح الخاص بك.',
+            'booking.approved'
+        );
 
         return new BookingResource($booking);
     }
@@ -402,6 +421,12 @@ class BoothBookingController extends Controller
         ]);
 
         $this->notifyBooking($booking->booth->exhibition_id, 'تم رفض حجز', 'تم رفض طلب حجز جناح.', 'booking.rejected');
+        $this->notifyInvestorBooking(
+            $booking,
+            'تم رفض الحجز',
+            'تم رفض طلب حجز الجناح الخاص بك. السبب: ' . ($request->reason ?: 'لم يتم تحديد سبب.'),
+            'booking.rejected'
+        );
 
         return new BookingResource($booking);
     }
@@ -414,6 +439,28 @@ class BoothBookingController extends Controller
                 $exhibition, $title, $body, 'booking', 'org.bookings', ['event' => $event], '/bookings', ['admin.reports']
             );
         }
+    }
+
+    private function notifyInvestorBooking(
+        BoothBooking $booking,
+        string $title,
+        string $body,
+        string $event,
+    ): void {
+        $userId = $booking->investor?->user_id;
+        if (!$userId) {
+            return;
+        }
+
+        app(NotificationService::class)->forUserId(
+            $userId,
+            $title,
+            $body,
+            'booking',
+            ['event' => $event, 'booking_id' => $booking->id],
+            '/bookings',
+            $booking->booth?->exhibition_id,
+        );
     }
     //==============================================================
     public function contractPdf($booking_id)

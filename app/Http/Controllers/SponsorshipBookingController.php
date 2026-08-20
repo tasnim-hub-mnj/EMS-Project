@@ -22,7 +22,10 @@ class SponsorshipBookingController extends Controller
 
         $bookings = SponsorshipBooking::with([
             'sponsorEvent.exhibition',
-            'sponsorEvent.sponsorEventImages'
+            'sponsorEvent.sponsorEventImages',
+            'sponsorEvent.programs',
+            'sponsorshipBookingImages',
+            'sponsorshipBookingProductImages',
         ])
         ->where('investor_id', $investor->id)
         ->orderBy('booked_at', 'desc')
@@ -42,6 +45,8 @@ class SponsorshipBookingController extends Controller
 
                 'exhibition_name' => $exhibition->name,
 
+                'start_date' => Carbon::parse($event->start_time)->format('Y-m-d'),
+                'end_date' => Carbon::parse($event->end_time)->format('Y-m-d'),
                 'date' => Carbon::parse($event->start_time)->format('Y-m-d'),
                 'place' => $event->place,
                 'time' => Carbon::parse($event->start_time)->format('H:i') . ' - ' .
@@ -62,8 +67,34 @@ class SponsorshipBookingController extends Controller
                 'current_day' => $bk->current_day ?? 1,
                 'total_days' => $bk->total_days ?? $bk->days,
 
+                'capacity' => $event->max_participants,
+                'registered_count' => $event->registered_count,
+                'scanned_count' => $event->scanned_count,
+                'ticket_type' => $event->ticket_type,
+                'ticket_price' => $event->ticket_price,
+                'duration_options' => $this->durationOptions($event),
+                'event_images' => $event->sponsorEventImages->map(fn ($image) => [
+                    'id' => $image->id,
+                    'url' => $this->publicImageUrl($image->image),
+                    'caption' => $image->caption,
+                ])->values()->all(),
+                'activities' => $event->programs->map(fn ($program) => [
+                    'title' => $program->title,
+                    'start_time' => $program->start_time,
+                    'end_time' => $program->end_time,
+                    'provider_name' => $program->provider_name,
+                    'provider_contact' => $program->provider_contact,
+                ])->values()->all(),
+
                 // صور الفعالية الإعلانية
-                'company_images' => $bk->sponsorshipBookingImages->pluck('image')->toArray(),
+                'company_images' => $bk->sponsorshipBookingImages
+                    ->map(fn ($image) => $this->publicImageUrl($image->image))
+                    ->values()->all(),
+                'event_images' => $event->sponsorEventImages->map(fn ($image) => [
+                    'id' => $image->id,
+                    'url' => $this->publicImageUrl($image->image),
+                    'caption' => $image->caption,
+                ])->values()->all(),
 
                 'logo' => $bk->investor->logo,
             ];
@@ -101,17 +132,20 @@ class SponsorshipBookingController extends Controller
             ], 422);
         }
 
-        // 3) التحقق من السعر إذا كان يعتمد على أيام × سعر يومي
-        if ($event->daily_price !== null)
-        {
-            $expectedPrice = $event->daily_price * $data['selected_days'];
-
-            if ($data['price'] != $expectedPrice)
-            {
-                return response()->json([
-                    'message' => 'Invalid price calculation.'
-                ], 422);
+        // 3) التحقق من السعر مقابل خيار الرعاية الذي أدخله المنظم.
+        $pricingOption = collect($event->duration_options ?? [])
+            ->firstWhere('days', $data['selected_days']);
+        if ($pricingOption) {
+            if (round((float) $data['price'], 2) !== round((float) $pricingOption['price'], 2)) {
+                return response()->json(['message' => 'Invalid price for selected sponsorship days.'], 422);
             }
+        } elseif ($event->daily_price !== null) {
+            $expectedPrice = $event->daily_price * $data['selected_days'];
+            if (round((float) $data['price'], 2) !== round((float) $expectedPrice, 2)) {
+                return response()->json(['message' => 'Invalid price calculation.'], 422);
+            }
+        } else {
+            return response()->json(['message' => 'This event has no sponsorship price for the selected days.'], 422);
         }
 
         // 4) التحقق أن الفعالية الإعلانية ما انتهت
@@ -217,11 +251,18 @@ class SponsorshipBookingController extends Controller
             'id' => $event->id,
             'name' => $event->name,
             'type' => $event->type,
-            'start_date' => $event->start_date,
-            'end_date' => $event->end_date,
+            'start_date' => Carbon::parse($event->start_time)->format('Y-m-d'),
+            'end_date' => Carbon::parse($event->end_time)->format('Y-m-d'),
+            'place' => $event->place,
             'daily_price' => $event->daily_price,
             'duration_days' => $event->duration_days,
             'exhibition' => $event->exhibition->name,
+            'duration_options' => $this->durationOptions($event),
+            'images' => $event->sponsorEventImages->map(fn ($image) => [
+                'id' => $image->id,
+                'url' => $this->publicImageUrl($image->image),
+                'caption' => $image->caption,
+            ])->values()->all(),
         ];
 
         // 3) معلومات الشركة الراعية
@@ -239,6 +280,19 @@ class SponsorshipBookingController extends Controller
             'event' => $eventInfo,
             'company' => $companyInfo,
         ], 201);
+    }
+
+    private function durationOptions(SponsorEvent $event): array
+    {
+        return is_array($event->duration_options) ? array_values($event->duration_options) : [];
+    }
+
+    private function publicImageUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        return str_starts_with($path, 'data:') || filter_var($path, FILTER_VALIDATE_URL)
+            ? $path
+            : asset('storage/' . ltrim($path, '/'));
     }
     //===============================================================
     public function cancelSponsorship($sponsorship_id)//✅

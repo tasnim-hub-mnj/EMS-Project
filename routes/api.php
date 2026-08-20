@@ -266,8 +266,8 @@ Route::middleware('auth:sanctum')->group(function ()
 //================================================================
 //Auth
 Route::post('/investor/auth/register', [InvestorController::class, 'register']);
-Route::post('/investor/auth/verify-otp', [verifyOtpController::class, 'verifyOtp']);
-Route::post('/investor/auth/resend-otp', [verifyOtpController::class, 'resendOtp']);
+Route::post('/investor/auth/verify-otp', [InvestorController::class, 'verifyOtp']);
+Route::post('/investor/auth/resend-otp', [InvestorController::class, 'resendOtp']);
 Route::post('/investor/auth/login', [InvestorController::class, 'login'])->middleware('throttle:log');
 
 Route::post('/investor/auth/forgot-password', [verifyOtpController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
@@ -289,9 +289,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/investor/sponsor-events/featured', [DashboardInvestorController::class, 'featuredSponsorEvents']);
         Route::get('/investor/dashboard', [DashboardInvestorController::class, 'dashboard']);
         Route::get('/investor/exhibitions/latest', [DashboardInvestorController::class, 'latestExhibitions']);
+        Route::get('/investor/notifications', [NotificationController::class, 'index']);
+        Route::get('/investor/notifications/unread', [NotificationController::class, 'unread']);
+        Route::patch('/investor/notifications/{id}/read', [NotificationController::class, 'markRead']);
+        Route::post('/investor/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::delete('/investor/notifications/{id}', [NotificationController::class, 'destroy']);
 
         //Exhibitions
         Route::get('/investor/exhibitions', [ExhibitionController::class, 'getAllExhibitions']);
+        Route::get('/investor/exhibitions/{id}/map', [InvestorController::class, 'getMap']);
         Route::get('/investor/exhibitions/{id}', [ExhibitionController::class, 'show']);
 
         //Booths

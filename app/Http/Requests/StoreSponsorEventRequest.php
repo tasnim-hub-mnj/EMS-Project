@@ -37,6 +37,13 @@ class StoreSponsorEventRequest extends FormRequest
             'ticket_type' => 'required|in:invitation,paid',
             'ticket_price' => 'required|numeric|min:0',
 
+            'daily_price' => 'nullable|numeric|min:0',
+            'duration_options' => 'required|array|min:1',
+            'duration_options.*.days' => 'required|integer|min:1',
+            'duration_options.*.start_date' => 'required|date_format:Y-m-d',
+            'duration_options.*.end_date' => 'required|date_format:Y-m-d|after_or_equal:duration_options.*.start_date',
+            'duration_options.*.price' => 'required|numeric|min:0',
+
             'max_participants' => 'required|integer|min:1',
 
             'activities' => 'nullable|array',

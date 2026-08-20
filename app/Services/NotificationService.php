@@ -13,6 +13,30 @@ use Kreait\Firebase\Messaging\Notification as FirebaseNotification;
 
 class NotificationService
 {
+    public function forUserId(
+        int $userId,
+        string $title,
+        string $body,
+        string $type,
+        array $data = [],
+        ?string $actionUrl = null,
+        ?int $exhibitionId = null,
+    ): void {
+        Notification::create([
+            'id' => (string) Str::uuid(),
+            'user_id' => $userId,
+            'exhibition_id' => $exhibitionId,
+            'title' => $title,
+            'body' => $body,
+            'type' => $type,
+            'data' => $data,
+            'action_url' => $actionUrl,
+            'read' => false,
+        ]);
+
+        $this->sendPush([$userId], $title, $body, $type, $data);
+    }
+
     public function forExhibition(
         Exhibition $exhibition,
         string $title,
