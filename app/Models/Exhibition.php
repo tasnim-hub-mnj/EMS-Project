@@ -82,6 +82,11 @@ class Exhibition extends Model
         return $this->hasOne(Map::class)->latestOfMany();
     }
     //=====================================================
+    public function publishedMap()
+    {
+        return $this->hasOne(Map::class)->where('status', 'published');
+    }
+    //=====================================================
     public function exhibitionReviews()
     {
         return $this->hasMany(ExhibitionReview::class);

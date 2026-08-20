@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth as FacadesAuth;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
 use App\Services\NotificationService;
+
 use Illuminate\Support\Facades\Storage;
 
 class BoothController extends Controller
@@ -55,8 +56,21 @@ class BoothController extends Controller
 
     public function store(StoreBoothRequest $request, $exhibition_id)
     {
+        // $organizer = Auth::user()->organizer;
+        // $exhibition = Exhibition::where('organizer_id', $organizer->id)
+        //     ->where('id', $exhibition_id)
+        //     ->first();
+
+        // if (!$exhibition)
+        // {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
+        //     ], 403);
+        // }
         $data = $request->validated();
         $data['exhibition_id'] = $exhibition_id;
+
 
         $section = $this->resolveSectionForExhibition($exhibition_id, $data['section'] ?? null);
         if ($section) {
@@ -232,8 +246,8 @@ class BoothController extends Controller
                 'area' => $booth->area,
                 'status' => $booth->status_inv,
                 'price' => $booth->price,
-                'start_date' => $booth->exhibition->start_date,
-                'end_date' => $booth->exhibition->end_date,
+                'start_date' => Carbon::parse($booth->exhibition->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($booth->exhibition->end_date)->format('Y-m-d'),
                 'location' => $booth->location,
                 'amenities' => $booth->amenities ?? [],
                 'is_favorite' => Auth::user()->favorites()
@@ -302,8 +316,8 @@ class BoothController extends Controller
 
                 'image_url' => $booth->image,
                 'location' => $booth->location,
-                'start_date' => $booth->exhibition->start_date,
-                'end_date' => $booth->exhibition->end_date,
+                'start_date' => Carbon::parse($booth->exhibition->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($booth->exhibition->end_date)->format('Y-m-d'),
                 'amenities' => $amenities,
 
                 'is_favorite' => Auth::user()->favorites()
@@ -365,8 +379,8 @@ class BoothController extends Controller
 
                 'image_url' => $booth->image,
                 'location' => $booth->location,
-                'start_date' => $booth->exhibition->start_date,
-                'end_date' => $booth->exhibition->end_date,
+                'start_date' => Carbon::parse($booth->exhibition->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($booth->exhibition->end_date)->format('Y-m-d'),
                 'amenities' => $amenities,
 
                 'is_favorite' => Auth::user()->favorites()

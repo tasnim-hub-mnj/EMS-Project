@@ -76,27 +76,67 @@ class SponsorshipBookingController extends Controller
     //===============================================================
     public function createSponsorship(BookingshipSponsorEventRequest $request)//حجز فعالية اعلانية//✅
     {
-
         $investor = Auth::user()->investor;
         $data = $request->validated();
 
         $event = SponsorEvent::findOrFail($data['event_id']);
 
-        $total_price = $data['price'];
+        // 1) منع تكرار الرعاية لنفس الفعالية من نفس المستثمر
+        $exists = SponsorshipBooking::where('investor_id', $investor->id)
+            ->where('sponsor_event_id', $event->id)
+            ->exists();
 
+        if ($exists)
+        {
+            return response()->json([
+                'message' => 'You already have a sponsorship for this event.'
+            ], 409);
+        }
+
+        // 2) التحقق أن عدد الأيام المختارة لا يتجاوز أيام الفعالية
+        if ($data['selected_days'] > $event->duration_days)
+        {
+            return response()->json([
+                'message' => 'Selected days exceed event duration.'
+            ], 422);
+        }
+
+        // 3) التحقق من السعر إذا كان يعتمد على أيام × سعر يومي
+        if ($event->daily_price !== null)
+        {
+            $expectedPrice = $event->daily_price * $data['selected_days'];
+
+            if ($data['price'] != $expectedPrice)
+            {
+                return response()->json([
+                    'message' => 'Invalid price calculation.'
+                ], 422);
+            }
+        }
+
+        // 4) التحقق أن الفعالية الإعلانية ما انتهت
+        if (now()->greaterThan($event->end_time))//finished
+        {
+            return response()->json([
+                'message' => 'This sponsorship event has already ended.'
+            ], 400);
+        }
+
+        // رفع اللوغو
         $logoPath = null;
         if ($request->hasFile('logo'))
         {
             $logoPath = $request->file('logo')->store('sponsorship_company_logos', 'public');
         }
 
+        // إنشاء الحجز
         $booking = SponsorshipBooking::create([
             'investor_id' => $investor->id,
             'sponsor_event_id' => $event->id,
 
             'selected_duration_label' => $data['selected_duration_label'] ?? null,
             'days' => $data['selected_days'],
-            'total_price' => $total_price,
+            'total_price' => $data['price'],
 
             'description' => $data['product_names'] ?? null,
             'logo' => $logoPath,
@@ -105,7 +145,7 @@ class SponsorshipBookingController extends Controller
             'status' => 'pending',
         ]);
 
-        //ad_images
+        // ad_images
         if ($request->hasFile('ad_images'))
         {
             foreach ($request->file('ad_images') as $img)
@@ -120,7 +160,7 @@ class SponsorshipBookingController extends Controller
             }
         }
 
-        //poster_images
+        // poster_images
         if ($request->hasFile('poster_images'))
         {
             foreach ($request->file('poster_images') as $img)
@@ -135,11 +175,17 @@ class SponsorshipBookingController extends Controller
             }
         }
 
-        //product_images
+        // product_images
         if ($request->filled('product_images'))
         {
             foreach ($request->product_images as $item)
             {
+
+                if (!isset($item['image']) || !$item['image'] instanceof \Illuminate\Http\UploadedFile)
+                {
+                    return response()->json(['message' => 'Invalid product image format'], 422);
+                }
+
                 $path = $item['image']->store('sponsorship_product_images', 'public');
 
                 SponsorshipBookingProductImage::create([
@@ -150,13 +196,48 @@ class SponsorshipBookingController extends Controller
             }
         }
 
+        // تحميل العلاقات
+        $booking->load([
+            'sponsorshipBookingImages',
+            'sponsorshipBookingProductImages',
+            'sponsorEvent.exhibition',
+        ]);
+
+        // 1) الصور مصنّفة حسب النوع
+        $images =
+        [
+            'ads' => $booking->sponsorshipBookingImages->where('type', 'ad')->pluck('image'),
+            'posters' => $booking->sponsorshipBookingImages->where('type', 'poster')->pluck('image'),
+            'products' => $booking->sponsorshipBookingProductImages->pluck('image'),
+        ];
+
+        // 2) معلومات الفعالية الإعلانية
+        $eventInfo =
+        [
+            'id' => $event->id,
+            'name' => $event->name,
+            'type' => $event->type,
+            'start_date' => $event->start_date,
+            'end_date' => $event->end_date,
+            'daily_price' => $event->daily_price,
+            'duration_days' => $event->duration_days,
+            'exhibition' => $event->exhibition->name,
+        ];
+
+        // 3) معلومات الشركة الراعية
+        $companyInfo =
+        [
+            'name' => $investor->company_name,
+            'website' => $investor->company_website,
+            'phone' => $investor->company_phone,
+        ];
+
         return response()->json([
             'message' => 'Sponsorship created successfully.',
-            'data' => $booking->load([
-                'sponsorshipBookingImages',
-                'sponsorshipBookingProductImages',
-                'sponsorEvent.exhibition',
-            ])
+            'sponsorship' => $booking,
+            'images' => $images,
+            'event' => $eventInfo,
+            'company' => $companyInfo,
         ], 201);
     }
     //===============================================================

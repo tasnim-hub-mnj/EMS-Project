@@ -29,7 +29,7 @@ class BookingBoothRequest extends FormRequest
             'start_date'  => 'required|date',
             'end_date'    => 'required|date|after_or_equal:start_date',
             'notes'       => 'nullable|string',
-            'services'    => 'nullable|json',  // Map<String,bool>
+            'services'    => 'nullable|array',  // Map<String,bool>
             'total_price' => 'required|numeric|min:0',  // يأتي جاهز من Flutter
         ];
     }

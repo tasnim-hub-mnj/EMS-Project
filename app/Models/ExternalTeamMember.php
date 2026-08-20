@@ -9,14 +9,7 @@ class ExternalTeamMember extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-    [
-        'external_team_id',
-        'name',
-        'role',
-        'phone',
-        'email',
-    ];
+    protected $guarded = [];
 
     protected $table = 'external_team_members';
 

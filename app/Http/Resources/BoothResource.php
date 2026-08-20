@@ -19,6 +19,7 @@ class BoothResource extends JsonResource
             : null;
 
         return
+
         [
             'id' => 'b' . $this->id,
             'exhibitionId' => (string) $this->exhibition_id,
@@ -39,16 +40,20 @@ class BoothResource extends JsonResource
             'dailyPrice' => $this->pricing_type === 'daily' ? $this->price : null,
 
             // الخدمات الإضافية (services)
-            'services' => $this->services ? collect($this->services)->map(function ($price, $name) {
-                return [
+            'services' => $this->services ? collect($this->services)->map(function ($price, $name)
+            {
+                return
+                [
                     'name' => $name,
                     'price' => $price
                 ];
             })->values() : [],
 
             // الخدمات الأساسية (amenities)
-            'amenities' => $this->amenities ? collect($this->amenities)->map(function ($price, $name) {
-                return [
+            'amenities' => $this->amenities ? collect($this->amenities)->map(function ($price, $name)
+            {
+                return
+                [
                     'name' => $name,
                     'price' => $price
                 ];

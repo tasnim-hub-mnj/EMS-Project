@@ -43,9 +43,9 @@ class SponsorEventSeeder extends Seeder
                     'max_participants' => rand(50, 200),
 
                     'duration_days' => 1,
-                    'duration_options' => json_encode([
-                        ['day' => 1, 'price' => rand(100, 300)]
-                    ]),
+                    'duration_options' => [
+                        ['day' => 1, 'price' => 100]
+                    ],
 
                     'daily_price' => rand(100, 500),
 

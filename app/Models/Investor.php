@@ -9,17 +9,7 @@ class Investor extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-    [
-        'user_id',
-        'company_name',
-        'trade_name',
-        'location',
-        'website',
-        'activity_type',
-        'bio',
-        'logo',
-    ];
+    protected $guarded = [];
 
     protected $table = 'investors';
 

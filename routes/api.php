@@ -46,6 +46,7 @@ use Illuminate\Support\Facades\Route;
 //================================================================
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/fcm-token', [FcmTokenController::class, 'store']);
+
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread', [NotificationController::class, 'unread']);
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
@@ -80,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/staff/portal-links/portal-store', [PortalLinkController::class, 'storeFromPortal']);
 });
 
+
 //================================================================
 //***********************Organizer*********************************
 //================================================================
@@ -98,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function ()
     Route::post('/organizer/auth/approve/{userId}', [verifyOtpController::class, 'approve']);
     Route::middleware('checkOrganizer')->group(function()
     {
+
         //Auth
         Route::post('/organizer/auth/change-password', [verifyOtpController::class, 'updatePassword']);
         // Route::post('/organizer/auth/delete-account', [verifyOtpController::class, 'deleteAccount']);
@@ -246,16 +249,15 @@ Route::middleware('auth:sanctum')->group(function ()
 
 
     //***********Admin Dashboard & Users Management*************
-    Route::middleware('checkAdmin')->group(function()
-    {
-        Route::get('dashboard',[AdminController::class,'dashboard']);
-        Route::get('users/approved',[AdminController::class,'approvedUsers']);
-        Route::get('users/pending',[AdminController::class,'pendingUsers']);
+    Route::middleware('checkAdmin')->group(function () {
+        Route::get('dashboard', [AdminController::class, 'dashboard']);
+        Route::get('users/approved', [AdminController::class, 'approvedUsers']);
+        Route::get('users/pending', [AdminController::class, 'pendingUsers']);
 
         //****Change User Approve Status*****
-        Route::put('users/{id}/approve',[AdminController::class,'approveUser']);
-        Route::put('users/{id}/rejecte',[AdminController::class,'rejecteUser']);
-        Route::delete('users/{id}',[AdminController::class,'deleteUser']);
+        Route::put('users/{id}/approve', [AdminController::class, 'approveUser']);
+        Route::put('users/{id}/rejecte', [AdminController::class, 'rejecteUser']);
+        Route::delete('users/{id}', [AdminController::class, 'deleteUser']);
     });
 });
 
@@ -275,10 +277,8 @@ Route::post('/investor/auth/reset-password', [verifyOtpController::class, 'reset
 //Reports--download
 Route::get('/investor/reports/{id}/download', [InvestorReportsController::class, 'downloadReport']);
 
-Route::middleware('auth:sanctum')->group(function ()
-{
-    Route::middleware('checkInvestor')->group(function()
-    {
+Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware('checkInvestor')->group(function () {
         Route::post('/investor/auth/change-password', [verifyOtpController::class, 'updatePassword']);
         Route::post('/investor/auth/fcm-token', [verifyOtpController::class, 'saveFcmToken']);
         Route::post('/investor/auth/delete-account', [verifyOtpController::class, 'deleteAccount']);
@@ -312,13 +312,13 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::get('/investor/booth/events', [BoothManagementController::class, 'getBoothEvents']);
 
         //Event
-        Route::post('/investor/events', [EventController::class, 'createEvent']);//❌
+        Route::post('/investor/events', [EventController::class, 'createEvent']);
         Route::get('/investor/events', [EventController::class, 'getInvestorEvents']);
         Route::get('/investor/events/{id}/ticket-requests', [EventController::class, 'getTicketRequests']);
         Route::patch('/investor/events/{eventId}/ticket-requests/{requestId}', [EventController::class, 'ticketRequestAction']);
         //SponsorEvent
         Route::get('/investor/sponsor-events', [SponsorEventController::class, 'getSponsorEvents']);
-        Route::post('/investor/sponsorships', [SponsorshipBookingController::class, 'createSponsorship']);//❌
+        Route::post('/investor/sponsorships', [SponsorshipBookingController::class, 'createSponsorship']);
         Route::patch('/investor/sponsorships/{id}/cancel', [SponsorshipBookingController::class, 'cancelSponsorship']);
         Route::get('/investor/sponsorships', [SponsorshipBookingController::class, 'getMySponsorships']);
 
@@ -345,83 +345,101 @@ Route::middleware('auth:sanctum')->group(function ()
 //**********************************HANAN😁Visitor****************************
 //****************************************************************************
 
-Route::post('/auth/login', [VisitorController::class, 'login']);
+Route::post('/auth/login', [VisitorController::class, 'login'])->middleware('throttle:log');
 Route::post('/auth/register', [VisitorController::class, 'register']);
+Route::post('/visitor/auth/verify-otp', [verifyOtpController::class, 'verifyOtp']);
+Route::post('/visitor/auth/resend-otp', [verifyOtpController::class, 'resendOtp']);
+Route::post('/visitor/auth/forgot-password', [verifyOtpController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
+Route::post('/visitor/auth/forgot-password/verify-otp', [verifyOtpController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
+Route::post('/visitor/auth/reset-password', [verifyOtpController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
 
 
 Route::middleware('auth:sanctum')->group(function () {
-    //profile+logout
-    Route::get('/profile', [ProfileVisitorController::class, 'getProfile']);
-    Route::match(['put', 'post'], '/profile/update', [ProfileVisitorController::class, 'updateProfile']);
-    Route::post('/profile/delete-account', [ProfileVisitorController::class, 'deleteAccount']);
-    Route::post('/profile/change-password', [ProfileVisitorController::class, 'changePassword']);
-    Route::post('/auth/logout', [VisitorController::class, 'logout']);
+    Route::middleware('checkIsVisitor')->group(function () {
+        Route::post('/visitor/auth/change-password', [verifyOtpController::class, 'updatePassword']);
+        Route::post('/visitor/auth/fcm-token', [verifyOtpController::class, 'saveFcmToken']);
+
+        //profile+logout
+        Route::get('/profile', [ProfileVisitorController::class, 'getProfile']);
+        Route::match(['put', 'post'], '/profile/update', [ProfileVisitorController::class, 'updateProfile']);
+        Route::post('/profile/delete-account', [ProfileVisitorController::class, 'deleteAccount']);
+        Route::post('/profile/change-password', [ProfileVisitorController::class, 'changePassword']);
+        Route::post('/auth/logout', [VisitorController::class, 'logout']);
 
 
-    //*************/
+        //*************/
 
-    //exh
-    Route::get('/exhibitions', [ExhibitionController::class, 'featuredExhibitionsForVisitor']);
-    Route::get('/exhibitions/{id}/events', [ExhibitionController::class, 'getEventsExh']);
-    Route::get('/exhibitions/{id}/booths', [ExhibitionController::class, 'getBoothsExh']);
-    Route::get('/exhibitions/{id}/map', [ExhibitionController::class, 'getFloorMap']);
+        //exh
+        Route::get('/visitor/exhibitions', [ExhibitionController::class, 'getAllExhibitions']);
+        Route::get('/visitor/exhibitions/{id}', [ExhibitionController::class, 'show']);
+        Route::get('/exhibitions', [ExhibitionController::class, 'featuredExhibitionsForVisitor']);
+        Route::get('/exhibitions/{id}/events', [ExhibitionController::class, 'getEventsExh']);
+        Route::get('/exhibitions/{id}/booths', [ExhibitionController::class, 'getBoothsExh']);
+        Route::get('/exhibitions/{id}/map', [ExhibitionController::class, 'getFloorMap']);
 
-    //exh review
-    Route::get('/exhibitions/{id}/reviews', [ExhibitionReviewController::class, 'getExhibitionReviews']);
-    Route::get('/reviews/exhibitions/all', [ExhibitionReviewController::class, 'getAllExhibitionsReviews']);
-    Route::post('/reviews/exhibition', [ExhibitionReviewController::class, 'submitExhibitionReview']);
+        //exh review
+        Route::get('/exhibitions/{id}/reviews', [ExhibitionReviewController::class, 'getExhibitionReviews']);
+        Route::get('/reviews/exhibitions/all', [ExhibitionReviewController::class, 'getAllExhibitionsReviews']);
+        Route::post('/reviews/exhibition', [ExhibitionReviewController::class, 'submitExhibitionReview']);
 
-    //__________________________________________________________________________________________
-    //booth review
-    Route::get('/booths/{id}/reviews', [BoothReviewController::class, 'getBoothReviews']);
-    Route::get('/reviews/booths/all', [BoothReviewController::class, 'getAllBoothsReviews']);
-    Route::post('/reviews/booth', [BoothReviewController::class, 'submitBoothReview']);
+        //__________________________________________________________________________________________
+        //booth review
+        Route::get('/visitor/booths', [BoothController::class, 'getAvailableBooths']);
+        Route::get('/visitor/booths/{id}', [BoothController::class, 'getBoothDetail']);
+        Route::get('/booths/{id}/reviews', [BoothReviewController::class, 'getBoothReviews']);
+        Route::get('/reviews/booths/all', [BoothReviewController::class, 'getAllBoothsReviews']);
+        Route::post('/reviews/booth', [BoothReviewController::class, 'submitBoothReview']);
 
-    //____________________________________________________________________________________________
+        //____________________________________________________________________________________________
 // عرض كل تقييمات زائر معيّن (معرض + جناح)
-    Route::get('/visitor/{id}/reviews', [VisitorController::class, 'visitorReviews']);
+        Route::get('/visitor/{id}/reviews', [VisitorController::class, 'visitorReviews']);
 
-    //____________________________________________________________________________________________
+        //____________________________________________________________________________________________
 
-    //support ticket
-    Route::get('/support/tickets', [SupportTicketController::class, 'AllTickets']);
-    Route::get('/support/tickets/{id}', [SupportTicketController::class, 'show']);
-    Route::post('/support/messages', [SupportTicketController::class, 'storeMessage']);
-    Route::post('/support/report', [SupportTicketController::class, 'storeReport']);
-    Route::post('/support/location', [SupportTicketController::class, 'sendLocation']);
-    //__________________________________________________________________________________________
-
-
-
-    //تذاكر الزائر
-    Route::get('/bookings/my-tickets', [TicketController::class, 'myTickets']);
-    Route::post('/bookings/exhibition', [TicketController::class, 'bookExhibition']);
-    Route::get('/booking/exhibition/{id}', [TicketController::class, 'getExhibitionTicket']);
-    Route::post('/bookings/event', [TicketController::class, 'bookEvent']);
-    Route::get('/booking/event/{id}', [TicketController::class, 'getEventTicket']);
-    Route::delete('/bookings/{id}/cancel', [TicketController::class, 'cancelTicket']);
-    Route::get('/booking/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
-
-    Route::post('/booking/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
+        //support ticket
+        Route::get('/support/tickets', [SupportTicketController::class, 'AllTickets']);
+        Route::get('/support/tickets/{id}', [SupportTicketController::class, 'show']);
+        Route::post('/support/messages', [SupportTicketController::class, 'storeMessage']);
+        Route::post('/support/report', [SupportTicketController::class, 'storeReport']);
+        Route::post('/support/location', [SupportTicketController::class, 'sendLocation']);
+        //__________________________________________________________________________________________
 
 
 
-    //___________________________________________________________________________________________
+        //تذاكر الزائر
+        Route::get('/bookings/my-tickets', [TicketController::class, 'myTickets']);
+        Route::post('/bookings/exhibition', [TicketController::class, 'bookExhibition']);
+        Route::get('/booking/exhibition/{id}', [TicketController::class, 'getExhibitionTicket']);
+        Route::post('/bookings/event', [TicketController::class, 'bookEvent']);
+        Route::get('/booking/event/{id}', [TicketController::class, 'getEventTicket']);
+        Route::delete('/bookings/{id}/cancel', [TicketController::class, 'cancelTicket']);
+        Route::get('/booking/sponsor-event/{id}', [TicketController::class, 'showSponsorEventTicket']);
+        Route::post('/booking/sponsor-event', [TicketController::class, 'bookSponsorEventTicket']);
 
-    Route::get('/schedule', [VisitorScheduleController::class, 'mySchedule']);
-    Route::post('/schedule/{eventId}', [VisitorScheduleController::class, 'storeSchedule']);
-    Route::delete('/schedule/{eventId}', [VisitorScheduleController::class, 'removeFromSchedule']);
-
-    //_____________________________________________________________________________________________
 
 
-    Route::get('/collected-booths', [CollectedBoothController::class, 'index']);
-    Route::post('/collected-booths', [CollectedBoothController::class, 'store']);
-    Route::post('/collected-booths/scan', [CollectedBoothController::class, 'scan']);
-    Route::delete('/collected-booths/{id}', [CollectedBoothController::class, 'destroy']);
+        //___________________________________________________________________________________________
 
-    Route::get('/events/{id}', [EventController::class, 'getEventById']);
-    Route::get('/events', [EventController::class, 'getLatestEvents']);
+        Route::get('/schedule', [VisitorScheduleController::class, 'mySchedule']);
+        Route::post('/schedule/{eventId}', [VisitorScheduleController::class, 'storeSchedule']);
+        Route::delete('/schedule/{eventId}', [VisitorScheduleController::class, 'removeFromSchedule']);
+
+        //_____________________________________________________________________________________________
+
+
+        Route::get('/collected-booths', [CollectedBoothController::class, 'index']);
+        Route::post('/collected-booths', [CollectedBoothController::class, 'store']);
+        Route::post('/collected-booths/scan', [CollectedBoothController::class, 'scan']);
+        Route::delete('/collected-booths/{id}', [CollectedBoothController::class, 'destroy']);
+        //__________________________________________________________________________________________
+
+        Route::get('/events/{id}', [EventController::class, 'getEventById']);
+        Route::get('/events', [EventController::class, 'getLatestEvents']);
+        //__________________________________________________________________________________________
+        Route::get('/visitor/favorites', [FavoriteController::class, 'getFavoritesInvestor']);
+        Route::post('/visitor/favorites/{id}', [FavoriteController::class, 'addFavorite']);
+        Route::delete('/visitor/favorites/{id}', [FavoriteController::class, 'removeFavorite']);
+    });
 });
 
 

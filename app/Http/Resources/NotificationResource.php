@@ -29,5 +29,6 @@ class NotificationResource extends JsonResource
             'data' => $this->data,
             'actionUrl' => $this->action_url,
         ];
+
     }
 }

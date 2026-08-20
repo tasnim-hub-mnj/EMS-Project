@@ -188,13 +188,6 @@ class BoothManagementController extends Controller
             }
         }
 
-        //cover_image
-        // if ($request->hasFile('cover_image'))
-        // {
-        //     $path = $request->file('cover_image')->store('booth_cover_images', 'public');
-        //     $booking->cover_image = $path;
-        // }
-
         $booking->save();
         $booking->load(['productBookingImages', 'boothBookingImages']);
 
@@ -207,7 +200,6 @@ class BoothManagementController extends Controller
                 'social_links'      => $investor->socialLinks->pluck('link'),
                 'product_images'    => $booking->productBookingImages->pluck('image_p'),
                 'booth_images'      => $booking->boothBookingImages->pluck('image_b'),
-                // 'cover_image'       => $booking->cover_image,
             ]
         ], 200);
     }
@@ -292,8 +284,7 @@ class BoothManagementController extends Controller
 
                 'start_date' => Carbon::parse($ev->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($ev->end_date)->format('Y-m-d'),
-                'time' => $ev->time,
-                // 'time' => Carbon::parse($ev->start_date)->format('H:i:s') . ' - ' . Carbon::parse($ev->end_date)->format('H:i'),
+                'time' => Carbon::parse($ev->time)->format('H-i'),
 
                 'max_participants' => $ev->max_participants,
                 'registered_count' => $ev->registered_count ?? 0,
@@ -331,4 +322,5 @@ class BoothManagementController extends Controller
             'data' => $data
         ], 200);
     }
+    //==============================================================
 }

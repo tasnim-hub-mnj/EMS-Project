@@ -6,6 +6,8 @@ use App\Models\Event;
 use App\Models\EventTicket;
 use App\Models\Exhibition;
 use App\Models\SponserEventTicket;
+use App\Models\Notification;
+use App\Notifications\SponsorNotification;
 use App\Models\SponsorEvent;
 use Illuminate\Http\Request;
 use App\Models\Ticket;
@@ -23,7 +25,7 @@ class TicketController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'exhibition_id' => 'required|exists:exhibitions,id',
-            ' ticket_type' => 'nullable|string',
+            'ticket_type' => 'nullable|string',
             'quantity' => 'nullable|integer|min:1',
             'paid_amount' => 'nullable|numeric',
         ]);
@@ -35,7 +37,8 @@ class TicketController extends Controller
             ], 422);
         }
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -53,7 +56,9 @@ class TicketController extends Controller
 
         $createdTickets = [];
 
-        DB::transaction(function () use ($quantity, $visitor, $request, $unitPrice, $exhibition, &$createdTickets) {
+        DB::transaction(function () use ($quantity, $user, $visitor, $request, $unitPrice, $exhibition, &$createdTickets) {
+            $exhibitionName = $exhibition?->name ?? 'معرض غير محدد';
+
             for ($i = 0; $i < $quantity; $i++) {
                 $qrCode = 'EXH-' . strtoupper(Str::random(10));
                 $now = now();
@@ -70,7 +75,7 @@ class TicketController extends Controller
                 $createdTickets[] = [
                     'id' => (int) $ticket->id,
                     'exhibition_id' => (int) $ticket->exhibition_id,
-                    'exhibition_name' => $exhibition?->name ?? 'معرض غير محدد',
+                    'exhibition_name' => $exhibitionName,
                     'qr_data' => (string) $ticket->qr_code,
                     'booked_at' => Carbon::parse($ticket->booked_at)->toIso8601String(),
                     'type' => 'exhibition',
@@ -104,7 +109,8 @@ class TicketController extends Controller
             ], 422);
         }
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -133,7 +139,9 @@ class TicketController extends Controller
 
         $createdTickets = [];
 
-        DB::transaction(function () use ($quantity, $visitor, $event, $exhibition, $unitPrice, &$createdTickets) {
+        DB::transaction(function () use ($quantity, $user, $visitor, $event, $exhibition, $unitPrice, &$createdTickets) {
+            $eventName = $event->title ?? $event->name ?? 'فعالية غير محددة';
+
             for ($i = 0; $i < $quantity; $i++) {
                 $qrCode = 'EVT-' . strtoupper(Str::random(10));
                 $now = now();
@@ -156,7 +164,7 @@ class TicketController extends Controller
                     'type' => 'event',
                     'status' => (string) $ticket->status,
                     'event_id' => (int) $ticket->event_id,
-                    'event_name' => $event->title ?? $event->name ?? 'فعالية غير محددة',
+                    'event_name' => $eventName,
                     'paid_amount' => (float) $ticket->amount,
                     'seat_number' => null,
                 ];
@@ -174,7 +182,6 @@ class TicketController extends Controller
     //طلب حجز تذكرة فعالية راعي
     public function bookSponsorEventTicket(Request $request)
     {
-        // جلب الـ ID من الـ Request Body مباشرة
         $sponsor_event_id = $request->input('sponsor_event_id');
 
         $validator = Validator::make($request->all(), [
@@ -189,7 +196,8 @@ class TicketController extends Controller
             ], 422);
         }
 
-        $visitor = $request->user()?->visitor;
+        $user = $request->user();
+        $visitor = $user?->visitor;
 
         if (!$visitor) {
             return response()->json([
@@ -198,31 +206,43 @@ class TicketController extends Controller
             ], 403);
         }
 
-        $sponsorEvent = SponsorEvent::find($sponsor_event_id);
+        $sponsorEvent = SponsorEvent::with('exhibition')->find($sponsor_event_id);
+        $exhibition = $sponsorEvent?->exhibition;
+
         $qrCode = 'SPN-' . strtoupper(Str::random(10));
         $now = now();
         $amount = $request->input('amount', $sponsorEvent?->ticket_price ?? 0.00);
 
-        // إنشاء التذكرة
+        $holderName = trim(($visitor->first_name ?? '') . ' ' . ($visitor->last_name ?? '')) ?: 'Guest';
+        $holderEmail = $user?->email ?? 'guest@example.com';
+        $holderPhone = $visitor->phone ?? null;
+        $ticketType = $amount > 0 ? 'paid' : 'invitation';
+
         $ticket = SponserEventTicket::create([
             'visitor_id' => $visitor->id,
             'sponsor_event_id' => $sponsor_event_id,
-            'status' => 'approved',
+            'type' => $ticketType,
+            'holder_name' => $holderName,
+            'holder_email' => $holderEmail,
+            'holder_phone' => $holderPhone,
+            'status' => 'confirmed',
             'qr_code' => $qrCode,
             'amount' => $amount,
             'booked_at' => $now,
         ]);
 
+        $eventName = $sponsorEvent?->name ?? 'الفعالية الإعلانية';
+
         $formattedTicket = [
             'id' => (int) $ticket->id,
-            'exhibition_id' => null,
-            'exhibition_name' => null,
+            'exhibition_id' => $exhibition ? (int) $exhibition->id : null,
+            'exhibition_name' => $exhibition?->name ?? null,
             'qr_data' => (string) $ticket->qr_code,
             'booked_at' => Carbon::parse($ticket->booked_at)->toIso8601String(),
             'type' => 'event',
             'status' => (string) $ticket->status,
             'event_id' => (int) $ticket->sponsor_event_id,
-            'event_name' => $sponsorEvent?->title ?? $sponsorEvent?->name ?? 'فعالية إعلانية',
+            'event_name' => $eventName,
             'paid_amount' => (float) $ticket->amount,
             'seat_number' => null,
         ];
@@ -233,7 +253,7 @@ class TicketController extends Controller
             'data' => $formattedTicket
         ], 201);
     }
-    //=============================================================
+    //====================================================
 
     //==========================================================
     public function getExhibitionTicket(Request $request, $id)
@@ -271,6 +291,7 @@ class TicketController extends Controller
             'seat_number' => null,
         ], 200);
     }
+    //=========================================================
 
     public function getEventTicket(Request $request, $id)
     {
@@ -404,7 +425,6 @@ class TicketController extends Controller
                 ];
             });
 
-        // 4. دمج كل التذاكر في مصفوفة واحدة
         $allTickets = $exhibitionTickets
             ->concat($eventTickets)
             ->concat($sponsorTickets)

@@ -123,13 +123,6 @@ class ExhibitionReviewController extends Controller
             ]
         );
 
-        // 3. تحديث متوسط تقييم المعرض
-        $exhibition = Exhibition::find($request->exhibition_id);
-        if ($exhibition) {
-            $avgRating = ExhibitionReview::where('exhibition_id', $exhibition->id)->avg('rating');
-            $exhibition->update(['rating' => round($avgRating, 1)]);
-        }
-
         return response()->json([
             'status' => true,
             'message' => 'تم إرسال التقييم بنجاح',

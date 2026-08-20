@@ -28,5 +28,6 @@ class SupportTicket extends Model
     {
         return $this->belongsTo(Visitor::class, 'visitor_id');
     }
+    //=============================================
 
 }

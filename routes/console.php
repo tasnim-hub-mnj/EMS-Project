@@ -23,15 +23,16 @@ Artisan::command('inspire', function () {
 Schedule::command(UpdateExhibitionStatus::class)->dailyAt('00:00');
 Schedule::command(SendExhibitionReportNotifications::class)->dailyAt('08:00');
 Schedule::command(UpdateEventStatus::class)->dailyAt('00:00');
+
 Schedule::command(UpdateSponsorEventStatus::class)->dailyAt('00:00');
 Schedule::command(UpdateBookingStatus::class)->dailyAt('00:00');
 
-Schedule::job(new GenerateVisitorReportsJob)->everyTwoHours();
-Schedule::job(new GenerateBoothReportsJob)->everyTwoHours();
-Schedule::job(new GenerateEventReportsJob)->everyTwoHours();
-Schedule::job(new GenerateSponsorshipReportsJob)->everyTwoHours();
+Schedule::job(new GenerateVisitorReportsJob)->everyFiveMinutes();
+Schedule::job(new GenerateBoothReportsJob)->everyFiveMinutes();
+Schedule::job(new GenerateEventReportsJob)->everyFiveMinutes();
+Schedule::job(new GenerateSponsorshipReportsJob)->everyFiveMinutes();
 
-Schedule::job(new GenerateExhibitionCopiesJob)->everyTwoHours();
+Schedule::job(new GenerateExhibitionCopiesJob)->everyFiveMinutes();
 
 // Schedule::job(new GenerateExhibitionCopiesJob)->yearlyOn();
 

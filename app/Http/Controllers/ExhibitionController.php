@@ -113,6 +113,7 @@ class ExhibitionController extends Controller
 
         if (!$exhibition)
         {
+
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
@@ -161,8 +162,7 @@ class ExhibitionController extends Controller
             ->with('copies')
             ->first();
 
-        if (!$exhibition)
-        {
+        if (!$exhibition) {
             return response()->json([
                 'success' => false,
                 'message' => 'No exhibition found',
@@ -179,12 +179,11 @@ class ExhibitionController extends Controller
         return new ExhibitionResource($exhibition);
     }
     //===============================================================
-    public function BuiltMap( $exhibition_id)
+    public function BuiltMap($exhibition_id)
     {
         $exhibition = Exhibition::find($exhibition_id);
 
-        if (!$exhibition)
-        {
+        if (!$exhibition) {
             return response()->json(['message' => 'Exhibition not found'], 404);
         }
 
@@ -202,7 +201,7 @@ class ExhibitionController extends Controller
         return new ExhibitionResource($exhibition);
     }
     //===============================================================
-    public function archive(Request $request ,$exhibition_id)//ارشفة معرض
+    public function archive(Request $request, $exhibition_id)//ارشفة معرض
     {
         $organizer = Auth::user()->organizer;
         $exhibition = Exhibition::where('organizer_id', $organizer->id)
@@ -211,6 +210,7 @@ class ExhibitionController extends Controller
 
         if (!$exhibition)
         {
+
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
@@ -220,9 +220,17 @@ class ExhibitionController extends Controller
 
         $editionId = $request->edition_id;
 
-        $copy = Copy::where('exhibition_id', $exhibition->id)
+        $copy = Copy::where('exhibition_id', $exhibition_id)
             ->where('id', $editionId)
-            ->firstOrFail();
+            ->first();
+
+        if (!$copy)
+        {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to access this copy because it does not belong to your exhibition.'
+            ], 403);
+        }
 
         $copy->update([
             'copy_status' => 'archived'
@@ -247,6 +255,7 @@ class ExhibitionController extends Controller
 
         if (!$exhibition)
         {
+
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
@@ -272,88 +281,93 @@ class ExhibitionController extends Controller
     //===============================================================
     public function getAllExhibitions(Request $request)//✅
     {
-        $page = $request->query('page', 1);
+        $page     = $request->query('page', 1);
         $per_page = $request->query('per_page', 15);
 
         $search = $request->query('search');
-        $city = $request->query('city');
+        $city   = $request->query('city');
         $sector = $request->query('sector');
-        $status = $request->query('status'); // upcoming | active | ended
+        $status = $request->query('status');
 
-        $query = Exhibition::with([
-            'sponsorEvents'
-        ])->where('copy_status', 'active');
+        $query = Exhibition::query()
+            ->join('copies', 'copies.exhibition_id', '=', 'exhibitions.id')
+            ->where('copies.copy_status', 'active')
+            ->orderBy('exhibitions.start_date', 'asc')
+            ->with([
+                'sponsorEvents',
+                'publishedMap'
+            ])
+            ->select('exhibitions.*');
 
+        // search
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%$search%")
-                    ->orWhere('city', 'LIKE', "%$search%");
+                ->orWhere('city', 'LIKE', "%$search%");
             });
         }
 
+        // city
         if ($city) {
             $query->where('city', $city);
         }
 
+        // sector
         if ($sector) {
             $query->whereJsonContains('sectors', $sector);
-
         }
 
-        // Status filter (mapping API → DB)
+        // status
         if ($status) {
-            $statusMap =
-                [
-                    'upcoming' => 'upcoming',
-                    'active' => 'ongoing',
-                    'ended' => 'finished'
-                ];
+            $statusMap = [
+                'upcoming' => 'upcoming',
+                'active'   => 'ongoing',
+                'ended'    => 'finished'
+            ];
 
             if (isset($statusMap[$status])) {
                 $query->where('status', $statusMap[$status]);
             }
         }
 
-        $query->orderBy('start_date', 'asc');
-
+        // paginate
         $exhibitions = $query->paginate($per_page, ['*'], 'page', $page);
+
         $user = auth('sanctum')->user();
 
         $exhibitions_data = $exhibitions->map(function ($exhibition) use ($user) {
-            return
-                [
-                    'id' => $exhibition->id,
-                    'name' => $exhibition->name,
-                    'description' => $exhibition->description,
-                    'images' => $exhibition->images ?? [],
-                    'services' => $exhibition->extra_services
-                        ? collect($exhibition->extra_services, true)->pluck('name')->toArray()
-                        : [],
-                    'mapJson' => $exhibition->map,
-                    'sponsorEvents' => $exhibition->sponsorEvents,
-                    'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
-                    'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
-                    'location' => $exhibition->location,
-                    'city' => $exhibition->city,
-                    'status' => $exhibition->status,
-                    'available_booths' => $exhibition->available_booths,
-                    'sectors' => $exhibition->sectors ?? [],
-                    'is_favorite' => $user ? $user->favorites()
-                        ->where('favoritable_id', $exhibition->id)
-                        ->where('favoritable_type', Exhibition::class)
-                        ->exists() : false,
-                ];
+            return [
+                'id'               => $exhibition->id,
+                'name'             => $exhibition->name,
+                'description'      => $exhibition->description,
+                'images'           => $exhibition->images ?? [],
+                'services'         => $exhibition->extra_services
+                                        ? collect($exhibition->extra_services)->pluck('name')->toArray()
+                                        : [],
+                'mapJson'          => $exhibition->publishedMap?->map_json, // ← الخريطة المنشورة
+                'sponsor_events'   => $exhibition->sponsorEvents,  // ← الفعاليات
+                'start_date'       => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
+                'end_date'         => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
+                'location'         => $exhibition->location,
+                'city'             => $exhibition->city,
+                'status'           => $exhibition->status,
+                'available_booths' => $exhibition->available_booths,
+                'sectors'          => $exhibition->sectors ?? [],
+                'is_favorite'      => $user ? $user->favorites()
+                    ->where('favoritable_id', $exhibition->id)
+                    ->where('favoritable_type', Exhibition::class)
+                    ->exists() : false,
+            ];
         });
 
         return response()->json([
             'data' => $exhibitions_data,
-            'pagination' =>
-                [
-                    'current_page' => $exhibitions->currentPage(),
-                    'per_page' => $exhibitions->perPage(),
-                    'total' => $exhibitions->total(),
-                    'last_page' => $exhibitions->lastPage(),
-                ]
+            'pagination' => [
+                'current_page' => $exhibitions->currentPage(),
+                'per_page'     => $exhibitions->perPage(),
+                'total'        => $exhibitions->total(),
+                'last_page'    => $exhibitions->lastPage(),
+            ]
         ], 200);
     }
     //===============================================================
@@ -380,7 +394,7 @@ class ExhibitionController extends Controller
 
         $images = $exhibition->exhibitionImages ?? [];
 
-        $map_data = $exhibition->map;
+        $map_data = $exhibition->publishedMap;
 
         $sponsor_events = $exhibition->sponsorEvents->map(function ($event) {
             return
@@ -653,13 +667,13 @@ class ExhibitionController extends Controller
         $perPage = (int) $request->query('per_page', 4);
 
         // جلب متوسط التقييم، عدد الأكشاك، عدد التذاكر المقبولة، وعدد الفعاليات
-        $query = Exhibition::with(['exhibitionImages'])
+        $query = Exhibition::with(['exhibitionImages','publishedMap'])
             ->withCount([
                 'booths',
                 'tickets' => function ($ticketQuery) {
                     $ticketQuery->where('status', 'approved');
                 },
-                'sponsorEvents' // إضافة العلاقة هنا
+                'sponsorEvents'
             ])
             ->withAvg('exhibitionReviews as average_rating', 'rating');
 
@@ -689,7 +703,6 @@ class ExhibitionController extends Controller
 
         $exhibitions = $query->limit($perPage)->get();
 
-        // الاستعلام الاحتياطي في حال عدم مطابقة الفلاتر أعلاه
         if ($exhibitions->isEmpty()) {
             $exhibitions = Exhibition::with(['exhibitionImages'])
                 ->withCount([
@@ -697,7 +710,7 @@ class ExhibitionController extends Controller
                     'tickets' => function ($ticketQuery) {
                         $ticketQuery->where('status', 'approved');
                     },
-                    'sponsorEvents' // 👈 أضفناها هنا أيضاً لمنع رجوع الصفر
+                    'sponsorEvents'
                 ])
                 ->withAvg('exhibitionReviews as average_rating', 'rating')
                 ->latest()
@@ -773,12 +786,9 @@ class ExhibitionController extends Controller
         $user = auth('sanctum')->user();
         $visitorId = $user?->visitor?->id;
 
-        // 1. جلب معرفات الحجوزات التابعة لأكشاك هذا المعرض
         $boothBookingIds = \App\Models\BoothBooking::whereHas('booth', function ($q) use ($id) {
             $q->where('exhibition_id', $id);
         })->pluck('id');
-
-        // 2. الاستعلام عن الفعاليات مع تحميل علاقة eventTickets المعرفة
         $events = Event::whereIn('booth_booking_id', $boothBookingIds)
             ->with([
                 'boothBooking.booth',
@@ -791,7 +801,6 @@ class ExhibitionController extends Controller
             ])
             ->paginate($perPage);
 
-        // 3. تحويل عناصر المجموعة
         $events->getCollection()->transform(function ($event) use ($exhibition, $visitorId, $id) {
 
             $boothBooking = $event->boothBooking;
@@ -813,7 +822,6 @@ class ExhibitionController extends Controller
                 $endTime = \Carbon\Carbon::parse($event->end_date)->toIso8601String();
             }
 
-            // فحص هل الزائر مسجل في الفعالية عبر علاقة eventTickets
             $isRegistered = false;
             if ($visitorId && $event->relationLoaded('eventTickets')) {
                 $isRegistered = $event->eventTickets->whereIn('status', ['pending', 'approved'])->isNotEmpty();
@@ -871,7 +879,6 @@ class ExhibitionController extends Controller
     //===============================================================
     public function getFloorMap($id)
     {
-        // جلب المعرض مع الأكشاك التابعة له
         $exhibition = Exhibition::with('booths')->find($id);
 
         if (!$exhibition) {
@@ -890,7 +897,6 @@ class ExhibitionController extends Controller
             ], 404);
         }
 
-        // تجهيز بيانات الأكشاك
         $boothsData = [];
         if ($exhibition->booths) {
             foreach ($exhibition->booths as $booth) {
@@ -919,7 +925,7 @@ class ExhibitionController extends Controller
         $rawHalls = $mapData['halls'] ?? [];
 
         if (empty($rawHalls)) {
-            // قاعة افتراضية في حال عدم وجود تفاصيل القاعات
+
             $halls = [
                 [
                     'id' => '1',
@@ -935,7 +941,6 @@ class ExhibitionController extends Controller
             $halls = array_map(function ($hall) use ($boothsData) {
                 $hallId = (string) ($hall['id'] ?? '1');
 
-                // فلترة الأكشاك الخاصة بهدّه القاعة إذا كانت مرتبطة بـ hall_id
                 $hallBooths = array_filter($boothsData, function ($booth) use ($hallId) {
                     return !isset($booth['hall_id']) || (string) $booth['hall_id'] === $hallId;
                 });
@@ -954,7 +959,6 @@ class ExhibitionController extends Controller
             }, $rawHalls);
         }
 
-        // الاستجابة المطابقة للـ JSON المطلوب في التوثيق تماماً
         return response()->json([
             'status' => true,
             'data' => [
@@ -968,116 +972,5 @@ class ExhibitionController extends Controller
     }
 
     //===============================================================
-    // public function latestExhibitions()//عرض احدث المعارض
-    // {
-    //     $exhibitions = Exhibition::whereIn('status', ['upcoming', 'ongoing'])
-    //         ->where('copy_status', 'active')
-    //         ->orderBy('start_date', 'asc')
-    //         ->get();
-
-    //     $exhibitions_data = $exhibitions->map(function ($exhibition) {
-    //         return [
-    //             'id' => $exhibition->id,
-    //             'name' => $exhibition->name,
-    //             'type' => $exhibition->type,
-    //             'start_date' => $exhibition->start_date,
-    //             'end_date' => $exhibition->end_date,
-    //             'location' => $exhibition->location,
-    //             'city' => $exhibition->city,
-    //             'status' => $exhibition->status,
-    //             'available_booths' => $exhibition->available_booths,
-    //             'total_booths' => $exhibition->total_booths,
-    //             'visitors_count' => $exhibition->visitors_count,
-    //             'is_favorite' => Auth::user()->favorites()
-    //                 ->where('favoritable_id', $exhibition->id)
-    //                 ->where('favoritable_type', Exhibition::class)
-    //                 ->exists()
-    //         ];
-
-    //     });
-
-    //     return response()->json(
-    //         [
-    //             'exhibitions' => $exhibitions_data
-    //         ],
-    //         200
-    //     );
-    // }
-    //===============================================================
-    // public function getAllExhibitions()//عرض كل المعارض
-    // {
-    //     $exhibitions = Exhibition::orderBy('start_date', 'asc')
-    //         ->where('copy_status', 'active')
-    //         ->get();
-
-    //     $exhibitions_data = $exhibitions->map(function ($exhibition)
-    //     {
-    //         return [
-    //             'id' => $exhibition->id,
-    //             'name' => $exhibition->name,
-    //             'type' => $exhibition->type,
-    //             'start_date' => $exhibition->start_date,
-    //             'end_date' => $exhibition->end_date,
-    //             'location' => $exhibition->location,
-    //             'city' => $exhibition->city,
-    //             'status' => $exhibition->status,
-    //             'available_booths' => $exhibition->available_booths,
-    //             'total_booths' => $exhibition->total_booths,
-    //             'visitors_count' => $exhibition->visitors_count,
-    //             'is_favorite' => Auth::user()->favorites->where('favoritable_id', $exhibition->id)
-    //                 ->where('favoritable_type', 'App\Models\Exhibition')
-    //                 ->exists(),
-    //             // 'booths' => $exhibition->booths,
-    //         ];
-
-    //     });
-
-    //     return response()->json(
-    //         [
-    //             'exhibitions' => $exhibitions_data,
-    //         ],
-    //         200
-    //     );
-    // }
-    // //===============================================================
-    // public function filter(Request $request)//فلترة+بحث
-    // {
-    //     $query = Exhibition::query();
-
-    //     if ($request->has('latest') && $request->latest != '') {
-
-    //     }
-
-    //     // بحث بالاسم
-    //     if ($request->has('search') && $request->search != '') {
-    //         $query->where('name', 'LIKE', '%' . $request->search . '%');
-    //     }
-
-    //     // فلترة حسب الحالة
-    //     if ($request->has('status') && in_array($request->status, ['far', 'upcoming', 'ongoing', 'finished'])) {
-    //         $query->where('status', $request->status);
-    //     }
-
-    //     // فلترة حسب المدينة
-    //     if ($request->has('city') && $request->city != '') {
-    //         $query->where('city', $request->city);
-    //     }
-
-    //     // فلترة حسب القطاع
-    //     if ($request->has('sector') && $request->sector != '') {
-    //         $query->whereJsonContains('sectors', $request->sector);
-    //     }
-
-    //     $exhibitions = $query->orderBy('start_date', 'asc')->get();
-
-    //     return response()->json(
-    //         [
-    //             'exhibitions' => $exhibitions
-    //         ],
-    //         200
-    //     );
-    // }
-
-
 
 }

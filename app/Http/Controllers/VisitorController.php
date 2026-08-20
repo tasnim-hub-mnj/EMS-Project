@@ -20,8 +20,9 @@ class VisitorController extends Controller
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|unique:users,phone',
             'password' => 'required|string|min:6',
-            'firstName' => 'required|string|max:255',
-            'lastName' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+
         ]);
 
         if ($validator->fails()) {
@@ -44,11 +45,12 @@ class VisitorController extends Controller
 
             Visitor::create([
                 'user_id' => $user->id,
-                'first_name' => $request->firstName,
-                'last_name' => $request->lastName,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
             ]);
 
             DB::commit();
+
             return response()->json([
                 'status' => true,
                 'message' => 'User registered successfully',
@@ -62,7 +64,6 @@ class VisitorController extends Controller
                 'message' => 'Registration failed: ' . $e->getMessage(),
             ], 500);
         }
-
     }
     //================================================================
 

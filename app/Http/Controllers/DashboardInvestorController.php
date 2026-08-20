@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booth;
 use App\Models\BoothBooking;
+use App\Models\Copy;
 use App\Models\Event;
 use App\Models\Exhibition;
 use App\Models\Favorite;
@@ -24,18 +25,20 @@ class DashboardInvestorController extends Controller
         $page     = $request->query('page', 1);
         $per_page = $request->query('per_page', 5);
 
-        $query = Exhibition::where('copy_status', 'active')
-            ->where('location', $investor->location)
-            ->where('type', $investor->activity_type)
-            ->whereIn('status', ['upcoming', 'ongoing'])
-            ->where('available_booths', '>', 0)
-            ->orderBy('start_date', 'asc');
+        $query = Exhibition::query()
+        ->join('copies', 'copies.exhibition_id', '=', 'exhibitions.id')
+        ->where('copies.copy_status', 'active') // النسخ النشطة فقط
+        ->where('exhibitions.location', $investor->location)
+        ->where('exhibitions.type', $investor->activity_type)
+        ->whereIn('exhibitions.status', ['upcoming', 'ongoing'])
+        ->where('exhibitions.available_booths', '>', 0)
+        ->orderBy('exhibitions.start_date', 'asc')
+        ->select('exhibitions.*') // مهم حتى يرجع موديل Exhibition كامل
+        ->paginate($per_page, ['*'], 'page', $page);
 
-        $exhibitions = $query->paginate($per_page, ['*'], 'page', $page);
-
-        $data = $exhibitions->map(function ($ex)
+        $data = $query->map(function ($ex) 
         {
-            return
+            return 
             [
                 'id'               => $ex->id,
                 'name'             => $ex->name,
@@ -52,13 +55,15 @@ class DashboardInvestorController extends Controller
 
         return response()->json([
             'data' => $data,
-            'meta' => [
-                'current_page' => $exhibitions->currentPage(),
-                'last_page'    => $exhibitions->lastPage(),
-                'per_page'     => $exhibitions->perPage(),
-                'total'        => $exhibitions->total(),
+            'meta' => 
+            [
+                'current_page' => $query->currentPage(),
+                'last_page'    => $query->lastPage(),
+                'per_page'     => $query->perPage(),
+                'total'        => $query->total(),
             ]
         ], 200);
+
     }
     //=====================================================================
     public function featuredSponsorEvents(Request $request)//✅
@@ -68,19 +73,29 @@ class DashboardInvestorController extends Controller
         $page     = $request->query('page', 1);
         $per_page = $request->query('per_page', 5);
 
-        $query = SponsorEvent::where('copy_status', 'active')
-            ->where('type', $investor->activity_type)
+        // 1) جلب المعارض المميزة للمستثمر (نفس شروط featuredExhibitions)
+        $featuredExhibitionsIds = Exhibition::query()
+            ->join('copies', 'copies.exhibition_id', '=', 'exhibitions.id')
+            ->where('copies.copy_status', 'active')
+            ->where('exhibitions.location', $investor->location)
+            ->where('exhibitions.type', $investor->activity_type)
+            ->whereIn('exhibitions.status', ['upcoming', 'ongoing'])
+            ->where('exhibitions.available_booths', '>', 0)
+            ->pluck('exhibitions.id');
+
+        // 2) جلب الفعاليات التابعة لهذه المعارض فقط
+        $events = SponsorEvent::query()
+            ->whereIn('exhibition_id', $featuredExhibitionsIds)
+            ->where('copy_status', 'published')
             ->whereIn('status', ['upcoming', 'ongoing'])
-            ->orderBy('start_time', 'asc');
+            ->orderBy('start_time', 'asc')
+            ->paginate($per_page, ['*'], 'page', $page);
 
-        $events = $query->paginate($per_page, ['*'], 'page', $page);
-
-        $data = $events->map(function ($ev)
-        {
+        // 3) تجهيز الريسبونس
+        $data = $events->map(function ($ev) {
             $ex = $ev->exhibition;
 
-            return
-            [
+            return [
                 'id'                    => $ev->id,
                 'name'                  => $ev->name,
                 'type'                  => $ev->type,
@@ -93,7 +108,7 @@ class DashboardInvestorController extends Controller
                 'place'                 => $ev->place,
                 'listing_days'          => $ev->duration_days,
                 'description'           => $ev->description,
-                'duration_options'      => $this->buildDurationOptions($ev),
+                'duration_options'      => $this->buildDurationOptions($ev), // ← هنا التابع المطلوب
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $ev->id)
                     ->where('favoritable_type', SponsorEvent::class)
@@ -119,29 +134,44 @@ class DashboardInvestorController extends Controller
         $daily = $event->daily_price;
         $totalDays = $event->duration_days;
 
-        // Always add: One day
-        $options[] =
-        [
-            'label' => 'One day',
+        // إذا الفعالية يوم واحد فقط
+        if ($totalDays == 1) {
+            $options[] = [
+                'label' => 'يوم واحد',
+                'days'  => 1,
+                'price' => $daily,
+            ];
+            return $options;
+        }
+
+        // إذا أكثر من يوم واحد → نبني الخيارات حسب عدد الأيام
+        // 1) خيار اليوم الواحد
+        $options[] = [
+            'label' => 'يوم واحد',
             'days'  => 1,
             'price' => $daily,
         ];
 
-        // Add: Two days ONLY if event duration > 2
-        if ($totalDays > 2)
-        {
-            $options[] =
-            [
-                'label' => 'Two days',
+        // 2) إذا يومين → نضيف يومين فقط
+        if ($totalDays == 2) {
+            $options[] = [
+                'label' => 'يومان',
                 'days'  => 2,
                 'price' => $daily * 2,
             ];
+            return $options;
         }
 
-        // Always add: Full event
-        $options[] =
-        [
-            'label' => "Full event ($totalDays days)",
+        // 3) إذا 3 أيام أو أكثر → نضيف يومان
+        $options[] = [
+            'label' => 'يومان',
+            'days'  => 2,
+            'price' => $daily * 2,
+        ];
+
+        // 4) كامل الفعالية
+        $options[] = [
+            'label' => "$totalDays أيام",
             'days'  => $totalDays,
             'price' => $daily * $totalDays,
         ];
@@ -300,10 +330,14 @@ class DashboardInvestorController extends Controller
     //=====================================================================
     public function latestExhibitions()//✅
     {
-        $exhibitions = Exhibition::whereIn('status', ['upcoming', 'ongoing'])
-            ->where('copy_status', 'active')
-            ->orderBy('start_date', 'asc')
-            ->get();
+        $exhibitions = Exhibition::query()
+        ->join('copies', 'copies.exhibition_id', '=', 'exhibitions.id')
+        ->where('copies.copy_status', 'active') // النسخ النشطة فقط
+        ->whereIn('exhibitions.status', ['upcoming', 'ongoing'])
+        ->orderBy('exhibitions.start_date', 'asc')
+        ->select('exhibitions.*')
+        ->get() ;// مهم حتى يرجع موديل Exhibition كامل
+        
 
         $exhibitions_data = $exhibitions->map(function ($exhibition)
         {
@@ -334,7 +368,70 @@ class DashboardInvestorController extends Controller
     }
     //=====================================================================
     //=====================================================================
+    // // 1) جلب النسخ النشطة
+        // $copies = Copy::where('copy_status', 'active')->get();
 
+        // // 2) تجميع المعارض التابعة لكل نسخة وتنفيذ الشروط
+        // $exhibitionsCollection = collect();
+
+        // foreach ($copies as $copy) 
+        // {
+
+        //     $ex = $copy->exhibition;
+
+        //     if (!$ex) continue; // احتياط لو نسخة بدون معرض
+            
+        //     // تطبيق الشروط
+        //     if (
+        //         $ex->location === $investor->location &&
+        //         $ex->type === $investor->activity_type &&
+        //         in_array($ex->status, ['upcoming', 'ongoing']) &&
+        //         $ex->available_booths > 0
+        //     ) 
+        //     {
+        //         $exhibitionsCollection->push($ex);
+        //     }
+        // }
+
+        // // 3) ترتيب حسب تاريخ البداية
+        // $sorted = $exhibitionsCollection->sortBy('start_date')->values();
+
+        // // 4) عمل Pagination يدوي على الـ Collection
+        // $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+        //     $sorted->forPage($page, $per_page),
+        //     $sorted->count(),
+        //     $per_page,
+        //     $page,
+        //     ['path' => $request->url(), 'query' => $request->query()]
+        // );
+
+        // // 5) تجهيز البيانات
+        // $data = $paginated->map(function ($ex) 
+        // {
+        //     return 
+        //     [
+        //         'id'               => $ex->id,
+        //         'name'             => $ex->name,
+        //         'images'           => $ex->exhibitionImages ?? [],
+        //         'start_date'       => Carbon::parse($ex->start_date)->format('Y-m-d'),
+        //         'end_date'         => Carbon::parse($ex->end_date)->format('Y-m-d'),
+        //         'location'         => $ex->location,
+        //         'city'             => $ex->city,
+        //         'status'           => $ex->status,
+        //         'available_booths' => $ex->available_booths,
+        //         'sectors'          => $ex->sectors ?? [],
+        //     ];
+        // });
+
+        // return response()->json([
+        //     'data' => $data,
+        //     'meta' => [
+        //         'current_page' => $paginated->currentPage(),
+        //         'last_page'    => $paginated->lastPage(),
+        //         'per_page'     => $paginated->perPage(),
+        //         'total'        => $paginated->total(),
+        //     ]
+        // ], 200);
 
 
 

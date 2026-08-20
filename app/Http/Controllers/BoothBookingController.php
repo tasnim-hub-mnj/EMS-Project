@@ -36,6 +36,11 @@ class BoothBookingController extends Controller
 
         $investor = Auth::user()->investor;
         $booth = Booth::with('exhibition')->findOrFail($data['booth_id']);
+        $exhibition_id = $booth->exhibition->id;
+        $copy = Copy::where('exhibition_id', $exhibition_id)
+            ->where('copy_status', 'active')
+            ->first();
+
 
         if ($booth->status_inv !== 'available' || $booth->status !== 'available')
         {
@@ -59,10 +64,11 @@ class BoothBookingController extends Controller
         $booking = BoothBooking::create([
             'investor_id'        => $investor->id,
             'booth_id'           => $booth->id,
+            'copy_id'            => $copy->id,
             'start_date'         => $start,
             'end_date'           => $end,
             'days'               => $days,
-            'additional_services'=> json_decode($data['services']),
+            'additional_services'=> $data['services'],
             'notes'              => $data['notes'],
             'total_price'        => $data['total_price'],
             'paid_amount'        => 0,
@@ -308,7 +314,7 @@ class BoothBookingController extends Controller
         {
             $total += array_sum($data['service_prices']);
         }
-
+        
         $booking = BoothBooking::create([
             'investor_id' => $data['investor_id'],
             'booth_id' => $data['booth_id'],

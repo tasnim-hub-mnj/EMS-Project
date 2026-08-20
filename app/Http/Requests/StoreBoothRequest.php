@@ -24,17 +24,13 @@ class StoreBoothRequest extends FormRequest
         return
         [
             'number'        => 'required|string|max:50',
-            'section'       => 'nullable|string|max:50',
             'area'          => 'required|numeric|min:1',
-
-            // حالة المنظّم فقط
-            'status'        => 'required|in:available,unavailable',
-
-            'pricing_type'  => 'required|in:total,daily',
             'price'         => 'required|numeric|min:0',
+            'pricing_type'  => 'required|in:total,daily',
+            'status'        => 'required|in:available,unavailable',// حالة المنظّم فقط
+            'section'       => 'nullable|string|max:50',
 
             'location'      => 'nullable|string|max:255',
-
             // خدمات إضافية
             'services'      => 'nullable|array',
             'services.*'    => 'numeric|min:0',
