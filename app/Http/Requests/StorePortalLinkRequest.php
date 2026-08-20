@@ -4,9 +4,26 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\StaffMember;
 
 class StorePortalLinkRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $identifier = $this->input('staff_id');
+        $staff = $identifier
+            ? StaffMember::where('number', $identifier)->orWhere('id', $identifier)->first()
+            : null;
+
+        if ($staff) {
+            $this->merge([
+                'staff_id' => $staff->id,
+                'staff_number' => $staff->number,
+                'staff_name' => $this->input('staff_name', $staff->name),
+            ]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;

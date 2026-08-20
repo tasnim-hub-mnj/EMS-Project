@@ -4,9 +4,29 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\PortalLink;
 
 class StoreExternalTeamRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $user = $this->user();
+        $exhibitionId = $user?->organizer()->first()?->exhibition()->first()?->id
+            ?? PortalLink::query()
+                ->where('token', $this->header('X-Portal-Token'))
+                ->where('active', true)
+                ->value('exhibition_id');
+
+        $this->merge([
+            'exhibition_id' => $exhibitionId,
+            'amount' => $this->input('amount', $this->input('contract_value')),
+            'classification' => $this->input('classification', $this->input('category')),
+            'offical_name' => $this->input('offical_name', $this->input('contact_name')),
+            'email' => $this->input('email', $this->input('contact_email')),
+            'phone' => $this->input('phone', $this->input('contact_phone')),
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -26,10 +46,10 @@ class StoreExternalTeamRequest extends FormRequest
             'phone' => 'nullable|string|max:50',
             'amount' => 'nullable|numeric|min:0',
             'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
             'classification' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-            'status' => 'nullable|in:pending,active,finished',
+            'status' => 'nullable|in:pending,active,finished,rejected',
 
             // أعضاء الفريق
             'members' => 'nullable|array',

@@ -22,19 +22,15 @@ class OrganizerFactory extends Factory
     {
         return
         [
-            'user_id'       => User::factory(), // لكل منظم مستخدم جديد
+            'user_id'       => User::factory(),
             'company_name'  => $this->faker->company(),
-            'category'      => $this->faker->randomElement([['Technology'],['Food'],['Fashion'],['Education'],['Health'],['Sports'],]),
+            'category'      => $this->faker->randomElement(['Technology', 'Food', 'Fashion', 'Education', 'Health', 'Sports']),
             'headquarters'  => $this->faker->city(),
             'reg_number'    => $this->faker->unique()->numerify('########'),
             'location'      => $this->faker->address(),
             'description'   => $this->faker->sentence(10),
             'logo'          => $this->faker->imageUrl(300, 300, 'business', true),
-            'file'          =>
-            [
-                'contract' => Str::random(20) . '.pdf',
-                'issued_at' => now()->toDateString(),
-            ],
+            'legal_document' => Str::random(20) . '.pdf',
         ];
     }
 }

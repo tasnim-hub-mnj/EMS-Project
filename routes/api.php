@@ -28,6 +28,7 @@ use App\Http\Controllers\VisitorScheduleController;
 use App\Http\Controllers\CopyReportController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\InvestorsSummaryController;
+use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SponsorController;
 use App\Http\Controllers\SponsorshipRequestController;
 use App\Http\Controllers\EventSponsorshipRequestController;
@@ -38,22 +39,46 @@ use App\Http\Controllers\StaffTaskController;
 use App\Http\Controllers\FirebaseSyncController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\StaffAuthController;
 use Illuminate\Support\Facades\Route;
 
 //================================================================
 //================================================================
-//FCM Token
-Route::post('/notifications/fcm-token', [FcmTokenController::class, 'store']);
-
-//Notifications
-Route::get('/notifications', [NotificationController::class, 'index']);
-Route::get('/notifications/unread', [NotificationController::class, 'unread']);
-Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
-Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
-Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/notifications/fcm-token', [FcmTokenController::class, 'store']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+});
 
 //Firebase Sync
 Route::post('/auth/firebase-sync', [FirebaseSyncController::class, 'sync']);
+Route::middleware('auth:sanctum')->post('/auth/firebase/principal-token', [FirebaseSyncController::class, 'principalToken']);
+
+// Public read-only lookup used by staff invitation links before login.
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/staff/portal-links/portal-search', [PortalLinkController::class, 'searchForPortal']);
+    Route::get('/staff/portal-links/portal-sub-links', [PortalLinkController::class, 'subLinksForPortal']);
+    Route::post('/staff/portal-links/portal-store', [PortalLinkController::class, 'storeFromPortal']);
+    Route::delete('/staff/portal-links/portal-delete', [PortalLinkController::class, 'destroyFromPortal']);
+});
+Route::get('/staff/portal-links/{token}', [PortalLinkController::class, 'show']);
+
+// Staff identity is owned by Laravel; Firebase is used only for realtime chat.
+Route::post('/staff/auth/setup', [StaffAuthController::class, 'setup']);
+Route::post('/staff/auth/verify-otp', [StaffAuthController::class, 'verifyOtp']);
+Route::post('/staff/auth/resend-otp', [StaffAuthController::class, 'resendOtp']);
+Route::post('/staff/auth/login', [StaffAuthController::class, 'login'])->middleware('throttle:log');
+Route::get('/staff/auth/status', [StaffAuthController::class, 'status']);
+Route::middleware('auth:sanctum')->post('/auth/firebase/chat-token', [StaffAuthController::class, 'chatToken']);
+Route::middleware('auth:sanctum')->post('/staff/auth/change-password', [StaffAuthController::class, 'changePassword']);
+Route::middleware('auth:sanctum')->post('/staff/portal-invite/from-portal', [PortalInviteController::class, 'sendFromPortal']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/staff/portal-links/portal-search', [PortalLinkController::class, 'searchForPortal']);
+    Route::post('/staff/portal-links/portal-store', [PortalLinkController::class, 'storeFromPortal']);
+});
 
 //================================================================
 //***********************Organizer*********************************
@@ -62,15 +87,15 @@ Route::post('/auth/firebase-sync', [FirebaseSyncController::class, 'sync']);
 Route::post('/organizer/auth/register', [OrganizerController::class, 'register']);
 Route::post('/organizer/auth/verify-otp', [verifyOtpController::class, 'verifyOtp']);
 Route::post('/organizer/auth/resend-otp', [verifyOtpController::class, 'resendOtp']);
+Route::get('/organizer/auth/review-status/{userId}', [verifyOtpController::class, 'reviewStatus']);
 Route::post('/organizer/auth/login', [OrganizerController::class, 'login'])->middleware('throttle:log');
 
 Route::post('/organizer/auth/forgot-password', [verifyOtpController::class, 'forgotPassword1']);
 Route::post('/organizer/auth/reset-password', [verifyOtpController::class, 'resetPassword2']);
 
-// Route::get('/staff/claim/{link}', [StaffMemberController::class, 'claimRole']);
-
 Route::middleware('auth:sanctum')->group(function ()
 {
+    Route::post('/organizer/auth/approve/{userId}', [verifyOtpController::class, 'approve']);
     Route::middleware('checkOrganizer')->group(function()
     {
         //Auth
@@ -99,6 +124,7 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::get('/organizer/reports/revenue-timeline/{exhibitionId}', [CopyReportController::class, 'revenueTimeline']);
         Route::get('/organizer/reports/edition-comparisons/{exhibitionId}', [CopyReportController::class, 'editionComparisons']);
         Route::get('/organizer/reports/{reportType}/export.pdf', [CopyReportController::class, 'exportPdf']);
+        Route::get('/organizer/reports/{reportType}/export.xlsx', [CopyReportController::class, 'exportExcel']);
 
         //Map builder
         Route::post('/organizer/exhibitions/{id}/map', [MapController::class, 'store']);
@@ -107,6 +133,13 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::post('/organizer/exhibitions/{id}/map/json', [MapController::class, 'saveRaw']);
         Route::get('/organizer/exhibitions/{id}/map/history', [MapController::class, 'history']);
         Route::patch('/organizer/exhibitions/{id}/map/{mapId}/publish', [MapController::class, 'publish']);
+
+        //Sections
+        Route::get('/organizer/exhibitions/{exhibitionId}/sections', [SectionController::class, 'index']);
+        Route::post('/organizer/exhibitions/{exhibitionId}/sections', [SectionController::class, 'store']);
+        Route::put('/organizer/sections/{sectionId}', [SectionController::class, 'update']);
+        Route::delete('/organizer/sections/{sectionId}', [SectionController::class, 'destroy']);
+        Route::post('/organizer/exhibitions/{exhibitionId}/sections/sync', [SectionController::class, 'sync']);
 
         //Booths
         Route::post('/organizer/exhibitions/{exhibitionId}/booths', [BoothController::class, 'store']);
@@ -120,11 +153,16 @@ Route::middleware('auth:sanctum')->group(function ()
         //Bookings
         Route::post('/organizer/bookings', [BoothBookingController::class, 'store']);
         Route::get('/organizer/bookings', [BoothBookingController::class, 'index']);
+        Route::get('/bookings', [BoothBookingController::class, 'index']);
         Route::get('/organizer/exhibitions/{exhibitionId}/past-edition-bookings', [BoothBookingController::class, 'pastEditionBookings']);
         Route::get('/organizer/bookings/{id}', [BoothBookingController::class, 'show']);
+        Route::get('/bookings/{id}', [BoothBookingController::class, 'show']);
         Route::post('/organizer/bookings/{id}/approve', [BoothBookingController::class, 'approve']);
+        Route::post('/bookings/{id}/approve', [BoothBookingController::class, 'approve']);
         Route::post('/organizer/bookings/{id}/reject', [BoothBookingController::class, 'reject']);
+        Route::post('/bookings/{id}/reject', [BoothBookingController::class, 'reject']);
         Route::get('/organizer/bookings/{id}/contract.pdf', [BoothBookingController::class, 'contractPdf']);
+        Route::get('/bookings/{id}/contract.pdf', [BoothBookingController::class, 'contractPdf']);
 
         //Sponsor Events and Invitations
         Route::post('/organizer/events', [SponsorEventController::class, 'store']);
@@ -159,41 +197,49 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::put('/event-sponsorship-requests/{id}', [EventSponsorshipRequestController::class, 'update']);
 
         //Staff management
+        Route::get('/staff/portal-staff', [StaffMemberController::class, 'portalAssignees']);
         Route::get('/staff', [StaffMemberController::class, 'index']);
-        Route::get('/staff/{id}', [StaffMemberController::class, 'show']);
         Route::post('/staff', [StaffMemberController::class, 'store']);
-        Route::put('/staff/{id}', [StaffMemberController::class, 'update']);
-        Route::delete('/staff/{id}', [StaffMemberController::class, 'destroy']);
-        //External Team
+        Route::get('/staff/applications', [StaffMemberController::class, 'applications']);
+        Route::put('/staff/applications/{id}/status', [StaffMemberController::class, 'updateApplicationStatus']);
+        Route::post('/staff/applications/{id}/accept', [StaffMemberController::class, 'acceptApplication']);
         Route::get('/staff/external', [ExternalTeamController::class, 'index']);
+        Route::get('/staff/external-teams', [ExternalTeamController::class, 'index']);
         Route::post('/staff/external', [ExternalTeamController::class, 'store']);
+        Route::post('/staff/external-teams', [ExternalTeamController::class, 'store']);
         Route::put('/staff/external/{id}', [ExternalTeamController::class, 'update']);
+        Route::put('/staff/external-teams/{id}', [ExternalTeamController::class, 'update']);
         Route::delete('/staff/external/{id}', [ExternalTeamController::class, 'destroy']);
-        //External Team Members
+        Route::delete('/staff/external-teams/{id}', [ExternalTeamController::class, 'destroy']);
         Route::post('/staff/external/{teamId}/members', [ExternalTeamController::class, 'storeMember']);
+        Route::post('/staff/external-teams/{teamId}/members', [ExternalTeamController::class, 'storeMember']);
         Route::put('/staff/external/{teamId}/members/{memberId}', [ExternalTeamController::class, 'updateMember']);
+        Route::put('/staff/external-teams/{teamId}/members/{memberId}', [ExternalTeamController::class, 'updateMember']);
         Route::delete('/staff/external/{teamId}/members/{memberId}', [ExternalTeamController::class, 'destroyMember']);
-        //External Team Tasks
+        Route::delete('/staff/external-teams/{teamId}/members/{memberId}', [ExternalTeamController::class, 'destroyMember']);
         Route::post('/staff/external/{teamId}/tasks', [ExternalTeamController::class, 'storeTask']);
+        Route::post('/staff/external-teams/{teamId}/tasks', [ExternalTeamController::class, 'storeTask']);
         Route::put('/staff/external/{teamId}/tasks/{taskId}', [ExternalTeamController::class, 'updateTask']);
-        //Staff Task
+        Route::put('/staff/external-teams/{teamId}/tasks/{taskId}', [ExternalTeamController::class, 'updateTask']);
         Route::get('/staff/tasks', [StaffTaskController::class, 'index']);
         Route::post('/staff/tasks', [StaffTaskController::class, 'store']);
         Route::put('/staff/tasks/{id}', [StaffTaskController::class, 'update']);
         Route::delete('/staff/tasks/{id}', [StaffTaskController::class, 'destroy']);
-        //Staff Attendance
+        Route::get('/staff/search-by-id', [StaffMemberController::class, 'searchById']);
         Route::get('/staff/attendance', [AttendanceController::class, 'index']);
         Route::post('/staff/attendance', [AttendanceController::class, 'store']);
-        //Staff Payroll
         Route::get('/staff/payroll', [PayrollController::class, 'summary']);
         Route::get('/staff/payroll/entries', [PayrollController::class, 'entries']);
 
-        //Staff portal links and employee access control
+        // Staff portal links must be registered before the generic staff routes.
         Route::get('/staff/portal-links', [PortalLinkController::class, 'index']);
         Route::post('/staff/portal-links', [PortalLinkController::class, 'store']);
-        Route::get('/staff/portal-links/{token}', [PortalLinkController::class, 'show']);
         Route::patch('/staff/portal-links/{token}/deactivate', [PortalLinkController::class, 'deactivate']);
         Route::delete('/staff/portal-links/{token}', [PortalLinkController::class, 'destroy']);
+
+        Route::get('/staff/{id}', [StaffMemberController::class, 'show']);
+        Route::put('/staff/{id}', [StaffMemberController::class, 'update']);
+        Route::delete('/staff/{id}', [StaffMemberController::class, 'destroy']);
 
         Route::post('/staff/portal-invite', [PortalInviteController::class, 'send']);
     });

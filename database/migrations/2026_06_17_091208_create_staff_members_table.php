@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
             $table->string('number');
+            $table->string('qr_code')->nullable();
             $table->string('name');
             // $table->string('email')->nullable();
             // $table->string('phone')->nullable();

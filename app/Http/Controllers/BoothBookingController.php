@@ -17,6 +17,7 @@ use App\Http\Requests\RejectBookingRequest;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Copy;
+use App\Services\NotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -69,11 +70,13 @@ class BoothBookingController extends Controller
             'status'             => 'pending',
         ]);
 
+        $this->notifyBooking($booth->exhibition_id, 'تم استلام حجز جديد', 'تم استلام طلب حجز جديد لأحد الأجنحة.', 'booking.created');
+
         $services = $booth->services ?? [];
         $amenities = $booth->amenities ?? [];
         $bookedServices = $booking->additional_services ?? [];
 
-        // $booth->status_inv = 'booked';عند القبول 
+        // $booth->status_inv = 'booked';عند القبول
         // $booth->save();
 
         // $user = User::findOrfail($user_id);
@@ -283,7 +286,7 @@ class BoothBookingController extends Controller
     }
     //==============================================================
     //==============================================================
-    
+
 
     //==============================================================
     //*************************----o----****************************
@@ -301,7 +304,7 @@ class BoothBookingController extends Controller
             ? $booth->price * $days
             : $booth->price;
 
-        if (!empty($data['service_prices'])) 
+        if (!empty($data['service_prices']))
         {
             $total += array_sum($data['service_prices']);
         }
@@ -378,6 +381,8 @@ class BoothBookingController extends Controller
         // تحديث حالة البوث
         $booking->booth->update(['status_inv' => 'booked']);
 
+        $this->notifyBooking($booking->booth->exhibition_id, 'تمت الموافقة على حجز', 'تمت الموافقة على طلب حجز جناح.', 'booking.approved');
+
         return new BookingResource($booking);
     }
     //==============================================================
@@ -390,7 +395,19 @@ class BoothBookingController extends Controller
             'notes' => $request->reason
         ]);
 
+        $this->notifyBooking($booking->booth->exhibition_id, 'تم رفض حجز', 'تم رفض طلب حجز جناح.', 'booking.rejected');
+
         return new BookingResource($booking);
+    }
+
+    private function notifyBooking(int $exhibitionId, string $title, string $body, string $event): void
+    {
+        $exhibition = Exhibition::find($exhibitionId);
+        if ($exhibition) {
+            app(NotificationService::class)->forExhibition(
+                $exhibition, $title, $body, 'booking', 'org.bookings', ['event' => $event], '/bookings', ['admin.reports']
+            );
+        }
     }
     //==============================================================
     public function contractPdf($booking_id)
@@ -411,7 +428,7 @@ class BoothBookingController extends Controller
 
 
 
-    
+
     // public function getAllBooking($exhibition_id)//عرض كل الحجوزات الخاصة بمعرض ما//o
     // {
     //     $exhibition = Exhibition::with(

@@ -27,7 +27,7 @@ return new class extends Migration
             $table->date('end_date')->nullable();
             $table->string('classification')->nullable();//التصنيف
             $table->text('notes')->nullable();
-            $table->enum('status', ['pending', 'active', 'finished'])->default('pending');
+            $table->enum('status', ['pending', 'active', 'finished', 'rejected'])->default('pending');
             $table->timestamps();
         });
     }

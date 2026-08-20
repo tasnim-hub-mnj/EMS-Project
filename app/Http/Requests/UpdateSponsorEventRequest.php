@@ -38,7 +38,14 @@ class UpdateSponsorEventRequest extends FormRequest
             'max_participants' => 'sometimes|integer|min:1',
 
             'activities' => 'nullable|array',
+            'activities.*.title' => 'required|string',
+            'activities.*.start_time' => 'required|string',
+            'activities.*.end_time' => 'required|string',
+            'activities.*.provider_name' => 'required|string',
+            'activities.*.provider_contact' => 'nullable|string',
             'photos' => 'nullable|array',
+            'photos.*.image' => 'required|string',
+            'photos.*.caption' => 'nullable|string',
         ];
     }
 }

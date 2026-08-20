@@ -13,13 +13,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('company_name')->nullable();
-            $table->json('category')->nullable();//exhibitoin->sectors
+            $table->string('category')->nullable();
             $table->string('headquarters')->nullable();
             $table->string('reg_number')->unique()->nullable();
-            $table->string('location');//EXHIBITION->LOCATION
+            $table->string('location');
             $table->string('description')->nullable();
             $table->string('logo')->nullable();
-            $table->json('file')->nullable();//العقد
+            $table->string('legal_document')->nullable();
             $table->timestamps();
         });
     }

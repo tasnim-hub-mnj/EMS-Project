@@ -9,36 +9,87 @@ use App\Models\BoothBooking;
 use App\Models\Booth;
 use App\Models\BoothImage;
 use App\Models\Exhibition;
+use App\Models\Section;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Auth as FacadesAuth;
 use App\Models\User;
 use App\Notifications\OrderStatusNotification;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Storage;
 
 class BoothController extends Controller
-{ 
+{
+    protected function normalizeBoothId($id): int
+    {
+        if (is_numeric($id)) {
+            return (int) $id;
+        }
+
+        $normalized = ltrim((string) $id, 'bB');
+
+        return is_numeric($normalized) ? (int) $normalized : 0;
+    }
+
     //===============================================================
     //**************************----o----****************************
     //===============================================================
+    protected function resolveSectionForExhibition($exhibitionId, ?string $sectionName): ?Section
+    {
+        if (blank($sectionName)) {
+            return null;
+        }
+
+        $normalized = trim($sectionName);
+
+        return Section::firstOrCreate(
+            [
+                'exhibition_id' => $exhibitionId,
+                'name' => $normalized,
+            ],
+            [
+                'type' => 'default',
+            ]
+        );
+    }
+
     public function store(StoreBoothRequest $request, $exhibition_id)
     {
         $data = $request->validated();
         $data['exhibition_id'] = $exhibition_id;
 
+        $section = $this->resolveSectionForExhibition($exhibition_id, $data['section'] ?? null);
+        if ($section) {
+            $data['section_id'] = $section->id;
+        }
+
         $booth = Booth::create($data);
 
-        return new BoothResource($booth);
+        $this->notifyBooth($booth->exhibition_id, 'تمت إضافة جناح جديد', 'تمت إضافة الجناح ' . $booth->number . '.', 'booth.created');
+
+        return new BoothResource($booth->fresh());
     }
     //===========================================
     public function update(UpdateBoothRequest $request, $booth_id)
     {
-        $booth = Booth::findOrFail($booth_id);
+        $boothId = $this->normalizeBoothId($booth_id);
+        $booth = Booth::findOrFail($boothId);
 
         $data = $request->validated();
+
+        if (array_key_exists('section', $data)) {
+            $section = $this->resolveSectionForExhibition($booth->exhibition_id, $data['section'] ?? null);
+            if ($section) {
+                $data['section_id'] = $section->id;
+                $data['section'] = $section->name;
+            }
+        }
+
         $booth->update($data);
 
-        return new BoothResource($booth);
+        $this->notifyBooth($booth->exhibition_id, 'تم تعديل جناح', 'تم تعديل بيانات الجناح ' . $booth->number . '.', 'booth.updated');
+
+        return new BoothResource($booth->fresh());
     }
     //===========================================
     public function index($exhibition_id)
@@ -52,17 +103,28 @@ class BoothController extends Controller
     //===========================================
     public function show($booth_id)
     {
+        $boothId = $this->normalizeBoothId($booth_id);
         $booth = Booth::with(['boothImages', 'boothBookings.investor'])
-            ->findOrFail($booth_id);
+            ->findOrFail($boothId);
 
         return new BoothResource($booth);
     }
     //===========================================
     public function updateWithImage(Request $request, $booth_id)
     {
-        $booth = Booth::findOrFail($booth_id);
+        $data = $request->validate([
+            'price' => 'nullable|numeric|min:0',
+            'pricing_type' => 'nullable|in:total,daily',
+            'description' => 'nullable|string|max:500',
+            'services' => 'nullable',
+            'status' => 'nullable|in:available,unavailable',
+            'image' => 'nullable|image',
+        ]);
 
-        if ($request->hasFile('image')) 
+        $boothId = $this->normalizeBoothId($booth_id);
+        $booth = Booth::findOrFail($boothId);
+
+        if ($request->hasFile('image'))
         {
             $path = $request->file('image')->store('booths', 'public');
 
@@ -72,7 +134,20 @@ class BoothController extends Controller
             ]);
         }
 
-        $booth->update($request->except('image'));
+        unset($data['image']);
+        if (isset($data['services']) && is_string($data['services'])) {
+            $decodedServices = json_decode($data['services'], true);
+            if (!is_array($decodedServices)) {
+                return response()->json(['message' => 'الخدمات المرسلة غير صالحة.'], 422);
+            }
+            $data['services'] = collect($decodedServices)->mapWithKeys(
+                fn ($price, $name) => [(string) $name => max(0, (float) $price)]
+            )->all();
+        }
+
+        $booth->update($data);
+
+        $this->notifyBooth($booth->exhibition_id, 'تم تعديل جناح', 'تم تعديل بيانات الجناح ' . $booth->number . '.', 'booth.updated');
 
         return new BoothResource($booth);
     }
@@ -83,21 +158,39 @@ class BoothController extends Controller
             'status' => 'required|in:available,unavailable'
         ]);
 
-        $booth = Booth::findOrFail($booth_id);
+        $boothId = $this->normalizeBoothId($booth_id);
+        $booth = Booth::findOrFail($boothId);
         $booth->update(['status' => $request->status]);
+
+        $this->notifyBooth($booth->exhibition_id, 'تغيرت حالة جناح', 'تغيرت حالة الجناح ' . $booth->number . '.', 'booth.status');
 
         return new BoothResource($booth);
     }
     //===========================================
     public function destroy($booth_id)
     {
-        $booth = Booth::findOrFail($booth_id);
+        $boothId = $this->normalizeBoothId($booth_id);
+        $booth = Booth::findOrFail($boothId);
+        $exhibitionId = $booth->exhibition_id;
+        $boothNumber = $booth->number;
         $booth->delete();
+
+        $this->notifyBooth($exhibitionId, 'تم حذف جناح', 'تم حذف الجناح ' . $boothNumber . '.', 'booth.deleted');
 
         return response()->json([
             'success' => true,
             'message' => 'Booth deleted successfully'
         ]);
+    }
+
+    private function notifyBooth(int $exhibitionId, string $title, string $body, string $event): void
+    {
+        $exhibition = Exhibition::find($exhibitionId);
+        if ($exhibition) {
+            app(NotificationService::class)->forExhibition(
+                $exhibition, $title, $body, 'booth', 'org.booths', ['event' => $event], '/booths', ['org.map', 'admin.map']
+            );
+        }
     }
     //===========================================
 
@@ -295,7 +388,7 @@ class BoothController extends Controller
     }
     //==============================================================
     //==============================================================
-    
+
     // public function store(StoreBoothRequest $request, $exhibition_id)
     // {
     //     $exhibition = Exhibition::where('organizer_id', Auth::id())
@@ -408,8 +501,8 @@ class BoothController extends Controller
     //         'message' => 'Booth deleted successfully'
     //     ], 200);
     // }
-    
-    
+
+
 
 
 

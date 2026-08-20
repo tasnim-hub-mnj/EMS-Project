@@ -4,28 +4,63 @@ namespace App\Http\Controllers;
 
 use App\Http\Resources\NotificationResource;
 use App\Models\Notification;
+use App\Models\PortalLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
-   public function index()
+   public function index(Request $request)
     {
-        $notifications = Notification::where('user_id', Auth::id())
+       $query = $this->scopedQuery($request);
+       $notifications = $query
             ->orderByDesc('created_at')
             ->paginate(request('per_page', 20));
 
         return NotificationResource::collection($notifications);
     }
     //===============================================================
-    public function unread()
+    public function unread(Request $request)
     {
-        $notifications = Notification::where('user_id', Auth::id())
+        $notifications = $this->scopedQuery($request)
             ->where('read', false)
             ->orderByDesc('created_at')
             ->paginate(request('per_page', 20));
 
         return NotificationResource::collection($notifications);
+    }
+
+    private function scopedQuery(Request $request)
+    {
+        $query = Notification::where('user_id', Auth::id());
+
+        $portalToken = $request->input('portal_token') ?: $request->header('X-Portal-Token');
+
+        if ($portalToken) {
+            $link = PortalLink::where('token', $portalToken)
+                ->where('active', true)
+                ->whereHas('staff', fn ($staff) => $staff->where('user_id', Auth::id()))
+                ->first();
+
+            // Do not reveal whether another user's portal link exists.
+            // An unrelated or stale portal session simply has no notifications.
+            if (!$link) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->where(function ($scoped) use ($link) {
+                $scoped->where('portal_link_id', $link->id)
+                    ->orWhere(function ($direct) use ($link) {
+                        $direct->whereNull('portal_link_id')
+                            ->where('exhibition_id', $link->exhibition_id)
+                            ->whereIn('permission_key', $link->permissions ?? []);
+                    });
+            });
+        }
+
+        return $request->filled('exhibition_id')
+            ? $query->where('exhibition_id', $request->integer('exhibition_id'))
+            : $query;
     }
     //===============================================================
     public function markRead($id)

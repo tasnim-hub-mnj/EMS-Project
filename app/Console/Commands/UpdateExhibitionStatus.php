@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Exhibition;
+use App\Services\NotificationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -38,14 +39,17 @@ class UpdateExhibitionStatus extends Command
         foreach( $exhibitions as $ex)
         {
             $today = now()->startOfDay();
-            $startDate = Carbon::parse($ex->start_date);
-            $endDate = Carbon::parse($ex->end_date);
+            $startDate = Carbon::parse($ex->start_date)->startOfDay();
+            $endDate = Carbon::parse($ex->end_date)->endOfDay();
+            $upcomingStart = $startDate->copy()->subDays(14);
 
-            if ($today->lt($startDate->subDays(14)))
+            $previousStatus = $ex->status;
+
+            if ($today->lt($upcomingStart))
             {
                 $ex->status = 'far';
             }
-            elseif ($today->between($startDate->subDays(14), $startDate))
+            elseif ($today->between($upcomingStart, $startDate))
             {
                 $ex->status = 'upcoming';
             }
@@ -63,6 +67,19 @@ class UpdateExhibitionStatus extends Command
             }
 
             $ex->save();
+
+            if ($previousStatus !== $ex->status) {
+                app(NotificationService::class)->forExhibition(
+                    $ex,
+                    'تغيرت حالة المعرض',
+                    'انتقلت حالة المعرض من ' . ($previousStatus ?: 'غير محددة') . ' إلى ' . $ex->status . '.',
+                    'exhibition_status',
+                    'admin.company',
+                    ['from' => (string) ($previousStatus ?? ''), 'to' => (string) $ex->status],
+                    '/exhibitions',
+                    ['admin.reports', 'admin.map', 'org.map']
+                );
+            }
         }
     }
 }

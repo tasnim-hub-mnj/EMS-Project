@@ -21,12 +21,12 @@ class OrganizerSeeder extends Seeder
             Organizer::create([
                 'user_id'       => $user->id,
                 'company_name'  => "Organizer Company " . ($index + 1),
-                'category'      => json_encode(['technology', 'innovation']),
+                'category'      => 'Technology',
                 'headquarters'  => 'Damascus - Syria',
                 'reg_number'    => 1000 + $index,
                 'location'      => 'Expo Center Damascus',
                 'logo'          => 'default_image/organizer_logo.png',
-                'file'          => json_encode(['contract_' . ($index + 1) . '.pdf']),
+                'legal_document' => 'contract_' . ($index + 1) . '.pdf',
                 'description'   => 'Professional organizer for exhibitions and events.',
             ]);
         }

@@ -29,7 +29,6 @@ class User extends Authenticatable
             'role',
             'status',
             'is_verified',
-            'fcm_token',
         ];
 
     /**
@@ -122,6 +121,6 @@ class User extends Authenticatable
         return $this->hasOne(FirebaseSync::class);
     }
     //=====================================================
-    
+
 }
 

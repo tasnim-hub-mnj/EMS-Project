@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('sponser_event_tickets', function (Blueprint $table)
         {
             $table->id();
-            $table->foreignId('visitor_id')->constrained('visitors')->cascadeOnDelete();
+            $table->foreignId('visitor_id')->nullable()->constrained('visitors')->cascadeOnDelete();
             $table->foreignId('sponsor_event_id')->constrained('sponsor_events')->cascadeOnDelete();
 
             $table->string('type'); // invitation / paid

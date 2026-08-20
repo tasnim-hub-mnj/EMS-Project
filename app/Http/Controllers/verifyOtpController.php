@@ -41,7 +41,7 @@ class verifyOtpController extends Controller
         $otp->update(['is_used' => true]);
         $user->update([
             'is_verified' => true,
-            'status' => 'approved',
+            'status' => 'pending',
         ]);
 
         return response()->json([
@@ -184,6 +184,12 @@ class verifyOtpController extends Controller
     public function updatePassword(Request $request)//✅
     {
         $user = Auth::user();
+
+        $request->merge([
+            'new_password' => $request->input('new_password', $request->input('password')),
+            'new_password_confirmation' => $request->input('new_password_confirmation', $request->input('password_confirmation')),
+        ]);
+
         $request->validate([
             'current_password' => 'required|string|min:6',
             'new_password' => 'required|string|min:6|confirmed',

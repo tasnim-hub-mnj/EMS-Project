@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('firebase_syncs', function (Blueprint $table) 
+        Schema::create('firebase_syncs', function (Blueprint $table)
         {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->uuid('firebase_uid');
-            $table->enum('role',['admin','investor','visitor']);
+            $table->string('firebase_uid');
+            $table->enum('role',['admin','investor','visitor','organizer','staff']);
             $table->timestamps();
         });
     }

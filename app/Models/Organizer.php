@@ -18,16 +18,11 @@ class Organizer extends Model
         'reg_number',
         'location',
         'logo',
-        'file',
+        'legal_document',
         'description',
     ];
 
     protected $table = 'organizers';
-
-    protected $casts =
-    [
-        'category' => 'array',
-    ];
 
     // =================Relationships===================
     public function user()

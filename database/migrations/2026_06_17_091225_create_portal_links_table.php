@@ -17,6 +17,7 @@ return new class extends Migration
             $table->uuid('token')->unique()->nullable();// الرابط الأساسي (UUID)
 
             $table->foreignId('staff_id')->constrained('staff_members')->onDelete('cascade');
+            $table->string('firebase_uid')->nullable()->index();
             $table->string('staff_name');
             $table->string('staff_email')->nullable();
             $table->string('staff_title')->nullable(); // مشرف الموارد البشرية
@@ -36,7 +37,6 @@ return new class extends Migration
             $table->string('created_by_name')->nullable(); // إدارة المعرض الرئيسي
 
             $table->uuid('parent_token')->nullable();// روابط فرعية
-            $table->string('qr_value')->nullable();// QR
             $table->boolean('active')->default(true);// حالة الرابط
             $table->timestamps();
         });

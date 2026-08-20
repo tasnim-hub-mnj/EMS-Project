@@ -15,7 +15,21 @@ class Copy extends Model
         'year',
         'start_date',
         'end_date',
-        'status'
+        'copy_status',
+        'announced',
+        'total_booths',
+        'booked_booths',
+        'available_booths',
+        'pending_requests',
+        'visitor_count',
+        'expected_visitors',
+        'turnout_percent',
+        'expected_turnout_percent',
+        'revenue',
+        'expected_revenue',
+        'staff_count',
+        'sponsorship_percent',
+        'final_booked_booths',
     ];
 
     protected $table = 'copies';

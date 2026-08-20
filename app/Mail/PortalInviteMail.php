@@ -18,7 +18,7 @@ class PortalInviteMail extends Mailable
     public $staff_name;
     public $exhibition_name;
 
-    public function __construct($portal_url,$exhibition_name,$staff_name)
+    public function __construct($portal_url, $staff_name, $exhibition_name)
     {
         $this->portal_url=$portal_url;
         $this->staff_name=$staff_name;

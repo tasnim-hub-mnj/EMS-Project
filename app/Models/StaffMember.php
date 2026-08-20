@@ -26,9 +26,19 @@ class StaffMember extends Model
             // توليد رقم الموظف s1 / s2 / s3
             $lastId = StaffMember::max('id') + 1;
             $staff->number = 's' . $lastId;
+
+            if (empty($staff->qr_code)) {
+                $staff->qr_code = 'STAFF:' . $staff->id . ':' . $staff->number;
+            }
+        });
+
+        static::saving(function ($staff)
+        {
+            if (empty($staff->qr_code) && !empty($staff->id)) {
+                $staff->qr_code = 'STAFF:' . $staff->id . ':' . ($staff->number ?? 'staff');
+            }
         });
     }
-
 
     //=================Relationships===================
     public function user()

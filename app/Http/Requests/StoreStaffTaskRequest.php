@@ -4,9 +4,37 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\StaffMember;
+use App\Models\PortalLink;
 
 class StoreStaffTaskRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $user = $this->user();
+        $exhibitionId = $user?->organizer()->first()?->exhibition()->first()?->id
+            ?? PortalLink::query()
+                ->where('token', $this->header('X-Portal-Token'))
+                ->where('active', true)
+                ->value('exhibition_id');
+        $assignedStaffIds = $this->input('assigned_staff_ids', $this->input('assigned_to', []));
+        $assignedStaffIds = is_array($assignedStaffIds) ? $assignedStaffIds : [$assignedStaffIds];
+
+        $team = $this->input('team');
+        if (!$team && !empty($assignedStaffIds)) {
+            $team = StaffMember::where('exhibition_id', $exhibitionId)
+                ->whereIn('number', $assignedStaffIds)
+                ->value('team');
+        }
+        $team = $team === 'service' ? 'services' : $team;
+
+        $this->merge([
+            'exhibition_id' => $exhibitionId,
+            'assigned_staff_ids' => array_values(array_filter($assignedStaffIds)),
+            'team' => $team,
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;

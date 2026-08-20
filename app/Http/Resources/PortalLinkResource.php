@@ -24,9 +24,10 @@ class PortalLinkResource extends JsonResource
             'staffName' => $this->staff_name,
             'staffEmail' => $this->staff_email,
             'staffTitle' => $this->staff_title,
-            'staffId' => $this->staff_number,
+            'staffId' => $this->staff_id,
+            'firebaseUid' => $this->firebase_uid ?? ('staff:' . ($this->staff?->user_id ?? '')),
+            'staffNumber' => $this->staff_number,
 
-            'qrValue' => $this->qr_value,
             'isManager' => $this->is_manager,
 
             'createdBy' => $this->created_by,

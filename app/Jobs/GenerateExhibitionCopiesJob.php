@@ -41,7 +41,7 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
         $exhibitions = Exhibition::with(['booths', 'sponsors'])->get();
         $today = Carbon::today();
 
-        foreach ($exhibitions as $exhibition) 
+        foreach ($exhibitions as $exhibition)
         {
             $exhibition_id = $exhibition->id;
 
@@ -50,51 +50,23 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
             $year = $start->format('Y');
 
             // 1. تحديد حالة النسخة بناءً على التاريخ الحالي
-            if ($today->between($start, $end)) 
-            {
-                $copy_status = 'active';
-            } 
-            elseif ($today->greaterThan($end)) 
-            {
-                $copy_status = 'finished';
-            } 
-            else 
-            {
-                $copy_status = 'archived'; // المعرض لم يبدأ بعد
-            }
+            $copy_status = $today->greaterThan($end) ? 'finished' : 'active';
 
             // جلب النسخة الحالية إن كانت موجودة سابقاً
             $copy = Copy::where('exhibition_id', $exhibition_id)
                 ->where('year', $year)
                 ->first();
 
-            // ==========================================
-
-            //1- إذا كانت أرشفة (لم تبدأ بعد) -> تتجاوز ولا تفعل شيئاً
-            if ($copy_status === 'archived') 
-            {
-                continue;
-            }
-
-            // 2-إذا كانت منتهية (Finished) وسبق أن تم تحديثها بعد تاريخ انتهاء المعرض -> تتجاوز
-            if ($copy_status === 'finished' && $copy) 
-            {
-                // إذا تم التحديث بتاريخ يساوي أو بعد تاريخ نهاية المعرض، فهذا يعني أن اللقطة الأخيرة أخذت بالفعل
-                if ($copy->updated_at->greaterThanOrEqualTo($end)) 
-                {
-                    continue;
-                }
-            }
-
-            // 3- إذا كانت فعالة (Active) -> ستكمل وتنفيذ التحديث دائماً!
-
-            // ==========================================
             //announced
-            $announced = ($copy_status === 'active');
+            $announced = true;
+            $editionCopyId = $copy?->id;
+            $dateRange = [$start, $end];
             //=====================================
             // pending_requests
             $booth_ids = $exhibition->booths->pluck('id');
-            $pending_requests = BoothBooking::whereIn('booth_id', $booth_ids)
+            $pendingQuery = BoothBooking::whereIn('booth_id', $booth_ids)
+                ->when($editionCopyId, fn($query) => $query->where('copy_id', $editionCopyId));
+            $pending_requests = $pendingQuery
                 ->where('status', 'pending')
                 ->count();
             //=====================================
@@ -112,7 +84,8 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
             }
 
             $ticket_buyers = Ticket::where('exhibition_id', $exhibition_id)
-                ->pluck('user_id')
+                ->whereBetween('created_at', $dateRange)
+                ->pluck('visitor_id')
                 ->unique()
                 ->count();
 
@@ -127,7 +100,9 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
             //=====================================
             // turnout_percent
             $interested_investors = Investor::where('activity_type', $exhibition->type)->count();
-            $actual_visitors = $exhibition->visitors_count ?? 0;
+            $actual_visitors = Ticket::where('exhibition_id', $exhibition_id)
+                ->whereBetween('created_at', $dateRange)
+                ->count();
             $base_turnout = $interested_visitors + $interested_investors;
             $turnout_percent = $base_turnout > 0
                 ? ($actual_visitors / $base_turnout) * 100
@@ -141,7 +116,7 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
 
             $turnout_values = [];
 
-            foreach ($previous_copies as $prev) 
+            foreach ($previous_copies as $prev)
             {
                 $prev_exhibition = $prev->exhibition;
                 if (!$prev_exhibition) continue;
@@ -174,15 +149,23 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
                 : 0;
             //=====================================
             // revenue
-            $booth_bokings_revenue = BoothBooking::where('exhibition_id', $exhibition_id)
+            $editionBookings = BoothBooking::whereIn('booth_id', $booth_ids)
+                ->when($editionCopyId, fn($query) => $query->where('copy_id', $editionCopyId));
+            $booth_bokings_revenue = (clone $editionBookings)
                 ->whereIn('status', ['approved', 'finished'])
                 ->sum('total_price');
 
-            $tickets_revenue = Ticket::where('exhibition_id', $exhibition_id)->sum('amount');
-            $sponsorships_bookings_revenue = SponsorshipBooking::where('exhibition_id', $exhibition_id)->sum('total_price');
+            $tickets_revenue = Ticket::where('exhibition_id', $exhibition_id)
+                ->whereBetween('created_at', $dateRange)
+                ->sum('amount');
+            $sponsorships_bookings_revenue = SponsorshipBooking::whereHas('sponsorEvent', fn($query) => $query->where('exhibition_id', $exhibition_id))
+                ->whereBetween('created_at', $dateRange)
+                ->sum('total_price');
 
             $sponsor_events_ids = SponsorEvent::where('exhibition_id', $exhibition_id)->pluck('id');
-            $sponsorEvent_tickets_revenue = SponserEventTicket::whereIn('sponsor_event_id', $sponsor_events_ids)->sum('amount');
+            $sponsorEvent_tickets_revenue = SponserEventTicket::whereIn('sponsor_event_id', $sponsor_events_ids)
+                ->whereBetween('created_at', $dateRange)
+                ->sum('amount');
 
             $revenue = $booth_bokings_revenue +
                 $tickets_revenue +
@@ -218,7 +201,7 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
                 : 0;
             //=====================================
             // final_booked_booths
-            $final_booked_booths = BoothBooking::whereIn('booth_id', $booth_ids)
+            $final_booked_booths = (clone $editionBookings)
                 ->where('status', 'finished')
                 ->count();
             //=====================================
@@ -239,9 +222,9 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
                     'end_date' => $end->format('Y-m-d'),
                     'copy_status' => $copy_status,
                     'announced' => $announced,
-                    '$total_booths' => $exhibition->total_booths,
-                    '$booked_booths' => $exhibition->total_booths - $exhibition->available_booths,
-                    '$available_booths' => $exhibition->available_booths,
+                    'total_booths' => $exhibition->total_booths,
+                    'booked_booths' => (clone $editionBookings)->whereIn('status', ['approved', 'finished'])->count(),
+                    'available_booths' => max(0, $exhibition->total_booths - (clone $editionBookings)->whereIn('status', ['approved', 'finished'])->count()),
                     'pending_requests' => $pending_requests,
                     'visitor_count' => $exhibition->visitors_count,
                     'expected_visitors' => $expected_visitors,
@@ -254,7 +237,7 @@ class GenerateExhibitionCopiesJob implements ShouldQueue
                     'final_booked_booths' => $final_booked_booths,
                 ]
             );
-            
+
         }
     }
 

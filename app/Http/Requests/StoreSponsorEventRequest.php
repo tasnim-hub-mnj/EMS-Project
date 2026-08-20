@@ -44,7 +44,7 @@ class StoreSponsorEventRequest extends FormRequest
             'activities.*.start_time' => 'required|string',
             'activities.*.end_time' => 'required|string',
             'activities.*.provider_name' => 'required|string',
-            'activities.*.provider_contact' => 'required|string',
+            'activities.*.provider_contact' => 'nullable|string',
 
             'photos' => 'nullable|array',
             'photos.*.image' => 'required|string',

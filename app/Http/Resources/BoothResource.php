@@ -14,10 +14,15 @@ class BoothResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return 
+        $latestBooking = $this->boothBookings && $this->boothBookings->isNotEmpty()
+            ? $this->boothBookings->sortByDesc('created_at')->first()
+            : null;
+
+        return
         [
             'id' => 'b' . $this->id,
             'exhibitionId' => (string) $this->exhibition_id,
+            'sectionId' => $this->section_id ? (string) $this->section_id : null,
 
             'number' => $this->number,
             'section' => $this->section,
@@ -61,17 +66,17 @@ class BoothResource extends JsonResource
             'mapHeight' => $this->map_height,
 
             // بيانات المستثمر (إن وجد حجز Approved)
-            'investorId' => optional($this->boothBookings)->investor_id,
-            'investorName' => optional(optional($this->boothBookings)->investor)->company_name,
+            'investorId' => $latestBooking?->investor_id,
+            'investorName' => $latestBooking?->investor?->company_name,
 
             // بيانات الحجز (إن وجد)
-            'booking' => $this->boothBookings ? 
+            'booking' => $latestBooking ?
             [
-                'companyName' => optional($this->boothBookings->investor)->company_name,
-                'contactName' => $this->boothBookings->contact_name,
-                'contactEmail' => $this->boothBookings->contact_email,
-                'contactPhone' => $this->boothBookings->contact_phone,
-                'bookedDays' => $this->boothBookings->days,
+                'companyName' => $latestBooking->investor?->company_name,
+                'contactName' => $latestBooking->contact_name,
+                'contactEmail' => $latestBooking->contact_email,
+                'contactPhone' => $latestBooking->contact_phone,
+                'bookedDays' => $latestBooking->days,
                 'events' => [] // ما في فعاليات داخل البوث الآن
             ] : null
         ];

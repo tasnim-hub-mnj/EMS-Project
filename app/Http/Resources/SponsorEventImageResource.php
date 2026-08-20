@@ -14,10 +14,13 @@ class SponsorEventImageResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return
-        [
+        $image = (string) $this->image;
+
+        return [
             'id' => 'p' . $this->id,
-            'url' => asset('storage/' . $this->image),
+            'url' => str_starts_with($image, 'data:') || str_starts_with($image, 'http://') || str_starts_with($image, 'https://')
+                ? $image
+                : asset('storage/' . ltrim($image, '/')),
             'caption' => $this->caption,
         ];
     }

@@ -10,6 +10,8 @@ use App\Models\Map;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Exhibition;
+use App\Services\NotificationService;
 
 class MapController extends Controller
 {
@@ -29,11 +31,14 @@ class MapController extends Controller
             'status' => 'draft'
         ]);
 
+            $this->notifyMap($exhibition_id, 'تم حفظ مسودة الخريطة', 'تم حفظ نسخة جديدة من خريطة المعرض.');
+
         return new MapResource($map);
     }
     //=========================================================
     public function update(UpdateMapRequest $request, $exhibition_id, $map_id)
     {
+        $map_id = preg_replace('/^map-/', '', (string) $map_id);
         $map = Map::where('exhibition_id', $exhibition_id)->findOrFail($map_id);
 
         $json = json_decode($request->file('map')->getContent(), true);
@@ -48,6 +53,8 @@ class MapController extends Controller
             'map_json' => $json
         ]);
 
+        $this->notifyMap($exhibition_id, 'تم تحديث الخريطة', 'تم تحديث خريطة المعرض.');
+
         return new MapResource($map);
     }
     //=========================================================
@@ -56,6 +63,12 @@ class MapController extends Controller
         $map = Map::where('exhibition_id', $exhibition_id)
             ->orderByDesc('version')
             ->first();
+
+        if (!$map) {
+            return response()->json([
+                'message' => 'Map not found for this exhibition.'
+            ], 404);
+        }
 
         return new MapResource($map);
     }
@@ -73,6 +86,8 @@ class MapController extends Controller
             'created_by' => Auth::id(),
             'status' => 'draft'
         ]);
+
+        $this->notifyMap($exhibition_id, 'تم حفظ مسودة الخريطة', 'تم حفظ نسخة جديدة من خريطة المعرض.');
 
         return new MapResource($map);
     }
@@ -96,6 +111,7 @@ class MapController extends Controller
     //=========================================================
     public function publish($exhibition_id, $map_id)
     {
+        $map_id = preg_replace('/^map-/', '', (string) $map_id);
         $map = Map::where('exhibition_id', $exhibition_id)->findOrFail($map_id);
 
         $map->update([
@@ -103,10 +119,22 @@ class MapController extends Controller
             'published_at' => now()
         ]);
 
+        $this->notifyMap($exhibition_id, 'تم نشر الخريطة', 'تم نشر خريطة المعرض بنجاح.');
+
         return [
             'success' => true,
             'message' => 'Map published successfully'
         ];
+    }
+
+    private function notifyMap($exhibitionId, string $title, string $body): void
+    {
+        $exhibition = Exhibition::find($exhibitionId);
+        if ($exhibition) {
+            app(NotificationService::class)->forExhibition(
+                $exhibition, $title, $body, 'map', 'org.map', [], '/map', ['admin.map']
+            );
+        }
     }
     //=========================================================
 }

@@ -12,6 +12,7 @@ return new class extends Migration {
         {
             $table->id();
             $table->foreignId('organizer_id')->constrained('organizers')->onDelete('cascade');
+            $table->string('admin_full_name')->nullable();
             // $table->string('year')->constrained('copies')->onDelete('cascade');
             // $table->enum('copy_status', ['draft', 'active', 'archived'])->default('draft');
             $table->string('name');

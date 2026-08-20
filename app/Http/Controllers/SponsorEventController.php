@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\EventInvitationMail;
 use App\Http\Requests\StoreSponsorEventImageRequest;
 use App\Http\Requests\StoreSponsorEventInvitationRequest;
 use App\Http\Requests\StoreSponsorEventProgramRequest;
@@ -12,6 +13,7 @@ use App\Http\Requests\UpdateSponsorEventTicketRequest;
 use App\Http\Resources\SponsorEventResource;
 use App\Http\Resources\SponsorEventTicketResource;
 use App\Models\Exhibition;
+use App\Models\PortalLink;
 use Illuminate\Http\Request;
 use App\Models\SponserEventTicket;
 use App\Models\SponsorEvent;
@@ -20,7 +22,9 @@ use App\Models\SponsorEventInvitation;
 use App\Models\SponsorEventProgram;
 use App\Models\SponsorshipBooking;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
+use App\Services\NotificationService;
 
 class SponsorEventController extends Controller
 {
@@ -36,7 +40,7 @@ class SponsorEventController extends Controller
 
         // التحقق من أن الفعالية ضمن مدة المعرض
         $exhibition_start = Carbon::parse($organizer->exhibition->start_date);
-        $exhibition_end   = Carbon::parse($organizer->exhibition->end_date);
+        $exhibition_end   = Carbon::parse($organizer->exhibition->end_date)->endOfDay();
 
         $start = Carbon::parse($data['start_time']);
         $end   = Carbon::parse($data['end_time']);
@@ -53,16 +57,20 @@ class SponsorEventController extends Controller
         // حساب مدة الفعالية
         $data['duration_days'] = $start->diffInDays($end) + 1;
 
-        // المقاعد المتاحة = max_participants
-        $data['total_seats'] = $data['max_participants'];
+        // These are stored in their own tables, not as sponsor_events columns.
+        $activities = $data['activities'] ?? [];
+        $photos = $data['photos'] ?? [];
+        unset($data['activities'], $data['photos'], $data['total_seats']);
 
         // إنشاء الفعالية
         $event = SponsorEvent::create($data);
 
+        $this->notifyEvent($event->exhibition_id, 'تمت إضافة فعالية جديدة', 'تمت إضافة فعالية جديدة إلى المعرض.', 'event.created');
+
         // حفظ الأنشطة
-        if (!empty($data['activities']))
+        if (!empty($activities))
         {
-            foreach ($data['activities'] as $act)
+            foreach ($activities as $act)
             {
                 SponsorEventProgram::create([
                     'sponsor_event_id' => $event->id,
@@ -76,9 +84,9 @@ class SponsorEventController extends Controller
         }
 
         // حفظ الصور
-        if (!empty($data['photos']))
+        if (!empty($photos))
         {
-            foreach ($data['photos'] as $photo)
+            foreach ($photos as $photo)
             {
                 SponsorEventImage::create([
                     'sponsor_event_id' => $event->id,
@@ -111,7 +119,7 @@ class SponsorEventController extends Controller
         {
 
             $exhibition_start = Carbon::parse($event->exhibition->start_date);
-            $exhibition_end   = Carbon::parse($event->exhibition->end_date);
+            $exhibition_end   = Carbon::parse($event->exhibition->end_date)->endOfDay();
 
             $start = Carbon::parse($data['start_time']);
             $end   = Carbon::parse($data['end_time']);
@@ -140,13 +148,38 @@ class SponsorEventController extends Controller
             }
         }
 
-        // تعديل المقاعد
-        if (isset($data['max_participants']))
-        {
-            $data['total_seats'] = $data['max_participants'];
-        }
+        $activities = $data['activities'] ?? null;
+        $photos = $data['photos'] ?? null;
+        unset($data['activities'], $data['photos'], $data['total_seats']);
 
         $event->update($data);
+
+        $this->notifyEvent($event->exhibition_id, 'تم تعديل فعالية', 'تم تعديل بيانات فعالية في المعرض.', 'event.updated');
+
+        if ($activities !== null) {
+            $event->programs()->delete();
+            foreach ($activities as $activity) {
+                SponsorEventProgram::create([
+                    'sponsor_event_id' => $event->id,
+                    'title' => $activity['title'],
+                    'start_time' => $activity['start_time'],
+                    'end_time' => $activity['end_time'],
+                    'provider_name' => $activity['provider_name'],
+                    'provider_contact' => $activity['provider_contact'] ?? '',
+                ]);
+            }
+        }
+
+        if ($photos !== null) {
+            $event->sponsorEventImages()->delete();
+            foreach ($photos as $photo) {
+                SponsorEventImage::create([
+                    'sponsor_event_id' => $event->id,
+                    'image' => $photo['image'],
+                    'caption' => $photo['caption'] ?? null,
+                ]);
+            }
+        }
 
         return new SponsorEventResource($event);
     }
@@ -197,6 +230,8 @@ class SponsorEventController extends Controller
         $event->publish_date = now();
         $event->save();
 
+        $this->notifyEvent($event->exhibition_id, 'تم نشر فعالية', 'تم نشر فعالية جديدة في المعرض.', 'event.published');
+
         return
         [
             'success' => true,
@@ -216,13 +251,25 @@ class SponsorEventController extends Controller
             ], 403);
         }
 
+        $exhibitionId = $event->exhibition_id;
         $event->delete();
+        $this->notifyEvent($exhibitionId, 'تم حذف فعالية', 'تم حذف فعالية من المعرض.', 'event.deleted');
 
         return
         [
             'success' => true,
             'message' => 'Event deleted successfully'
         ];
+    }
+
+    private function notifyEvent(int $exhibitionId, string $title, string $body, string $event): void
+    {
+        $exhibition = Exhibition::find($exhibitionId);
+        if ($exhibition) {
+            app(NotificationService::class)->forExhibition(
+                $exhibition, $title, $body, 'event', 'org.events', ['event' => $event], '/events', ['org.sponsors']
+            );
+        }
     }
     //===============================================================
     public function analytics($se_id)
@@ -258,9 +305,9 @@ class SponsorEventController extends Controller
             'byStatus' => $byStatus,
         ];
     }
-    
+
     //--------------------------Invitation---------------------------
-    
+
     public function getAllInvitation($se_id)
     {
         $invitations = SponserEventTicket::where('sponsor_event_id', $se_id)
@@ -276,8 +323,21 @@ class SponsorEventController extends Controller
         $event = SponsorEvent::findOrFail($se_id);
         $data = $request->validated();
 
-        if ($data['type'] === 'invitation' && !Auth::user()->organizer)
-        {
+        $canCreateInvitation = (bool) Auth::user()?->organizer;
+        if (!$canCreateInvitation && Auth::user()?->role === 'staff') {
+            $portalQuery = PortalLink::query()
+                ->where('staff_id', Auth::user()->staff?->id)
+                ->where('exhibition_id', $event->exhibition_id)
+                ->where('role', 'organizational')
+                ->where('active', true)
+                ->where('is_manager', true);
+            $portalToken = $request->header('X-Portal-Token');
+            if ($portalToken) $portalQuery->where('token', $portalToken);
+            $canCreateInvitation = $portalQuery->get()
+                ->contains(fn (PortalLink $link) => in_array('org.events', $link->permissions ?? [], true));
+        }
+
+        if ($data['type'] === 'invitation' && !$canCreateInvitation) {
             return response()->json([
                 'success' => false,
                 'message' => 'Only managers can create invitation tickets'
@@ -299,6 +359,8 @@ class SponsorEventController extends Controller
         ]);
 
         $event->increment('registered_count');
+
+        Mail::to($invitation->holder_email)->send(new EventInvitationMail($event, $invitation));
 
         return new SponsorEventTicketResource($invitation);
     }

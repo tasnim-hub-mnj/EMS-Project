@@ -26,16 +26,15 @@ class OrganizerRegisterRequest extends FormRequest
             'email'          => 'required|email|unique:users,email',
             'password'       => 'required|string|min:6|confirmed',
             'phone'          => 'required|string|unique:users,phone',
-            
             'company_name'   => 'required|string|max:200',
-            'category'     => 'required|array',
-            'headquarters'       => 'required|string|max:200',
-            'registration_number'        => 'required|string|max:200',
-            'exhibition_location'        => 'required|string|max:200',
-            'description'      => 'nullable|string|max:500',
-            // 'logo'      =>  'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            // 'file'        => 'required|file',
-
+            'category'       => 'required|string|max:200',
+            'headquarters'   => 'required|string|max:200',
+            'registration_number' => ['required', 'string', 'max:200', 'unique:organizers,reg_number'],
+            'exhibition_location' => 'required|string|max:200',
+            'description'    => 'nullable|string|max:500',
+            'logo'           => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'legalDocument'  => 'required|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:12288',
+            'fcm_token'      => 'nullable|string|max:400',
         ];
     }
 }

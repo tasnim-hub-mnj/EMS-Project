@@ -31,6 +31,7 @@ class StoreExhibitionRequest extends FormRequest
             'total_booths' => 'nullable|integer|min:0',
             'type' => 'nullable|string|max:255',
             'status' => 'nullable|string|in:far,upcoming,ongoing,finished,hidden',
+            'map_built' => 'sometimes|boolean',
         ];
     }
 }

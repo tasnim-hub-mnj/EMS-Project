@@ -12,6 +12,7 @@ use App\Models\Event;
 use App\Models\Exhibition;
 use App\Models\ExhibitionImage;
 use App\Models\Favorite;
+use App\Models\PortalLink;
 use App\Models\SponserEventTicket;
 use App\Models\SponsorEvent;
 use App\Models\SponsorshipBooking;
@@ -21,6 +22,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\NotificationService;
 
 
 class ExhibitionController extends Controller
@@ -30,12 +32,54 @@ class ExhibitionController extends Controller
     //===============================================================
     public function store(StoreExhibitionRequest $request)// اضافة معرض
     {
+        $user = Auth::user();
+        $organizer = $user?->organizer;
 
-        $organizer = Auth::user()->organizer;
+        if (!$organizer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Organizer profile not found.'
+            ], 403);
+        }
+
+        $alreadyExists = Exhibition::where('organizer_id', $organizer->id)->exists();
+        if ($alreadyExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Organizer can only manage one exhibition.'
+            ], 409);
+        }
+
         $validate_data = $request->validated();
+
+        if (isset($validate_data['status'])) {
+            $validate_data['status'] = match ($validate_data['status']) {
+                'draft' => 'far',
+                'active' => 'upcoming',
+                'archived' => 'finished',
+                default => $validate_data['status'],
+            };
+        }
+
         $validate_data['organizer_id'] = $organizer->id;
 
         $exhibition = Exhibition::create($validate_data);
+
+        if ($exhibition->start_date && $exhibition->end_date) {
+            $exhibition->copies()->create([
+                'year' => Carbon::parse($exhibition->start_date)->year,
+                'start_date' => $exhibition->start_date,
+                'end_date' => $exhibition->end_date,
+                'copy_status' => 'active',
+                'announced' => true,
+                'total_booths' => $exhibition->total_booths ?? 0,
+                'available_booths' => $exhibition->total_booths ?? 0,
+            ]);
+        }
+
+        app(NotificationService::class)->forExhibition(
+            $exhibition, 'تم إنشاء معرض جديد', 'تم إنشاء معرض جديد وإتاحته للإدارة.', 'exhibition', 'admin.company', [], '/exhibitions', ['admin.map', 'org.map']
+        );
 
         // return response()->json([
         //     'message' => 'Exhibition created successfully',
@@ -47,20 +91,44 @@ class ExhibitionController extends Controller
     //===============================================================
     public function update(StoreExhibitionRequest $request, $exhibition_id)//تعديل معرض
     {
-        $organizer = Auth::user()->organizer;
-        $exhibition = Exhibition::where('organizer_id', $organizer->id)
-            ->where('id', $exhibition_id)
-            ->first();
+        $user = Auth::user();
+        $organizer = $user?->organizer;
+        $portal = null;
 
-        if (!$exhibition) 
+        if ($organizer) {
+            $exhibition = Exhibition::where('organizer_id', $organizer->id)
+                ->whereKey($exhibition_id)
+                ->first();
+        } else {
+            $portalQuery = PortalLink::query()
+                ->where('staff_id', $user?->staff?->id)
+                ->where('exhibition_id', $exhibition_id)
+                ->where('role', 'organizational')
+                ->where('active', true);
+            $portalToken = $request->header('X-Portal-Token');
+            if ($portalToken) $portalQuery->where('token', $portalToken);
+            $portal = $portalQuery->first();
+            $exhibition = $portal ? Exhibition::find($exhibition_id) : null;
+        }
+
+        if (!$exhibition)
         {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
             ], 403);
         }
-        
-        $exhibition->update($request->validated());
+
+        $data = $request->validated();
+        if ($portal) {
+            abort_unless(in_array('org.map', $portal->permissions ?? [], true), 403);
+            $data = array_intersect_key($data, ['map_built' => true]);
+        }
+        $exhibition->update($data);
+
+        app(NotificationService::class)->forExhibition(
+            $exhibition, 'تم تعديل بيانات المعرض', 'تم تعديل بيانات المعرض أو إعداداته.', 'exhibition', 'admin.company', [], '/exhibitions', ['admin.map', 'org.map']
+        );
 
         // return response()->json([
         //     'message' => 'Exhibition updated successfully',
@@ -79,7 +147,15 @@ class ExhibitionController extends Controller
     public function organizerExhibition()
     {
         $user = Auth::user();
-        $organizer = $user->organizer;
+        $organizer = $user?->organizer;
+
+        if (!$organizer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Organizer profile not found.',
+                'data' => null,
+            ], 403);
+        }
 
         $exhibition = Exhibition::where('organizer_id', $organizer->id)
             ->with('copies')
@@ -88,8 +164,10 @@ class ExhibitionController extends Controller
         if (!$exhibition)
         {
             return response()->json([
-                'message' => 'No exhibition found'
-            ], 404);
+                'success' => false,
+                'message' => 'No exhibition found',
+                'data' => null,
+            ], 200);
         }
 
         return new ExhibitionResource($exhibition);
@@ -114,6 +192,10 @@ class ExhibitionController extends Controller
             'map_built' => true
         ]);
 
+        app(NotificationService::class)->forExhibition(
+            $exhibition, 'تم تجهيز خريطة المعرض', 'تم تجهيز خريطة المعرض للاستخدام.', 'map', 'org.map', [], '/map', ['admin.map']
+        );
+
         // return response()->json([
         //     'message' => 'Map Built Exhibition updated successfully',
         // ], 200);
@@ -127,14 +209,14 @@ class ExhibitionController extends Controller
             ->where('id', $exhibition_id)
             ->first();
 
-        if (!$exhibition) 
+        if (!$exhibition)
         {
             return response()->json([
                 'success' => false,
                 'message' => 'You are not authorized to access this exhibition because it does not belong to you.'
             ], 403);
         }
-        
+
 
         $editionId = $request->edition_id;
 
@@ -145,6 +227,10 @@ class ExhibitionController extends Controller
         $copy->update([
             'copy_status' => 'archived'
         ]);
+
+        app(NotificationService::class)->forExhibition(
+            $exhibition, 'تمت أرشفة إصدار المعرض', 'تمت أرشفة إصدار من إصدارات المعرض.', 'exhibition', 'admin.company', [], '/exhibitions', ['admin.reports']
+        );
 
         return response()->json([
             'success' => true,
@@ -159,7 +245,7 @@ class ExhibitionController extends Controller
             ->where('id', $exhibition_id)
             ->first();
 
-        if (!$exhibition) 
+        if (!$exhibition)
         {
             return response()->json([
                 'success' => false,
@@ -167,6 +253,9 @@ class ExhibitionController extends Controller
             ], 403);
         }
 
+        app(NotificationService::class)->forExhibition(
+            $exhibition, 'تم حذف المعرض', 'تم حذف المعرض من المنصة.', 'exhibition', 'admin.company', [], '/exhibitions', ['admin.reports']
+        );
         $exhibition->delete();
 
         return response()->json([

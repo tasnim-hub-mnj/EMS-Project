@@ -11,6 +11,8 @@ class Booth extends Model
     protected $fillable =
     [
         'exhibition_id',
+        'section_id',
+        'section',
         'number',
         'area',
         'status_inv',
@@ -22,7 +24,11 @@ class Booth extends Model
         'image',
         'map_x',
         'map_y',
-        'map_z'
+        'map_z',
+        'map_width',
+        'map_height',
+        'description',
+        'pricing_type',
     ];
 
     protected $table = 'booths';
@@ -41,6 +47,11 @@ class Booth extends Model
     public function exhibition()
     {
         return $this->belongsTo(Exhibition::class);
+    }
+    //=====================================================
+    public function section()
+    {
+        return $this->belongsTo(Section::class, 'section_id');
     }
     //=====================================================
     public function boothBookings()

@@ -26,7 +26,7 @@ class StaffResource extends JsonResource
             'rank' => $this->rank,
             'team' => $this->team,
 
-            'qrCode' => optional($this->portalLinks->where('exhibition_id', $this->exhibition_id)->first())->qr_value,
+            'qrCode' => $this->qr_code,
 
             'schedule' => $this->schedule,
             'attendanceRate' => $this->attendanceRate,

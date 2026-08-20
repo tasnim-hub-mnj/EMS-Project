@@ -33,6 +33,11 @@ class Exhibition extends Model
         return $this->hasMany(Booth::class, 'exhibition_id', 'id');
     }
     //=====================================================
+    public function sections()
+    {
+        return $this->hasMany(Section::class, 'exhibition_id', 'id');
+    }
+    //=====================================================
     public function sponsorEvents()
     {
         return $this->hasMany(SponsorEvent::class);

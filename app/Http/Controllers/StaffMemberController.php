@@ -19,88 +19,292 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\NotificationService;
 
 class StaffMemberController extends Controller
 {
+    private function organizerExhibition(): ?Exhibition
+    {
+        $user = Auth::user();
+        if (!$user instanceof User) {
+            return null;
+        }
+
+        return $user->organizer()->first()?->exhibition()->first();
+    }
+
+    private function currentExhibition(): ?Exhibition
+    {
+        if ($exhibition = $this->organizerExhibition()) {
+            return $exhibition;
+        }
+
+        return PortalLink::query()
+            ->where('token', request()->header('X-Portal-Token'))
+            ->where('active', true)
+            ->first()?->exhibition;
+    }
+
+    private function resolveStaffByIdentifier($staffId): StaffMember
+    {
+        $exhibition = $this->currentExhibition();
+
+        return StaffMember::query()
+            ->where('exhibition_id', $exhibition?->id)
+            ->where(function ($query) use ($staffId) {
+                $query->where('number', $staffId)->orWhere('id', $staffId);
+            })
+            ->firstOrFail();
+    }
+
     public function index()
     {
-        $organizer = Auth::user()->organizer();
-        $exhibition = $organizer->exhibition();
-        $query = StaffMember::with(['user', 'portalLinks']);
+        $exhibition = $this->currentExhibition();
+
+        if (!$exhibition)
+        {
+            return response()->json([], 200);
+        }
+
+        $query = StaffMember::with(['user', 'portalLinks'])
+            ->where('exhibition_id', $exhibition->id);
 
         if (request()->has('team'))
         {
-            $query->where('team', request('team'));
-        }
-
-        if (request()->has('exhibition_id'))
-        {
-            $query->whereHas('portalLinks', function ($q)
-            {
-                $q->where('exhibition_id', request('exhibition_id'));
-            });
+            $team = request('team') === 'service' ? 'services' : request('team');
+            $query->where('team', $team);
         }
 
         $staff = $query->orderByDesc('id')->get();
 
         return StaffResource::collection($staff);
     }
+
+    public function portalAssignees(Request $request)
+    {
+        $portalToken = $request->header('X-Portal-Token');
+        $portal = PortalLink::where('token', $portalToken)
+            ->where('active', true)
+            ->where('role', 'organizational')
+            ->whereJsonContains('permissions', 'org.tasks')
+            ->first();
+
+        abort_unless($portal, 403, 'رابط البوابة غير صالح أو لا يملك صلاحية إدارة المهام.');
+
+        $exhibitionId = (string) ($request->query('exhibition_id') ?: $portal->exhibition_id);
+        abort_unless($exhibitionId !== '' && (string) $portal->exhibition_id === $exhibitionId, 403, 'المعرض غير مرتبط بهذه البوابة.');
+
+        $staff = StaffMember::with(['user', 'portalLinks'])
+            ->where('team', 'organizational')
+            ->where('exhibition_id', $exhibitionId)
+            ->orderBy('name')
+            ->get();
+
+        return StaffResource::collection($staff);
+    }
     //================================================================
     public function show($staff_id)
     {
-        $staff = StaffMember::with(['user', 'portalLinks'])->findOrFail($staff_id);
+        $staff = StaffMember::with(['user', 'portalLinks'])
+            ->where('exhibition_id', $this->currentExhibition()?->id)
+            ->where(function ($query) use ($staff_id) {
+                $query->where('number', $staff_id)->orWhere('id', $staff_id);
+            })
+            ->firstOrFail();
 
         return new StaffResource($staff);
     }
     //================================================================
+    public function searchById(Request $request)
+    {
+        $identifier = trim((string) $request->input('id'));
+        $role = strtolower(trim((string) $request->input('role')));
+        $user = Auth::user();
+        $exhibitionId = $this->organizerExhibition()?->id;
+
+        if ($identifier === '' || !$exhibitionId) {
+            return response()->json(null, 404);
+        }
+
+        $staff = StaffMember::with('user')
+            ->where('exhibition_id', $exhibitionId)
+            ->where(function ($query) use ($identifier) {
+                $query->where('number', $identifier)->orWhere('id', $identifier);
+            })
+            ->first();
+
+        if (!$staff) {
+            return response()->json(null, 404);
+        }
+
+        $matchesRole = match ($role) {
+            'administrative' => $staff->team === 'administrative',
+            'organizational' => $staff->team === 'organizational',
+            'services' => in_array($staff->team, ['services', 'service'], true),
+            'external' => $staff->team === 'external',
+            default => true,
+        };
+
+        if (!$matchesRole) {
+            return response()->json([
+                'message' => 'المعرف لا يتناسب مع الدور المختار.',
+                'expected_role' => $role,
+                'staff_team' => $staff->team,
+            ], 422);
+        }
+
+        return response()->json([
+            'id' => $staff->number,
+            'name' => $staff->name,
+            'title' => $staff->role ?? $staff->rank ?? '',
+            'email' => $staff->user?->email,
+        ]);
+    }
+    //================================================================
     public function store(StoreStaffRequest $request)
     {
-        $organizer = Auth::user()->organizer();
-        $exhibition = $organizer->exhibition();
+        $exhibition = $this->currentExhibition();
+
+        if (!$exhibition)
+        {
+            return response()->json(['message' => 'Organizer exhibition not found'], 404);
+        }
+
         $data = $request->validated();
 
-        // إنشاء مستخدم للموظف
-        $user = User::create([
-            'email'  => $data['email'],
-            'phone'  => $data['phone'],
+        $email = trim((string) ($data['email'] ?? ''));
+        $phone = trim((string) ($data['phone'] ?? ''));
+        $normalizedEmail = $email !== '' ? mb_strtolower($email) : null;
+        $normalizedPhone = $phone !== '' ? preg_replace('/\s+/', '', $phone) : null;
+
+        $existingUser = null;
+
+        if ($normalizedEmail !== null) {
+            $existingUser = User::query()
+                ->whereRaw('LOWER(email) = ?', [$normalizedEmail])
+                ->first();
+        }
+
+        if (!$existingUser && $normalizedPhone !== null) {
+            $existingUser = User::query()
+                ->whereRaw('REPLACE(phone, " ", "") = ?', [$normalizedPhone])
+                ->first();
+        }
+
+        if ($normalizedEmail !== null) {
+            $emailAlreadyRegistered = StaffMember::query()
+                ->where('exhibition_id', $exhibition->id)
+                ->whereHas('user', function ($query) use ($normalizedEmail) {
+                    $query->whereRaw('LOWER(email) = ?', [$normalizedEmail]);
+                })
+                ->exists();
+
+            if ($emailAlreadyRegistered) {
+                return response()->json([
+                    'message' => 'This email is already registered for a staff member in this exhibition.',
+                ], 422);
+            }
+        }
+
+        if ($existingUser && $existingUser->role && $existingUser->role !== 'staff') {
+            return response()->json([
+                'message' => 'This email is already associated with a non-staff user and cannot be reused for staff in another exhibition.',
+            ], 422);
+        }
+
+        $account = $existingUser ?? User::create([
+            'email'  => $email,
+            'phone'  => $phone,
             'role'   => 'staff',
             'status' => 'approved',
         ]);
 
-        // رفع الملفات
+        if ($normalizedEmail && $account->email !== $email) {
+            $account->email = $email;
+            $account->save();
+        }
+        if ($normalizedPhone && $account->phone !== $phone) {
+            $account->phone = $phone;
+            $account->save();
+        }
+        if (!$account->role || $account->role === 'staff') {
+            $account->role = 'staff';
+            $account->save();
+        }
+
+        $alreadyExistsInThisExhibition = StaffMember::query()
+            ->where('user_id', $account->id)
+            ->where('exhibition_id', $exhibition->id)
+            ->exists();
+
+        if ($alreadyExistsInThisExhibition) {
+            return response()->json([
+                'message' => 'This staff member is already registered in this exhibition using the same email.',
+            ], 422);
+        }
+
         $idImagePath = $request->hasFile('idImage')
             ? $request->file('idImage')->store('staff/id', 'public')
-            : null;
+            : ($request->hasFile('id_image') ? $request->file('id_image')->store('staff/id', 'public') : null);
 
         $profileImagePath = $request->hasFile('profileImage')
             ? $request->file('profileImage')->store('staff/profile', 'public')
-            : null;
+            : ($request->hasFile('profile_image') ? $request->file('profile_image')->store('staff/profile', 'public') : null);
 
         $cvPath = $request->hasFile('cvFile')
             ? $request->file('cvFile')->store('staff/cv', 'public')
-            : null;
+            : ($request->hasFile('cv_file') ? $request->file('cv_file')->store('staff/cv', 'public') : null);
 
         $contractPath = $request->hasFile('contractFile')
             ? $request->file('contractFile')->store('staff/contracts', 'public')
-            : null;
+            : ($request->hasFile('contract_file') ? $request->file('contract_file')->store('staff/contracts', 'public') : null);
 
-        // إنشاء الموظف
+        $team = $data['team'] ?? null;
+        if (is_string($team)) {
+            $team = strtolower(trim($team));
+            $team = match ($team) {
+                'service' => 'services',
+                'technical' => 'organizational',
+                default => $team,
+            };
+        }
+
+        $paymentPeriod = $data['paymentPeriod'] ?? null;
+        if (is_string($paymentPeriod)) {
+            $paymentPeriod = strtolower(trim($paymentPeriod));
+            $paymentPeriod = $paymentPeriod === 'biweekly' ? 'bi-weekly' : $paymentPeriod;
+        }
+
+        $workDays = $data['workDays'] ?? ($data['work_days'] ?? null);
+        if (is_string($workDays)) {
+            $decoded = json_decode($workDays, true);
+            $workDays = is_array($decoded)
+                ? array_values($decoded)
+                : array_values(array_filter(
+                    array_map('trim', preg_split('/[,\[\]]+/', $workDays, -1, PREG_SPLIT_NO_EMPTY)),
+                    fn ($day) => $day !== ''
+                ));
+        }
+
+        $qrCode = $data['qrCode'] ?? $data['qr_code'] ?? null;
+
         $staff = StaffMember::create([
-            'user_id'        => $user->id,
+            'user_id'        => $account->id,
             'exhibition_id'  => $exhibition->id,
             'name'           => $data['name'],
             'type'           => $data['type'] ?? null,
             'role'           => $data['role'] ?? null,
             'rank'           => $data['rank'] ?? null,
-            'team'           => $data['team'] ?? null,
-            'nationalId'     => $data['nationalId'] ?? null,
+            'team'           => $team,
+            'nationalId'     => $data['nationalId'] ?? ($data['national_id'] ?? null),
             'schedule'       => $data['schedule'] ?? null,
-            'attendanceRate' => $data['attendanceRate'] ?? 0,
-            'tasksCompleted' => $data['tasksCompleted'] ?? 0,
-            'tasksTotal'     => $data['tasksTotal'] ?? 0,
+            'attendanceRate' => $data['attendanceRate'] ?? ($data['attendance_rate'] ?? 0),
+            'tasksCompleted' => $data['tasksCompleted'] ?? ($data['tasks_completed'] ?? 0),
+            'tasksTotal'     => $data['tasksTotal'] ?? ($data['tasks_total'] ?? 0),
             'salary'         => $data['salary'] ?? 0,
-            'paymentPeriod'  => $data['paymentPeriod'] ?? null,
-            'workDays'       => $data['workDays'] ?? null,
+            'paymentPeriod'  => $paymentPeriod ?? 'monthly',
+            'workDays'       => $workDays,
+            'qr_code'        => $qrCode,
             'idImage'        => $idImagePath,
             'profileImage'   => $profileImagePath,
             'cvFile'         => $cvPath,
@@ -118,6 +322,16 @@ class StaffMemberController extends Controller
         }
         $staff->save();
 
+        app(NotificationService::class)->forExhibition(
+            $exhibition,
+            'تمت إضافة موظف جديد',
+            'تمت إضافة الموظف ' . $staff->name . ' إلى المعرض بنجاح.',
+            'staff',
+            'admin.staff',
+            ['staffId' => (string) $staff->id],
+            '/staff'
+        );
+
         // إنشاء portalLink (بدون إرسال الرابط حالياً)
         // PortalLink::create([
         //     'exhibition_id' => $data['exhibition_id'],
@@ -132,7 +346,7 @@ class StaffMemberController extends Controller
     //================================================================
     public function update(UpdateStaffRequest $request, $staff_id)
     {
-        $staff = StaffMember::findOrFail($staff_id);
+        $staff = $this->resolveStaffByIdentifier($staff_id);
         $data  = $request->validated();
 
         $staff->fill($data);
@@ -166,12 +380,22 @@ class StaffMemberController extends Controller
 
         $staff->save();
 
+        $exhibition = $staff->exhibition_id ? Exhibition::find($staff->exhibition_id) : null;
+        if ($exhibition) {
+            app(NotificationService::class)->forExhibition(
+                $exhibition, 'تم تعديل بيانات موظف', 'تم تعديل بيانات الموظف ' . $staff->name . '.', 'staff', 'admin.staff',
+                ['staffId' => (string) $staff->id], '/staff'
+            );
+        }
+
         return new StaffResource($staff);
     }
     //================================================================
     public function destroy($staff_id)
     {
-        $staff = StaffMember::findOrFail($staff_id);
+        $staff = $this->resolveStaffByIdentifier($staff_id);
+        $exhibitionId = $staff->exhibition_id;
+        $staffName = $staff->name;
 
         Storage::disk('public')->delete([
             $staff->idImage,
@@ -182,8 +406,37 @@ class StaffMemberController extends Controller
 
         $staff->delete();
 
+        $exhibition = Exhibition::find($exhibitionId);
+        if ($exhibition) {
+            app(NotificationService::class)->forExhibition(
+                $exhibition, 'تم حذف موظف', 'تم حذف الموظف ' . $staffName . '.', 'staff', 'admin.staff', [], '/staff'
+            );
+        }
+
         return response()->json([
             'message' => 'Staff deleted successfully'
+        ], 200);
+    }
+
+    public function applications()
+    {
+        return response()->json([], 200);
+    }
+
+    public function updateApplicationStatus(Request $request, $id)
+    {
+        return response()->json([
+            'id' => $id,
+            'status' => $request->input('status', 'new'),
+        ], 200);
+    }
+
+    public function acceptApplication($id)
+    {
+        return response()->json([
+            'application' => null,
+            'staff' => null,
+            'id' => $id,
         ], 200);
     }
     //================================================================

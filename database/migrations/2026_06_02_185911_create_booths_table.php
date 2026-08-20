@@ -12,6 +12,7 @@ return new class extends Migration
         {
             $table->id();
             $table->foreignId('exhibition_id')->constrained('exhibitions')->onDelete('cascade');
+            $table->unsignedBigInteger('section_id')->nullable();
             $table->string('number');
             $table->string('section')->nullable();
             $table->float('area');
@@ -23,7 +24,7 @@ return new class extends Migration
             $table->json('services')->nullable();//exhibition->some(extra_services)
             $table->json('amenities')->nullable();//الخدمات الاساسية
             // $table->string('image');//جدول لحال
-            $table->text('description')->nullable()->change();
+            $table->text('description')->nullable();
             $table->integer('map_x')->nullable();
             $table->integer('map_y')->nullable();
             $table->integer('map_width')->nullable();

@@ -15,7 +15,9 @@ class ExhibitionResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return 
+        $activeCopy = $this->copies()->where('copy_status', 'active')->first();
+
+        return
         [
             'id' => $this->id,
             'name' => $this->name,
@@ -32,10 +34,8 @@ class ExhibitionResource extends JsonResource
             'mapTheme' => $this->getMapTheme(),
 
             // النسخة الحالية
-            'currentEditionId' => $this->copies()
-                ->where('copy_status', 'active')
-                ->first()
-                ? $this->copies()->where('copy_status', 'active')->first()->id . '-ed-' . $this->copies()->where('copy_status', 'active')->first()->year
+            'currentEditionId' => $activeCopy
+                ? $activeCopy->id . '-ed-' . $activeCopy->year
                 : null,
 
             // كل النسخ
@@ -48,24 +48,32 @@ class ExhibitionResource extends JsonResource
     //________________________________________
     private function getMapTheme()
     {
-        // إذا ما في خريطة
-        if (!$this->latestMap || !$this->latestMap->map_json) 
-        {
+        $latestMap = $this->latestMap;
+
+        if (!$latestMap || empty($latestMap->map_json)) {
             return null;
         }
 
-        $path = $this->latestMap->map_json;
+        $mapJson = $latestMap->map_json;
 
-        // إذا الملف مش موجود
-        if (!Storage::disk('public')->exists($path)) 
-        {
+        if (is_array($mapJson)) {
+            return $mapJson['theme'] ?? null;
+        }
+
+        if (!is_string($mapJson)) {
             return null;
         }
 
-        // قراءة الملف
-        $json = json_decode(Storage::disk('public')->get($path), true);
+        if (!Storage::disk('public')->exists($mapJson)) {
+            return null;
+        }
 
-        // theme من داخل JSON
+        $json = json_decode(Storage::disk('public')->get($mapJson), true);
+
+        if (!is_array($json)) {
+            return null;
+        }
+
         return $json['theme'] ?? null;
     }
 }

@@ -14,19 +14,22 @@ class Notification extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = 
+    protected $fillable =
     [
         'id',
         'user_id',
+        'exhibition_id',
+        'portal_link_id',
         'title',
         'body',
         'type',
+        'permission_key',
         'read',
         'data',
         'action_url',
     ];
 
-    protected $casts = 
+    protected $casts =
     [
         'read' => 'boolean',
         'data' => 'array',
@@ -36,6 +39,16 @@ class Notification extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function exhibition()
+    {
+        return $this->belongsTo(Exhibition::class);
+    }
+
+    public function portalLink()
+    {
+        return $this->belongsTo(PortalLink::class);
     }
     //============================================
 }

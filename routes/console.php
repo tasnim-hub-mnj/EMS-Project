@@ -3,6 +3,7 @@
 use App\Console\Commands\UpdateBookingStatus;
 use App\Console\Commands\UpdateEventStatus;
 use App\Console\Commands\UpdateExhibitionStatus;
+use App\Console\Commands\SendExhibitionReportNotifications;
 use App\Console\Commands\UpdateSponsorEventStatus;
 
 use App\Jobs\GenerateBoothReportsJob;
@@ -20,6 +21,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command(UpdateExhibitionStatus::class)->dailyAt('00:00');
+Schedule::command(SendExhibitionReportNotifications::class)->dailyAt('08:00');
 Schedule::command(UpdateEventStatus::class)->dailyAt('00:00');
 Schedule::command(UpdateSponsorEventStatus::class)->dailyAt('00:00');
 Schedule::command(UpdateBookingStatus::class)->dailyAt('00:00');
