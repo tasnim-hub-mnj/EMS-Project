@@ -52,6 +52,10 @@ class ExhibitionController extends Controller
 
         $validate_data = $request->validated();
 
+        if ($request->hasFile('image')) {
+            $validate_data['image'] = $request->file('image')->store('exhibitions', 'public');
+        }
+
         if (isset($validate_data['status'])) {
             $validate_data['status'] = match ($validate_data['status']) {
                 'draft' => 'far',
@@ -297,7 +301,8 @@ class ExhibitionController extends Controller
                 'sponsorEvents',
                 'publishedMap',
                 'booths',
-                'copies'
+                'copies',
+                'exhibitionImages',
             ])
             ->select('exhibitions.*');
 
@@ -342,7 +347,11 @@ class ExhibitionController extends Controller
                 'id'               => $exhibition->id,
                 'name'             => $exhibition->name,
                 'description'      => $exhibition->description,
-                'images'           => $exhibition->images ?? [],
+                'images'           => $exhibition->exhibitionImages
+                    ->map(fn ($image) => $this->publicImageUrl($image->image))
+                    ->filter()
+                    ->values()
+                    ->all(),
                 'services'         => $exhibition->extra_services
                                         ? collect($exhibition->extra_services)->pluck('name')->toArray()
                                         : [],
@@ -396,7 +405,9 @@ class ExhibitionController extends Controller
         $user = Auth::user();
 
         $exhibition = Exhibition::with([
-            'sponsorEvents'
+            'exhibitionImages',
+            'sponsorEvents.sponsorEventImages',
+            'sponsorEvents.programs',
         ])->find($exhibition_id);
 
         if (!$exhibition) {
@@ -416,20 +427,66 @@ class ExhibitionController extends Controller
 
         $map_data = $exhibition->publishedMap;
 
-        $sponsor_events = $exhibition->sponsorEvents->map(function ($event) {
-            return
-                [
-                    'id' => $event->id,
-                    'name' => $event->name,
-                    'type' => $event->type,
-                ];
+        $exhibitionImage = $exhibition->exhibitionImages->first()?->image;
+            $sponsor_events = $exhibition->sponsorEvents->map(function ($event) use ($user, $exhibition, $exhibitionImage) {
+            return [
+                'id' => $event->id,
+                'name' => $event->name,
+                'type' => $event->type,
+                'exhibition_id' => $event->exhibition_id,
+                'exhibition_name' => $exhibition->name,
+                'exhibitionName' => $exhibition->name,
+                'exhibition' => [
+                    'id' => $exhibition->id,
+                    'name' => $exhibition->name,
+                ],
+                'exhibition_image_url' => $this->publicImageUrl($exhibitionImage),
+                'date' => Carbon::parse($event->start_time)->format('Y-m-d'),
+                'start_time' => Carbon::parse($event->start_time)->format('H:i'),
+                'end_time' => Carbon::parse($event->end_time)->format('H:i'),
+                'place' => $event->place,
+                'listing_days' => $event->duration_days ?? 1,
+                'description' => $event->description,
+                'capacity' => $event->max_participants,
+                'registered_count' => $event->registered_count,
+                'scanned_count' => $event->scanned_count,
+                'ticket_type' => $event->ticket_type,
+                'ticket_price' => $event->ticket_price,
+                'status' => $event->status,
+                'publish_date' => $event->publish_date,
+                'duration_days' => $event->duration_days ?? 1,
+                'daily_price' => $event->daily_price,
+                'duration_options' => $this->investorDurationOptions($event),
+                'durationOptions' => $this->investorDurationOptions($event),
+                'images' => $event->sponsorEventImages->map(fn ($image) => [
+                    'id' => $image->id,
+                    'url' => $this->publicImageUrl($image->image),
+                    'caption' => $image->caption,
+                ])->values()->all(),
+                'activities' => $event->programs->map(fn ($program) => [
+                    'id' => $program->id,
+                    'title' => $program->title,
+                    'start_time' => $program->start_time,
+                    'end_time' => $program->end_time,
+                    'provider_name' => $program->provider_name,
+                    'provider_contact' => $program->provider_contact,
+                ])->values()->all(),
+                'is_favorite' => $user?->favorites()
+                    ->where('favoritable_id', $event->id)
+                    ->where('favoritable_type', SponsorEvent::class)
+                    ->exists(),
+            ];
         });
 
         return response()->json([
             'id' => $exhibition->id,
             'name' => $exhibition->name,
             'description' => $exhibition->description,
-            'images' => $images,
+            'images' => collect($images)
+                ->map(fn ($image) => $this->publicImageUrl($image->image))
+                ->filter()
+                ->values()
+                ->all(),
             'services' => $services,
             'start_date' => Carbon::parse($exhibition->start_date)->format('Y-m-d'),
             'end_date' => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
@@ -994,6 +1051,38 @@ class ExhibitionController extends Controller
             ]
         ], 200);
     }
+
+        private function investorDurationOptions(SponsorEvent $event): array
+        {
+            if (is_array($event->duration_options) && $event->duration_options !== []) {
+                return array_values(array_map(function ($option) {
+                    $days = (int) ($option['days'] ?? 1);
+                    return [
+                        'label' => $days === 1 ? 'يوم واحد' : "{$days} أيام",
+                        'days' => $days,
+                        'start_date' => $option['start_date'] ?? null,
+                        'end_date' => $option['end_date'] ?? null,
+                        'price' => (float) ($option['price'] ?? 0),
+                    ];
+                }, $event->duration_options));
+            }
+
+            return $event->daily_price === null ? [] : [[
+                'label' => 'يوم واحد',
+                'days' => 1,
+                'start_date' => Carbon::parse($event->start_time)->toDateString(),
+                'end_date' => Carbon::parse($event->start_time)->toDateString(),
+                'price' => (float) $event->daily_price,
+            ]];
+        }
+
+        private function publicImageUrl(?string $path): ?string
+        {
+            if (!$path) return null;
+            return str_starts_with($path, 'data:') || filter_var($path, FILTER_VALIDATE_URL)
+                ? $path
+                : asset('storage/' . ltrim($path, '/'));
+        }
 
     //===============================================================
 

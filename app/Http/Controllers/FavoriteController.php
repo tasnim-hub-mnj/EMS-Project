@@ -93,6 +93,10 @@ class FavoriteController extends Controller
 
         foreach ($favorites as $fav)
         {
+            if (!$fav->favoritable) {
+                continue;
+            }
+
             $type = class_basename($fav->favoritable_type);
 
             if ($type === 'Exhibition')
@@ -105,7 +109,7 @@ class FavoriteController extends Controller
                 $booths[] = $fav->favoritable;
             }
 
-            if ($type === 'SponsorEvent')
+            if ($type === 'SponsorEvent' || $type === 'Event')
             {
                 $events[] = $fav->favoritable;
             }

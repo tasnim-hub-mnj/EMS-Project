@@ -913,7 +913,7 @@ class SponsorEventController extends Controller
         $dateEnd    = $request->query('date_end');
         $search     = $request->query('search');
 
-        $query = SponsorEvent::with(['exhibition', 'sponsorEventImages', 'programs'])
+        $query = SponsorEvent::with(['exhibition.exhibitionImages', 'sponsorEventImages', 'programs'])
             ->where('copy_status', 'published')
             ->whereIn('status', ['upcoming', 'ongoing']);
 
@@ -956,9 +956,14 @@ class SponsorEventController extends Controller
                 'type' => $ev->type,
 
                 'exhibition_id' => $ev->exhibition_id,
-                'exhibition_name' => $ev->exhibition->name,
+                'exhibition_name' => $ev->exhibition?->name,
+                'exhibitionName' => $ev->exhibition?->name,
+                'exhibition' => $ev->exhibition ? [
+                    'id' => $ev->exhibition->id,
+                    'name' => $ev->exhibition->name,
+                ] : null,
                 'exhibition_image_url' => $this->publicImageUrl(
-                    optional($ev->exhibition->exhibitionImages->first())->image
+                    optional($ev->exhibition?->exhibitionImages?->first())->image
                 ),
 
                 'date' => Carbon::parse($ev->start_time)->format('Y-m-d'),

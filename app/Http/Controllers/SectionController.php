@@ -199,9 +199,16 @@ class SectionController extends Controller
                 $sectionMap[$sectionName] = $sectionId;
             }
 
+            $area = (float) ($boothInput['area'] ?? 0);
+            $mapWidth = (float) ($boothInput['map_width'] ?? $boothInput['mapWidth'] ?? 0);
+            $mapHeight = (float) ($boothInput['map_height'] ?? $boothInput['mapHeight'] ?? 0);
+            if ($mapWidth > 0 && $mapHeight > 0) {
+                $area = ($mapWidth * $mapHeight) / 1000;
+            }
+
             $boothData = [
                 'section_id' => $sectionId,
-                'area' => $boothInput['area'] ?? 0,
+                'area' => $area,
                 'status' => $boothInput['status'] ?? 'available',
                 'price' => $boothInput['price'] ?? 0,
                 'location' => $boothInput['location'] ?? null,

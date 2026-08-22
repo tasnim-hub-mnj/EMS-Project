@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Expo 3D Map</title>
+  <style>
+    html,body,#app { width:100%; height:100%; margin:0; overflow:hidden; background:#090b18; }
+    canvas { display:block; width:100%; height:100%; touch-action:none; }
+    #loading { position:fixed; inset:0; display:grid; place-items:center; color:#d9d6ef; font:600 14px sans-serif; pointer-events:none; }
+    #error { position:fixed; inset:0; display:grid; place-items:center; color:#ffd6e0; font:600 14px sans-serif; pointer-events:none; }
+  </style>
+</head>
+<body>
+  <div id="app"></div><div id="loading">Loading map...</div><div id="error" hidden></div>
+  <script>
+    window.SceneBridge = {
+      postMessage: function (message) {
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage(message);
+        }
+      }
+    };
+    window.addEventListener('error', function (event) {
+      window.SceneBridge.postMessage(JSON.stringify({
+        type: 'viewerError',
+        message: event.message || 'JavaScript error',
+        source: event.filename || ''
+      }));
+    });
+    window.addEventListener('unhandledrejection', function (event) {
+      window.SceneBridge.postMessage(JSON.stringify({
+        type: 'viewerError',
+        message: String(event.reason || 'Unhandled promise rejection')
+      }));
+    });
+  </script>
+  <script type="module" src="./viewer.js"></script>
+</body>
+</html>

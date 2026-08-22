@@ -175,6 +175,11 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::post('/organizer/events/{id}/publish', [SponsorEventController::class, 'publish']);
         Route::delete('/organizer/events/{id}', [SponsorEventController::class, 'destroy']);
         Route::get('/organizer/events/{eventId}/analytics', [SponsorEventController::class, 'analytics']);
+        Route::get('/organizer/sponsorships/{eventId}', [SponsorshipBookingController::class, 'getAllSponsorshipBookings']);
+        Route::get('/organizer/sponsorships', [SponsorshipBookingController::class, 'getAllOrganizerSponsorshipBookings']);
+        Route::post('/organizer/sponsorships/{id}/approve', [SponsorshipBookingController::class, 'approveBooking']);
+        Route::post('/organizer/sponsorships/{id}/reject', [SponsorshipBookingController::class, 'rejectBooking']);
+        Route::put('/organizer/sponsorships/{id}/status', [SponsorshipBookingController::class, 'updateOrganizerSponsorshipStatus']);
 
         Route::get('/organizer/events/{eventId}/tickets', [SponsorEventController::class, 'getAllInvitation']);
         Route::post('/organizer/events/{eventId}/tickets', [SponsorEventController::class, 'storeInvitation']);
@@ -195,6 +200,7 @@ Route::middleware('auth:sanctum')->group(function ()
         Route::get('/sponsorship-requests', [SponsorshipRequestController::class, 'index']);
         Route::put('/sponsorship-requests/{id}', [SponsorshipRequestController::class, 'update']);
         Route::post('/sponsorship-requests/{id}/accept', [SponsorshipRequestController::class, 'accept']);
+        Route::post('/sponsorship-requests/{id}/reject', [SponsorshipRequestController::class, 'reject']);
 
         Route::get('/event-sponsorship-requests', [EventSponsorshipRequestController::class, 'index']);
         Route::put('/event-sponsorship-requests/{id}', [EventSponsorshipRequestController::class, 'update']);
@@ -272,10 +278,8 @@ Route::post('/investor/auth/login', [InvestorController::class, 'login'])->middl
 
 Route::post('/investor/auth/forgot-password', [verifyOtpController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
 Route::post('/investor/auth/forgot-password/verify-otp', [verifyOtpController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
+Route::post('/investor/auth/forgot-password/resend-otp', [InvestorController::class, 'resendOtp']);// إعادة إرسال OTP لاستعادة كلمة المرور
 Route::post('/investor/auth/reset-password', [verifyOtpController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
-
-//Reports--download
-Route::get('/investor/reports/{id}/download', [InvestorReportsController::class, 'downloadReport']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('checkInvestor')->group(function () {
@@ -299,6 +303,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/investor/exhibitions', [ExhibitionController::class, 'getAllExhibitions']);
         Route::get('/investor/exhibitions/{id}/map', [InvestorController::class, 'getMap']);
         Route::get('/investor/exhibitions/{id}', [ExhibitionController::class, 'show']);
+        Route::get('/investor/exhibitions/{id}/sponsorship-request', [SponsorshipRequestController::class, 'investorStatus']);
+        Route::post('/investor/exhibitions/sponsorship-request', [SponsorshipRequestController::class, 'investorStore']);
 
         //Booths
         Route::get('/investor/booths', [BoothController::class, 'getAvailableBooths']);
@@ -331,7 +337,7 @@ Route::middleware('auth:sanctum')->group(function () {
         //Reports
         Route::get('/investor/reports', [InvestorReportsController::class, 'getReports']);
         Route::get('/investor/reports/{id}', [InvestorReportsController::class, 'getReportDetail']);
-        // Route::get('/investor/reports/{id}/download', [InvestorReportsController::class, 'downloadReport']);
+        Route::get('/investor/reports/{id}/download', [InvestorReportsController::class, 'downloadReport']);
 
         //Favorites
         Route::get('/investor/favorites', [FavoriteController::class, 'getFavoritesInvestor']);

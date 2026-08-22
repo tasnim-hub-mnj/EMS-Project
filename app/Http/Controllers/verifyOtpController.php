@@ -71,7 +71,7 @@ class verifyOtpController extends Controller
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'OTP resent successfully',
@@ -103,7 +103,7 @@ class verifyOtpController extends Controller
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->queue(new VerificationCodeMail($otp));
+        Mail::to($user->email)->send(new VerificationCodeMail($otp));
 
         return response()->json([
             'message' => 'Verification code sent to your email.',
@@ -136,8 +136,6 @@ class verifyOtpController extends Controller
             ], 400);
         }
 
-        $otp->update(['is_used' => true]);
-
         return response()->json([
             'message' => 'OTP verified successfully'
         ], 200);
@@ -168,9 +166,17 @@ class verifyOtpController extends Controller
         $user->update([
             'password' => Hash::make($request->password),
         ]);
+        $otp->update(['is_used' => true]);
 
         return response()->json([
-            'message' => 'Password changed successfully.'
+            'message' => 'Password changed successfully.',
+            'data' => [
+                'token' => $user->createToken('investor_token')->plainTextToken,
+                'id' => $user->id,
+                'email' => $user->email,
+                'company_name' => $user->investor?->company_name,
+                'avatar_url' => $user->investor?->logo,
+            ],
         ], 200);
     }
     //================================================================

@@ -27,6 +27,7 @@ class ExhibitionResource extends JsonResource
             'workingHours' => $this->working_hours,
             'status' => $this->status,
             'type' => $this->type,
+            'imageUrl' => $this->image ? asset('storage/' . ltrim($this->image, '/')) : null,
 
             'totalBooths' => $this->total_booths,
             'bookedBooths' => $this->total_booths - $this->available_booths,

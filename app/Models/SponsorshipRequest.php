@@ -18,6 +18,11 @@ class SponsorshipRequest extends Model
     {
         return $this->belongsTo(Sponsor::class);
     }
+
+    public function investor()
+    {
+        return $this->belongsTo(Investor::class);
+    }
     //=====================================================
     public function exhibition()
     {

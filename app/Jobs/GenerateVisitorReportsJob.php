@@ -36,7 +36,7 @@ class GenerateVisitorReportsJob implements ShouldQueue
             $startDate = $start->format('Y-m-d');
             $endDate = $end->format('Y-m-d');
 
-            if($startDate <= $today && $endDate >= $today)
+            if ($startDate <= $today)
             {
                 $booth = $booking->booth;
                 $collected_booths = CollectedBooths::where('booth_id', $booth->id)

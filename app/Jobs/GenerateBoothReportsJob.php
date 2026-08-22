@@ -43,7 +43,7 @@ class GenerateBoothReportsJob implements ShouldQueue
             $startDate = $start->copy()->format('Y-m-d');
             $endDate = $end->copy()->format('Y-m-d');
 
-            if($startDate <= $today && $endDate >= $today)
+            if ($startDate <= $today)
             {
                 $booth = $booking->booth;
                 //__________________________________________________________

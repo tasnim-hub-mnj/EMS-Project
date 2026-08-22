@@ -27,6 +27,33 @@ use Illuminate\Support\Facades\Storage;
 class BoothBookingController extends Controller
 {
     use BookingConflictTrait;
+
+    private function investorBoothStatus(BoothBooking $booking): string
+    {
+        if ($booking->status === 'approved') {
+            return $booking->end_date && !Carbon::parse($booking->end_date)->isPast()
+                ? 'active'
+                : 'ended';
+        }
+
+        return match ($booking->status) {
+            'pending' => 'pending',
+            'rejected' => 'rejected',
+            'cancelled', 'canceled' => 'cancelled',
+            'finished' => 'ended',
+            default => $booking->status,
+        };
+    }
+
+    private function servicePrices(BoothBooking $booking): array
+    {
+        $services = $booking->services_products;
+        if (is_string($services)) {
+            $services = json_decode($services, true);
+        }
+        return is_array($services) ? $services : [];
+    }
+
     //===============================================================
     //**************************----i----****************************
     //===============================================================
@@ -35,7 +62,7 @@ class BoothBookingController extends Controller
         $data = $request->validated();
 
         $investor = Auth::user()->investor;
-        $booth = Booth::with('exhibition')->findOrFail($data['booth_id']);
+        $booth = Booth::with(['exhibition', 'boothImages'])->findOrFail($data['booth_id']);
         $exhibition_id = $booth->exhibition->id;
         $copy = Copy::where('exhibition_id', $exhibition_id)
             ->where('copy_status', 'active')
@@ -52,6 +79,18 @@ class BoothBookingController extends Controller
         $start = Carbon::parse($data['start_date']);
         $end   = Carbon::parse($data['end_date']);
         $days  = $start->diffInDays($end) + 1;
+        $selectedServices = collect($data['services'] ?? [])
+            ->filter(fn ($selected) => $selected === true)
+            ->keys()
+            ->mapWithKeys(function ($name) use ($booth) {
+                return [(string) $name => (float) (($booth->services ?? [])[$name] ?? 0)];
+            })
+            ->all();
+        $servicesPrice = array_sum($selectedServices);
+        $boothPrice = $booth->pricing_type === 'daily'
+            ? (float) $booth->price * $days
+            : (float) $booth->price;
+        $totalPrice = $boothPrice + $servicesPrice;
 
         //منع الحجز إذا كان هناك حجز مقبول متضارب
         if ($this->hasApprovedConflict($booth->id, $start, $end))
@@ -68,9 +107,10 @@ class BoothBookingController extends Controller
             'start_date'         => $start,
             'end_date'           => $end,
             'days'               => $days,
-            'additional_services'=> $data['services'],
+            'additional_services'=> $data['services'] ?? [],
+            'services_products'  => $selectedServices,
             'notes'              => $data['notes'],
-            'total_price'        => $data['total_price'],
+            'total_price'        => $totalPrice,
             'paid_amount'        => 0,
             'booked_at'          => now()->format('Y-m-d'),
             'status'             => 'pending',
@@ -105,10 +145,13 @@ class BoothBookingController extends Controller
                 'id' => $booth->id,
                 'number' => $booth->number,
                 'exhibition_name' => $booth->exhibition->name,
-                'image_url' => $booth->image,
+                'image_url' => $booth->boothImages->first()?->image
+                    ? asset('storage/' . $booth->boothImages->first()->image)
+                    : null,
                 'area' => $booth->area,
-                'status' => $booth->status_inv,
+                'status' => $this->investorBoothStatus($booking),
                 'price' => $booth->price,
+                'pricing_type' => $booth->pricing_type,
                 'start_date' => Carbon::parse($booking->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($booking->end_date)->format('Y-m-d'),
                 'location' => $booth->location,
@@ -129,11 +172,11 @@ class BoothBookingController extends Controller
                 'booking_number' => 'BK-' . $booking->id,
                 'booked_at' => Carbon::parse($booking->booked_at)->format('Y-m-d'),
                 'duration_days' => $booking->days,
-                'services_price' => 0, // يُحسب لاحقاً عند الموافقة
-                'total_price' => $booking->total_price,
+                'services_price' => $servicesPrice,
+                'total_price' => $totalPrice,
                 'paid_amount' => $booking->paid_amount,
                 'remaining_amount' => $booking->total_price - $booking->paid_amount,
-                'booked_services' => $bookedServices,
+                'booked_services' => $data['services'] ?? [],
                 'notes' => $booking->notes,
             ]
         ], 201);
@@ -188,6 +231,7 @@ class BoothBookingController extends Controller
 
         $bookings = BoothBooking::with([
             'booth.exhibition',
+            'booth.boothImages',
             'investor.user'
         ])
         ->where('investor_id', $investor->id)
@@ -203,10 +247,13 @@ class BoothBookingController extends Controller
                 'id' => $booth->id,
                 'number' => $booth->number,
                 'exhibition_name' => $booth->exhibition->name,
-                'image_url' => $booth->image,
+                'image_url' => $booth->boothImages->first()?->image
+                    ? asset('storage/' . $booth->boothImages->first()->image)
+                    : null,
                 'area' => $booth->area,
-                'status' => $booking->status,
+                'status' => $this->investorBoothStatus($booking),
                 'price' => $booth->price,
+                'pricing_type' => $booth->pricing_type,
                 'start_date' => $booking->start_date,
                 'end_date' => $booking->end_date,
                 'location' => $booth->location,
@@ -227,7 +274,7 @@ class BoothBookingController extends Controller
                 'booking_number' => 'BK-' . $booking->id,
                 'booked_at' => Carbon::parse($booking->booked_at)->format('Y-m-d'),
                 'duration_days' => $booking->days,
-                'services_price' => $booking->services_price ?? 0,
+                'services_price' => array_sum($this->servicePrices($booking)),
                 'total_price' => $booking->total_price,
                 'paid_amount' => $booking->paid_amount,
                 'remaining_amount' => $booking->total_price - $booking->paid_amount,
@@ -247,6 +294,7 @@ class BoothBookingController extends Controller
 
         $booking = BoothBooking::with([
             'booth.exhibition',
+            'booth.boothImages',
             'investor.user'
         ])
         ->where('investor_id', $investor->id)
@@ -270,10 +318,13 @@ class BoothBookingController extends Controller
                 'id' => $booth->id,
                 'number' => $booth->number,
                 'exhibition_name' => $booth->exhibition->name,
-                'image_url' => $booth->image,
+                'image_url' => $booth->boothImages->first()?->image
+                    ? asset('storage/' . $booth->boothImages->first()->image)
+                    : null,
                 'area' => $booth->area,
-                'status' => $booth->status_inv,
+                'status' => $this->investorBoothStatus($booking),
                 'price' => $booth->price,
+                'pricing_type' => $booth->pricing_type,
                 'start_date' => $booking->start_date,
                 'end_date' => $booking->end_date,
                 'location' => $booth->location,
@@ -294,7 +345,7 @@ class BoothBookingController extends Controller
                 'booking_number' => 'BK-' . $booking->id,
                 'booked_at' => Carbon::parse($booking->booked_at)->format('Y-m-d'),
                 'duration_days' => $booking->days,
-                'services_price' => $booking->services_price ?? 0,
+                'services_price' => array_sum($this->servicePrices($booking)),
                 'total_price' => $booking->total_price,
                 'paid_amount' => $booking->paid_amount ?? 0,
                 'remaining_amount' => $booking->total_price - ($booking->paid_amount ?? 0),

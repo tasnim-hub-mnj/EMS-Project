@@ -17,8 +17,28 @@ class BookingResource extends JsonResource
         $booth = $this->booth;
         $investor = $this->investor;
         $copy = $this->copy;
+        $servicePrices = $this->services_products;
 
-        return 
+        if (is_string($servicePrices)) {
+            $servicePrices = json_decode($servicePrices, true);
+        }
+
+        if (!is_array($servicePrices)) {
+            $servicePrices = [];
+        }
+
+        $services = $this->additional_services;
+        if (is_string($services)) {
+            $services = json_decode($services, true);
+        }
+
+        if (!is_array($services)) {
+            $services = [];
+        } elseif (!array_is_list($services)) {
+            $services = array_keys($services);
+        }
+
+        return
         [
             'id' => 'bk' . $this->id,
             'exhibitionId' => (string) $booth->exhibition_id,
@@ -43,8 +63,8 @@ class BookingResource extends JsonResource
             'startDate' => $this->start_date,
             'endDate' => $this->end_date,
 
-            'services' => $this->additional_services ?? [],
-            'servicePrices' => $this->services_products ? json_decode($this->services_products, true) : [],
+            'services' => $services,
+            'servicePrices' => $servicePrices,
 
             'notes' => $this->notes,
             'rejectReason' => $this->status === 'rejected' ? $this->notes : null,

@@ -17,6 +17,7 @@ use App\Models\SponsorshipBookingProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class EventController extends Controller
@@ -30,7 +31,8 @@ class EventController extends Controller
 
         $data = $request->validated();
 
-        $booking = BoothBooking::where('investor_id', $investor->id)
+        $booking = BoothBooking::with('booth.exhibition')
+            ->where('investor_id', $investor->id)
             ->where('booth_id', $data['booth_id'])
             ->where('status', 'approved')
             ->first();
@@ -93,10 +95,9 @@ class EventController extends Controller
         if ($start->isToday() && $start->equalTo($end))
         {
 
-            $eventTime = Carbon::parse($data['time']); // وقت الفعالية
             $minAllowedTime = now()->addHours(6);      // الوقت الحالي + 6 ساعات
 
-            if ($eventTime->lessThan($minAllowedTime))
+            if ($eventDateTime->lessThan($minAllowedTime))
             {
                 return response()->json([
                     'message' => 'Event time must be at least 6 hours from now for same‑day events.'
@@ -104,39 +105,40 @@ class EventController extends Controller
             }
         }
 
-        $event = Event::create([
-            'booth_booking_id' => $booking->id,
-            'name' => $data['name'],
-            'type' => $data['type'],
-            'start_date' => $data['start_date'],
-            'end_date' => $data['end_date'],
-            'time' => $data['time'],
-            'place' => $booking->booth->number . ' - ' . $booking->booth->location,
-            'duration_days' => $duration_days,
-            'description' => $data['description'],
-            'is_general_invitation' => $data['is_general_invitation'] ?? true,
-            'has_bookable_seats' => $data['has_bookable_seats'] ?? false,
-            'requires_booking' => $data['requires_booking'] ?? false,
-            'max_participants' => $data['max_participants'],
-            'ticket_price' => $data['ticket_price'] ?? 0,
-            'total_seats' => $data['total_seats'] ?? $data['max_participants'],
-            'video_promo_url' => $data['video_promo_url'] ?? null,
-            'status' => $status,
-        ]);
+        [$event, $images] = DB::transaction(function () use ($request, $data, $booking, $duration_days, $status) {
+            $event = Event::create([
+                'booth_booking_id' => $booking->id,
+                'name' => $data['name'],
+                'type' => $data['type'] ?? null,
+                'start_date' => $data['start_date'],
+                'end_date' => $data['end_date'],
+                'time' => $data['time'],
+                'place' => $booking->booth->number . ' - ' . $booking->booth->location,
+                'duration_days' => $duration_days,
+                'description' => $data['description'] ?? null,
+                'is_general_invitation' => $data['is_general_invitation'] ?? true,
+                'has_bookable_seats' => $data['has_bookable_seats'] ?? false,
+                'requires_booking' => $data['requires_booking'] ?? false,
+                'max_participants' => $data['max_participants'] ?? 0,
+                'ticket_price' => $data['ticket_price'] ?? 0,
+                'total_seats' => $data['total_seats'] ?? ($data['max_participants'] ?? 0),
+                'ticket_type' => $data['ticket_type'] ?? null,
+                'free_ticket_limit' => $data['free_ticket_limit'] ?? null,
+                'video_promo_url' => $data['video_promo_url'] ?? null,
+                'status' => $status,
+            ]);
 
-        $images = [];
-        if ($request->hasFile('images'))
-        {
-            foreach ($request->file('images') as $img)
-            {
+            $images = [];
+            foreach ($request->file('images', []) as $img) {
                 $path = $img->store('event_images', 'public');
-
                 $images[] = EventImage::create([
                     'event_id' => $event->id,
                     'image' => $path,
                 ]);
             }
-        }
+
+            return [$event, $images];
+        });
 
         $data =
         [
@@ -157,6 +159,8 @@ class EventController extends Controller
             'max_participants' => $event->max_participants,
             'ticket_price' => $event->ticket_price,
             'total_seats' => $event->total_seats,
+            'ticket_type' => $event->ticket_type,
+            'free_ticket_limit' => $event->free_ticket_limit,
             'video_promo_url' => $event->video_promo_url,
             'status' => $event->status,
         ];
@@ -216,6 +220,8 @@ class EventController extends Controller
 
                     'ticket_price' => $ev->ticket_price,
                     'is_general_invitation' => $ev->is_general_invitation,
+                    'ticket_type' => $ev->ticket_type,
+                    'free_ticket_limit' => $ev->free_ticket_limit,
 
                     'place' => $ev->place,
                     'duration_days' => $ev->duration_days,

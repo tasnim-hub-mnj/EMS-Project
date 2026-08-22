@@ -38,12 +38,12 @@ class BoothManagementController extends Controller
         return response()->json([
             'data' => [
                 'company_nature'    => $investor->activity_type,
-                'services_products' => $booking->services_products,
+                    'services_products' => $booking->company_services_products ?? '',
                 'headquarters'      => $investor->location,
 
-                'social_links'      => $investor->socialLinks->pluck('link'),
-                'product_images'    => $booking->productBookingImages->pluck('image_p'),
-                'booth_images'      => $booking->boothBookingImages->pluck('image_b'),
+                'social_links'      => $investor->socialLinks->pluck('link')->values(),
+                'product_images'    => $booking->productBookingImages->map(fn ($image) => asset('storage/' . $image->image_p))->values(),
+                'booth_images'      => $booking->boothBookingImages->map(fn ($image) => asset('storage/' . $image->image_b))->values(),
             ]
         ], 200);
     }
@@ -94,9 +94,9 @@ class BoothManagementController extends Controller
             $investor->save();
         }
 
-        if ($request->filled('services_products'))
+        if ($request->has('services_products'))
         {
-            $booking->services_products = $request->services_products;
+                $booking->company_services_products = $request->services_products;
         }
 
         //social link
@@ -114,8 +114,9 @@ class BoothManagementController extends Controller
             }
         }
 
-        if ($request->filled('social_links'))
+        if ($request->has('social_links'))
         {
+            $investor->socialLinks()->delete();
             $socialLinks = $normalizeArray($request->social_links);
 
             foreach ($socialLinks as $link)
@@ -195,11 +196,11 @@ class BoothManagementController extends Controller
             'message' => 'Booth profile updated successfully.',
             'data' => [
                 'company_nature'    => $investor->activity_type,
-                'services_products' => $booking->services_products,
+                'services_products' => $booking->company_services_products ?? '',
                 'headquarters'      => $investor->location,
-                'social_links'      => $investor->socialLinks->pluck('link'),
-                'product_images'    => $booking->productBookingImages->pluck('image_p'),
-                'booth_images'      => $booking->boothBookingImages->pluck('image_b'),
+                'social_links'      => $investor->socialLinks()->pluck('link')->values(),
+                'product_images'    => $booking->productBookingImages->map(fn ($image) => asset('storage/' . $image->image_p))->values(),
+                'booth_images'      => $booking->boothBookingImages->map(fn ($image) => asset('storage/' . $image->image_b))->values(),
             ]
         ], 200);
     }

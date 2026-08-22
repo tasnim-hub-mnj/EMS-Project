@@ -10,322 +10,185 @@ use App\Models\InvestorBoothReports;
 use App\Models\InvestorEventReports;
 use App\Models\InvestorSponsorshipsReports;
 use App\Models\InvestorVisitorReports;
-use App\Models\ReportInvestor;//
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
-
-use function PHPSTORM_META\type;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class InvestorReportsController extends Controller
 {
-    public function getReports()//✅
+    public function getReports()
     {
         $investor = Auth::user()->investor;
+        $reports = collect()
+            ->merge(InvestorVisitorReports::with('boothBooking.booth.exhibition')
+                ->where('investor_id', $investor->id)->latest()->get()
+                ->map(fn ($report) => $this->serializeReport($report, 'visitor', $investor)))
+            ->merge(InvestorBoothReports::with('boothBooking.booth.exhibition')
+                ->where('investor_id', $investor->id)->latest()->get()
+                ->map(fn ($report) => $this->serializeReport($report, 'booth', $investor)))
+            ->merge(InvestorEventReports::with('boothBooking.booth.exhibition')
+                ->where('investor_id', $investor->id)->latest()->get()
+                ->map(fn ($report) => $this->serializeReport($report, 'event', $investor)))
+            ->merge(InvestorSponsorshipsReports::where('investor_id', $investor->id)
+                ->latest()->get()
+                ->map(fn ($report) => $this->serializeReport($report, 'sponsorship', $investor)))
+            ->sortByDesc('created_at')->values();
 
-        $visitor_reports = InvestorVisitorReports::where('investor_id', $investor->id)
-        ->orderBy('created_at', 'desc')
-        ->get();
-
-        $booth_reports = InvestorBoothReports::where('investor_id', $investor->id)
-        ->orderBy('created_at', 'desc')
-        ->get();
-
-        $event_reports = InvestorEventReports::where('investor_id', $investor->id)
-        ->orderBy('created_at', 'desc')
-        ->get();
-
-        $sponsorship_reports = InvestorSponsorshipsReports::where('investor_id', $investor->id)
-        ->orderBy('created_at', 'desc')
-        ->get();
-        //____________Visitor_____________
-        $data_out_visitor_reports = $visitor_reports->map(function ($r)
-        {
-            $booth = $r->boothBooking->booth;
-            return
-            [
-                'id' => $r->id,
-                'booth_number' => $booth->number,
-                'exhibition_name' => $booth->exhibition->name ?? 'N/A',
-                'date_period' => $r->date_period,
-                'total_visitors' => $r->total_visitors,
-                'growth_rate' => $r->growth_rate . '%',
-            ];
-        });
-        //____________Booth_______________
-        $data_out_booth_reports = $visitor_reports->map(function ($r)
-        {
-            $booth = $r->boothBooking->booth;
-            return
-            [
-                'id' => $r->id,
-                'booth_number' => $booth->number,
-                'exhibition_name' => $booth->exhibition->name ?? 'N/A',
-                'date_period' => $r->date_period,
-                'performance_index' => $r->performance_index,
-                'growth_rate' => $r->growth_rate . '%',
-            ];
-        });
-        //____________Event_______________
-        $data_out_event_reports = $visitor_reports->map(function ($r)
-        {
-            $booth = $r->boothBooking->booth;
-            return
-            [
-                'id' => $r->id,
-                'booth_number' => $booth->number,
-                'exhibition_name' => $booth->exhibition->name ?? 'N/A',
-                'date_period' => $r->date_period,
-                'registered_count' => $r->registered_count,
-                'growth_rate' => $r->growth_rate . '%',
-            ];
-        });
-        //____________Sponsorship_________
-        $data_out_sponsorship_reports = $visitor_reports->map(function ($r)
-        {
-            return
-            [
-                'id' => $r->id,
-                'investor_name' => $investor->company_name ?? 'مستثمر',
-                'total_campaigns' => $r->total_campaigns,
-                'total_reach' => $r->total_reach,
-                'growth_rate' => $r->growth_rate . '%',
-            ];
-        });
-        //_________________________________
         return response()->json([
-            'Visitor' => $data_out_visitor_reports,
-            'Booth' => $data_out_booth_reports,
-            'Event' => $data_out_event_reports,
-            'Sponsorship' => $data_out_sponsorship_reports,
+            'data' => $reports,
         ], 200);
     }
     //===============================================================
-    public function getReportDetail(Request $request,$r_id)//✅
+    public function getReportDetail(Request $request, $r_id)
     {
-        $type = $request->query('type');//[visitor,booth,event,sponsoship]
-        // $request->validate([
-        //     'type' => 'required|in:visitor,booth,event,sponsoship'
-        // ]);
-        // $type = $request->type;
+        $type = $this->normalizeType($request->query('type'));
+        if ($type === null) {
+            return response()->json(['message' => 'A valid report type is required.'], 422);
+        }
         $investor = Auth::user()->investor;
-
-        if($type == 'visitor')//+++++++++++++++++++++
-        {
-            $report = InvestorVisitorReports::where('investor_id', $investor->id)
-            ->findOrFail($r_id);
-            $booth = $report->boothBooking->booth;
-            $data_in =
-            [
-                'id' => $report->id,
-                'created_at' =>  $report->created_at->format('Y-m-d'),
-                'booth_number' => $booth->number,
-                'exhibition_name' => $booth->exhibition->name ?? 'N/A',
-                'date_period' => $report->date_period,
-                'total_visitors' => $report->total_visitors,
-                'peak_hours' => $report->peak_hours,
-                'average_visitors_per_hour' => $report->average_visitors_per_hour,
-                'unique_visitors' => $report->unique_visitors,
-            ];
-            return response()->json([
-                'data'=> $data_in,
-                'graph'=> $report->data_graph,
-                'specific_table'=> $report->data_specific_table,
-                'recommendations'=> $report->data_recommendations,
-            ], 200);
-        }
-        elseif($type == 'booth')//+++++++++++++++++++++
-        {
-            $report = InvestorBoothReports::where('investor_id', $investor->id)
-            ->findOrFail($r_id);
-            $booth = $report->boothBooking->booth;
-            $data_in =
-            [
-                'id' => $report->id,
-                'created_at' =>  $report->created_at->format('Y-m-d'),
-                'booth_number' => $booth->number,
-                'exhibition_name' => $booth->exhibition->name ?? 'N/A',
-                'date_period' => $report->date_period,
-                'performance_index' => $report->performance_index,
-                'potential_clients' => $report->potential_clients,
-                'events_count' => $report->events_count,
-            ];
-            return response()->json([
-                'data'=> $data_in,
-                'graph'=> $report->data_graph,
-                'specific_table'=> $report->data_specific_table,
-                'recommendations'=> $report->data_recommendations,
-            ], 200);
-        }
-        elseif($type == 'event')//+++++++++++++++++++++
-        {
-            $report = InvestorEventReports::where('investor_id', $investor->id)
-            ->findOrFail($r_id);
-            $booth = $report->boothBooking->booth;
-            $data_in =
-            [
-                'id' => $report->id,
-                'created_at' =>  $report->created_at->format('Y-m-d'),
-                'booth_number' => $booth->number,
-                'exhibition_name' => $booth->exhibition->name ?? 'N/A',
-                'date_period' => $report->date_period,
-                'registered_count' => $report->registered_count,
-                'events_count' => $report->events_count,
-                'scanned_count' => $report->scanned_count,
-                'evaluation' => $report->evaluation,
-            ];
-            return response()->json([
-                'data'=> $data_in,
-                'graph'=> $report->data_graph,
-                'specific_table'=> $report->data_specific_table,
-                'recommendations'=> $report->data_recommendations,
-            ], 200);
-        }
-        else//+++++++++++++++++++++
-        {
-            $report = InvestorSponsorshipsReports::where('investor_id', $investor->id)
-            ->findOrFail($r_id);
-            $data_in =
-            [
-                'id' => $report->id,
-                'created_at' =>  $report->created_at->format('Y-m-d'),
-                'investor_name' => $investor->company_name ?? 'مستثمر',
-                'total_campaigns' => $report->total_campaigns,
-                'total_amount' => $report->total_amount . ' $',
-                'total_reach' => $report->total_reach,
-                'total_favorites' => $report->total_favorites,
-                'overall_ctr' => $report->overall_ctr . '%',
-            ];
-            return response()->json([
-                'data'=> $data_in,
-                'graph'=> $report->data_graph,
-                'specific_table'=> $report->data_specific_table,
-                'recommendations'=> $report->data_recommendations,
-            ], 200);
-        }
+        $report = $this->findOwnedReport($type, $r_id, $investor->id);
+        return response()->json([
+            'data' => $this->serializeReport($report, $type, $investor),
+        ], 200);
     }
     //===============================================================
     public function downloadReport(Request $request, $r_id)
     {
-        // $investor = Auth::user()->investor;
-        $type = $request->query('type');//['visitor','booth','event','sponsoship']
-        $format = $request->query('format');//['pdf', 'excel', 'csv']
-
-        if ($type == 'visitor')
-        {
-            $report = InvestorVisitorReports::findOrFail($r_id);
-
-            if ($format == 'excel')
-            {
-                return Excel::download(new VisitorReportExport($report->id), 'Visitor_Report_' . $report->id . '.xlsx');
-            }
-            elseif ($format == 'pdf')
-            {
-                return Excel::download(new VisitorReportExport($report->id), 'Visitor_Report_' . $report->id . '.pdf');
-            } else
-            {
-                return Excel::download(new VisitorReportExport($report->id), 'Visitor_Report_' . $report->id . '.csv');
-            }
+        $type = $this->normalizeType($request->query('type'));
+        $format = $request->query('format', 'csv');
+        if ($type === null || !in_array($format, ['pdf', 'excel', 'csv'], true)) {
+            return response()->json(['message' => 'Invalid report type or format.'], 422);
         }
-        elseif($type == 'booth')
-        {
-            $report = InvestorBoothReports::findOrFail($r_id);
 
-            if ($format == 'excel')
-            {
-                return Excel::download(new BoothReportExport($report->id), 'Visitor_Report_' . $report->id . '.xlsx');
-            }
-            elseif ($format == 'pdf')
-            {
-                return Excel::download(new BoothReportExport($report->id), 'Visitor_Report_' . $report->id . '.pdf');
-            } else
-            {
-                return Excel::download(new BoothReportExport($report->id), 'Visitor_Report_' . $report->id . '.csv');
-            }
-        }
-        elseif($type == 'event')
-        {
-            $report = InvestorEventReports::findOrFail($r_id);
-
-            if ($format == 'excel')
-            {
-                return Excel::download(new EventReportExport($report->id), 'Visitor_Report_' . $report->id . '.xlsx');
-            }
-            elseif ($format == 'pdf')
-            {
-                return Excel::download(new EventReportExport($report->id), 'Visitor_Report_' . $report->id . '.pdf');
-            } else
-            {
-                return Excel::download(new EventReportExport($report->id), 'Visitor_Report_' . $report->id . '.csv');
-            }
-
-        }
-        elseif($type == 'sponsoship')
-        {
-            $report = InvestorSponsorshipsReports::findOrFail($r_id);
-
-            if ($format == 'excel')
-            {
-                return Excel::download(new SponsorshipReportExport($report->id), 'Visitor_Report_' . $report->id . '.xlsx');
-            }
-            elseif ($format == 'pdf')
-            {
-                return Excel::download(new SponsorshipReportExport($report->id), 'Visitor_Report_' . $report->id . '.pdf');
-            } else
-            {
-                return Excel::download(new SponsorshipReportExport($report->id), 'Visitor_Report_' . $report->id . '.csv');
-            }
-
-        }
-        else
-        {
-            return response()->json([
-            'message' => 'Invalid report type.'
-            ], 400);
-        }
-    }
-    //===============================================================
-    public function downloadReport2(Request $request, $r_id)
-    {
         $investor = Auth::user()->investor;
-        $type = $request->query('type'); // [visitor, booth, event, sponsorship]
-        $format = $request->query('format'); // [excel, pdf, csv]
+        $report = $this->findOwnedReport($type, $r_id, $investor->id);
+        $filename = ucfirst($type) . '_Report_' . $report->id;
 
-        $ext = match ($format)
-        {
-            'excel' => 'xlsx',
-            'pdf'   => 'pdf',
-            default => 'csv',
+        if ($format === 'pdf') {
+            return Pdf::loadHTML($this->reportPdfHtml($this->serializeReport($report, $type, $investor)))
+                ->download($filename . '.pdf');
+        }
+
+        $export = match ($type) {
+            'visitor' => new VisitorReportExport($report->id),
+            'booth' => new BoothReportExport($report->id),
+            'event' => new EventReportExport($report->id),
+            'sponsorship' => new SponsorshipReportExport($report->id),
+        };
+        return Excel::download($export, $filename . ($format === 'excel' ? '.xlsx' : '.csv'));
+    }
+
+    private function normalizeType(?string $type): ?string
+    {
+        return match (strtolower(trim((string) $type))) {
+            'visitor', 'visitors' => 'visitor',
+            'booth', 'performance' => 'booth',
+            'event', 'events' => 'event',
+            'sponsorship', 'sponsorships', 'sponsoship', 'campaigns' => 'sponsorship',
+            default => null,
+        };
+    }
+
+    private function findOwnedReport(string $type, int|string $id, int $investorId)
+    {
+        $query = match ($type) {
+            'visitor' => InvestorVisitorReports::with('boothBooking.booth.exhibition'),
+            'booth' => InvestorBoothReports::with('boothBooking.booth.exhibition'),
+            'event' => InvestorEventReports::with('boothBooking.booth.exhibition'),
+            'sponsorship' => InvestorSponsorshipsReports::query(),
         };
 
-        return match ($type)
-        {
-            'visitor' => Excel::download(
-                new VisitorReportExport(
-                    InvestorVisitorReports::where('investor_id', $investor->id)->findOrFail($r_id)->id
-                ),
-                "Visitor_Report_{$r_id}.{$ext}"
-            ),
-            'booth' => Excel::download(
-                new BoothReportExport(
-                    InvestorBoothReports::where('investor_id', $investor->id)->findOrFail($r_id)->id
-                ),
-                "Booth_Report_{$r_id}.{$ext}"
-            ),
-            'event' => Excel::download(
-                new EventReportExport(
-                    InvestorEventReports::where('investor_id', $investor->id)->findOrFail($r_id)->id
-                ),
-                "Event_Report_{$r_id}.{$ext}"
-            ),
-            'sponsorship' => Excel::download(
-                new SponsorshipReportExport(
-                    InvestorSponsorshipsReports::where('investor_id', $investor->id)->findOrFail($r_id)->id
-                ),
-                "Sponsorship_Report_{$r_id}.{$ext}"
-            ),
-            default => response()->json(['message' => 'Invalid report type.'], 400),
+        return $query->where('investor_id', $investorId)->findOrFail($id);
+    }
+
+    private function serializeReport($report, string $type, $investor): array
+    {
+        $booth = $report->boothBooking?->booth;
+        $typeLabel = match ($type) {
+            'visitor' => 'الزوار',
+            'booth' => 'الأداء',
+            'event' => 'الفعاليات',
+            'sponsorship' => 'الرعايات',
         };
+        $mainValue = match ($type) {
+            'visitor' => (float) $report->total_visitors,
+            'booth' => (float) $report->performance_index,
+            'event' => (float) $report->registered_count,
+            'sponsorship' => (float) $report->total_reach,
+        };
+        $mainLabel = match ($type) {
+            'visitor' => 'إجمالي الزوار',
+            'booth' => 'مؤشر الأداء',
+            'event' => 'المسجلون',
+            'sponsorship' => 'الوصول',
+        };
+        $graph = is_array($report->data_graph) ? $report->data_graph : [];
+
+        return [
+            'id' => (string) $report->id,
+            'type' => match ($type) {
+                'visitor' => 'visitors',
+                'booth' => 'performance',
+                'event' => 'events',
+                'sponsorship' => 'campaigns',
+            },
+            'title' => "تقرير {$typeLabel}",
+            'description' => "تقرير {$typeLabel} للفترة {$report->date_period}",
+            'period' => (string) $report->date_period,
+            'booth_name' => $booth?->number ?? '',
+            'exhibition_name' => $booth?->exhibition?->name ?? '',
+            'created_at' => optional($report->created_at)->format('Y-m-d'),
+            'main_value' => $mainValue,
+            'main_label' => $mainLabel,
+            'trend' => (float) ($report->growth_rate ?? 0),
+            'sparkline_data' => array_values(array_map('floatval', array_values($graph))),
+            'graph' => $graph,
+            'specific_table' => $report->data_specific_table ?? [],
+            'recommendations' => $report->data_recommendations ?? [],
+            'total_visitors' => $report->total_visitors ?? null,
+            'average_visitors_per_hour' => $report->average_visitors_per_hour ?? null,
+            'unique_visitors' => $report->unique_visitors ?? null,
+            'peak_hours' => $report->peak_hours ?? [],
+            'performance_index' => $report->performance_index ?? null,
+            'potential_clients' => $report->potential_clients ?? null,
+            'events_count' => $report->events_count ?? $report->event_count ?? null,
+            'registered_count' => $report->registered_count ?? null,
+            'scanned_count' => $report->scanned_count ?? null,
+            'evaluation' => $report->evaluation ?? null,
+            'investor_name' => $investor->company_name ?? 'مستثمر',
+            'total_campaigns' => $report->total_campaigns ?? null,
+            'total_amount' => $report->total_amount ?? null,
+            'total_reach' => $report->total_reach ?? null,
+            'total_favorites' => $report->total_favorites ?? null,
+            'overall_ctr' => $report->overall_ctr ?? null,
+        ];
+    }
+
+    private function reportPdfHtml(array $report): string
+    {
+        $escape = fn ($value) => htmlspecialchars(is_scalar($value)
+            ? (string) $value
+            : json_encode($value, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+        $rows = '';
+        foreach (($report['specific_table'] ?? []) as $row) {
+            $cells = collect($row)->map(fn ($value) => is_scalar($value)
+                ? (string) $value
+                : json_encode($value, JSON_UNESCAPED_UNICODE))->implode(' | ');
+            $rows .= '<tr><td>' . $escape($cells) . '</td></tr>';
+        }
+        $recommendations = '';
+        foreach (($report['recommendations'] ?? []) as $recommendation) {
+            $recommendations .= '<li>' . $escape($recommendation) . '</li>';
+        }
+        return '<!doctype html><html dir="rtl"><meta charset="utf-8"><style>'
+            . 'body{font-family:DejaVu Sans;color:#222;padding:24px}h1{color:#451952}'
+            . 'table{width:100%;border-collapse:collapse;margin-top:16px}td{border:1px solid #ddd;padding:8px}'
+            . '</style><h1>' . $escape($report['title']) . '</h1>'
+            . '<p>' . $escape($report['description']) . '</p>'
+            . '<p>القيمة الرئيسية: ' . $escape($report['main_value']) . ' ' . $escape($report['main_label']) . '</p>'
+            . '<h2>البيانات التفصيلية</h2><table>' . $rows . '</table>'
+            . '<h2>التوصيات</h2><ul>' . $recommendations . '</ul></html>';
     }
     //===============================================================
     // public function downloadReport(Request $request, $id)//✅

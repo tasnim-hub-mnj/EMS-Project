@@ -38,7 +38,7 @@ class StoreEventRequest extends FormRequest
             'total_seats' => 'nullable|integer|min:0',
             'ticket_price' => 'nullable|numeric|min:0',
             'is_general_invitation' => 'boolean',
-            'ticket_type' => 'nullable|in:paid,free',
+            'ticket_type' => 'nullable|in:general,free_limited,paid,free',
             'free_ticket_limit' => 'nullable|integer|min:0',
             'video_promo_url' => 'nullable|string',
             'images.*' => 'image|mimes:jpg,jpeg,png|max:4096'

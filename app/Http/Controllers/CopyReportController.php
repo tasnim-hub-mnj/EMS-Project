@@ -160,14 +160,19 @@ class CopyReportController extends Controller
 
         return $copies->map(function ($copy)
         {
+            $bookings = BoothBooking::where('copy_id', $copy->id);
+            $confirmedBookings = (clone $bookings)->whereIn('status', ['approved', 'finished']);
+            $visitors = $this->ticketsForCopy($copy->exhibition_id, $copy)->count();
+            $bookedBooths = (clone $confirmedBookings)->count();
+
             return [
                 'editionId' => $copy->id . '-ed-' . $copy->year,
                 'label' => $copy->copy_status === 'active'
                     ? 'النسخة الحالية ' . $copy->year
                     : 'نسخة ' . $copy->year,
-                'visitors' => $copy->visitor_count,
-                'revenue' => $copy->revenue,
-                'bookedBooths' => $copy->booked_booths,
+                'visitors' => $visitors,
+                'revenue' => (float) $confirmedBookings->sum('total_price'),
+                'bookedBooths' => $bookedBooths,
                 'sponsorshipPercent' => $copy->sponsorship_percent
             ];
         });

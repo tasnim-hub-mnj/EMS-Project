@@ -50,7 +50,7 @@ class MapResource extends JsonResource
                     'model3d' => $instance['asset_key'] ?? 'booth_mod1',
                     'boothId' => $instance['id'] ?? null,
                     'metadata' => [
-                        'area' => (isset($scale['x']) && isset($scale['z'])) ? (float) ($scale['x'] * $scale['z'] / 10000) : 1,
+                        'area' => (isset($scale['x']) && isset($scale['z'])) ? (float) ($scale['x'] * $scale['z'] * 10) : 1,
                         'price' => 0,
                     ],
                 ];

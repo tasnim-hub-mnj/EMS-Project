@@ -32,6 +32,7 @@ class StoreExhibitionRequest extends FormRequest
             'type' => 'nullable|string|max:255',
             'status' => 'nullable|string|in:far,upcoming,ongoing,finished,hidden',
             'map_built' => 'sometimes|boolean',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ];
     }
 }

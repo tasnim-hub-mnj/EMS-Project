@@ -11,6 +11,7 @@ use App\Models\BoothImage;
 use App\Models\Exhibition;
 use App\Models\Section;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Auth as FacadesAuth;
 use App\Models\User;
@@ -219,7 +220,7 @@ class BoothController extends Controller
         $exhibition_id = $request->query('exhibition_id');
         $status = $request->query('status');
 
-        $query = Booth::query();
+        $query = Booth::with(['exhibition', 'boothImages']);
 
         if ($exhibition_id)
         {
@@ -242,10 +243,13 @@ class BoothController extends Controller
                 'id' => $booth->id,
                 'number' => $booth->number,
                 'exhibition_name' => $booth->exhibition->name,
-                'image_url' => $booth->image,
+                'image_url' => $booth->boothImages->first()?->image
+                    ? asset('storage/' . $booth->boothImages->first()->image)
+                    : null,
                 'area' => $booth->area,
                 'status' => $booth->status_inv,
                 'price' => $booth->price,
+                'pricing_type' => $booth->pricing_type,
                 'start_date' => Carbon::parse($booth->exhibition->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($booth->exhibition->end_date)->format('Y-m-d'),
                 'location' => $booth->location,
@@ -281,7 +285,7 @@ class BoothController extends Controller
 
         $per_page = $request->query('per_page', 100);
 
-        $booths = Booth::with(['exhibition', 'boothBookings.investor.user'])
+        $booths = Booth::with(['exhibition', 'boothImages', 'boothBookings.investor.user'])
             ->where('exhibition_id', $exhibition_id)
             ->orderBy('number', 'asc')
             ->paginate($per_page);
@@ -312,9 +316,12 @@ class BoothController extends Controller
                 'number' => $booth->number,
                 'status' => $booth->status_inv,
                 'price' => $booth->price,
+                'pricing_type' => $booth->pricing_type,
                 'area' => $booth->area,
 
-                'image_url' => $booth->image,
+                'image_url' => $booth->boothImages->first()?->image
+                    ? asset('storage/' . $booth->boothImages->first()->image)
+                    : null,
                 'location' => $booth->location,
                 'start_date' => Carbon::parse($booth->exhibition->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($booth->exhibition->end_date)->format('Y-m-d'),
@@ -343,6 +350,7 @@ class BoothController extends Controller
     {
         $booth = Booth::with([
         'exhibition',
+        'boothImages',
         'boothBookings.investor.user'
         ])->find($booth_id);
 
@@ -375,9 +383,12 @@ class BoothController extends Controller
                 'number' => $booth->number,
                 'status' => $booth->status_inv,
                 'price' => $booth->price,
+                'pricing_type' => $booth->pricing_type,
                 'area' => $booth->area,
 
-                'image_url' => $booth->image,
+                'image_url' => $booth->boothImages->first()?->image
+                    ? asset('storage/' . $booth->boothImages->first()->image)
+                    : null,
                 'location' => $booth->location,
                 'start_date' => Carbon::parse($booth->exhibition->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($booth->exhibition->end_date)->format('Y-m-d'),

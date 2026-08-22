@@ -31,7 +31,7 @@ class BookingshipSponsorEventRequest extends FormRequest
 
             'company_name' => 'required|string|max:255',
             'company_website' => 'nullable|url|max:255',
-            'company_phone' => 'nullable|string|max:20',
+            'company_phone' => 'required|string|max:20',
             'product_names' => 'nullable|string|max:2000',
 
             // logo
@@ -47,8 +47,7 @@ class BookingshipSponsorEventRequest extends FormRequest
 
             // product images
             'product_images' => 'nullable|array',
-            'product_images.*.name' => 'required|string|max:255',
-            'product_images.*.image' => 'required|image|mimes:jpg,jpeg,png|max:4096',
+            'product_images.*' => 'image|mimes:jpg,jpeg,png|max:4096',
         ];
     }
 }

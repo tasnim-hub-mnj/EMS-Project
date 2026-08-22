@@ -42,6 +42,15 @@ class Booth extends Model
         'amenities' => 'array',
 
     ];
+
+    public function getAreaAttribute($value)
+    {
+        $area = (float) $value;
+        if ($area < 1 && $this->map_width > 0 && $this->map_height > 0) {
+            return ($this->map_width * $this->map_height) / 1000;
+        }
+        return $area;
+    }
     //---------------------------------------------------
 
     // =================Relationships===================

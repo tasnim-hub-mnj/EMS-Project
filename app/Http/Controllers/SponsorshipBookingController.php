@@ -10,6 +10,7 @@ use App\Models\SponsorshipBookingProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Services\NotificationService;
 
 class SponsorshipBookingController extends Controller
 {
@@ -56,6 +57,9 @@ class SponsorshipBookingController extends Controller
                 'selected_duration_label' => $bk->selected_duration_label ?? null,
                 'selected_days' => $bk->days,
                 'price' => $bk->total_price,
+                'company_name' => $bk->company_name,
+                'company_phone' => $bk->company_phone,
+                'company_website' => $bk->company_website,
 
                 'status' => $bk->status,
                 'booked_at' => Carbon::parse($bk->booked_at)->format('Y-m-d'),
@@ -169,7 +173,11 @@ class SponsorshipBookingController extends Controller
             'sponsor_event_id' => $event->id,
 
             'selected_duration_label' => $data['selected_duration_label'] ?? null,
+            'company_name' => $data['company_name'],
+            'company_phone' => $data['company_phone'],
+            'company_website' => $data['company_website'] ?? null,
             'days' => $data['selected_days'],
+            'total_days' => $data['selected_days'],
             'total_price' => $data['price'],
 
             'description' => $data['product_names'] ?? null,
@@ -178,6 +186,31 @@ class SponsorshipBookingController extends Controller
             'booked_at' => now()->format('Y-m-d'),
             'status' => 'pending',
         ]);
+
+        app(NotificationService::class)->forUserId(
+            (int) $investor->user_id,
+            'طلب رعاية قيد المراجعة',
+            'تم استلام طلب رعايتك للفعالية وسيتم مراجعته من المنظم.',
+            'sponsorship_pending',
+            ['booking_id' => $booking->id, 'event_id' => $event->id],
+        );
+
+        $exhibition = $event->exhibition;
+        if ($exhibition) {
+            app(NotificationService::class)->forExhibition(
+                $exhibition,
+                'طلب رعاية فعالية جديد',
+                "وصل طلب رعاية جديد لفعالية {$event->name} من {$booking->company_name}.",
+                'sponsorship_request',
+                'org.sponsors',
+                [
+                    'booking_id' => $booking->id,
+                    'event_id' => $event->id,
+                    'exhibition_id' => $exhibition->id,
+                ],
+                '/sponsors',
+            );
+        }
 
         // ad_images
         if ($request->hasFile('ad_images'))
@@ -210,21 +243,19 @@ class SponsorshipBookingController extends Controller
         }
 
         // product_images
-        if ($request->filled('product_images'))
+        if ($request->hasFile('product_images'))
         {
-            foreach ($request->product_images as $item)
+            $productNames = array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) ($data['product_names'] ?? ''))
+            )));
+            foreach ($request->file('product_images') as $index => $item)
             {
-
-                if (!isset($item['image']) || !$item['image'] instanceof \Illuminate\Http\UploadedFile)
-                {
-                    return response()->json(['message' => 'Invalid product image format'], 422);
-                }
-
-                $path = $item['image']->store('sponsorship_product_images', 'public');
+                $path = $item->store('sponsorship_product_images', 'public');
 
                 SponsorshipBookingProductImage::create([
                     'sp_b_id' => $booking->id,
-                    'product_name' => $item['name'],
+                    'product_name' => $productNames[$index] ?? 'منتج',
                     'image' => $path,
                 ]);
             }
@@ -268,9 +299,9 @@ class SponsorshipBookingController extends Controller
         // 3) معلومات الشركة الراعية
         $companyInfo =
         [
-            'name' => $investor->company_name,
-            'website' => $investor->company_website,
-            'phone' => $investor->company_phone,
+            'name' => $booking->company_name,
+            'website' => $booking->company_website,
+            'phone' => $booking->company_phone,
         ];
 
         return response()->json([
@@ -365,10 +396,86 @@ class SponsorshipBookingController extends Controller
             'sponsorship_bookings' => $sponsorship_bookings_data
         ], 200);
     }
+
+    public function getAllOrganizerSponsorshipBookings(Request $request)
+    {
+        $bookings = SponsorshipBooking::with(['investor', 'sponsorEvent.exhibition'])
+            ->when($request->integer('exhibition_id'), fn ($query, $exhibitionId) =>
+                $query->whereHas('sponsorEvent', fn ($eventQuery) =>
+                    $eventQuery->where('exhibition_id', $exhibitionId)
+                )
+            )
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (SponsorshipBooking $booking) => $this->organizerBookingData($booking));
+
+        return response()->json(['data' => $bookings], 200);
+    }
+
+    public function updateOrganizerSponsorshipStatus(Request $request, $booking_id)
+    {
+        $request->validate([
+            'status' => 'required|in:new,reviewing,negotiating,accepted,rejected',
+        ]);
+
+        $booking = SponsorshipBooking::with('sponsorEvent.exhibition.organizer')
+            ->findOrFail($booking_id);
+        abort_unless(
+            $booking->sponsorEvent->exhibition->organizer?->user_id === Auth::id(),
+            403,
+        );
+
+        $status = $request->input('status');
+        if ($status === 'accepted') {
+            return $this->approveBooking($booking_id);
+        }
+        if ($status === 'rejected') {
+            return $this->rejectBooking($booking_id);
+        }
+
+        $booking->update(['status' => 'pending']);
+        return response()->json(['data' => $this->organizerBookingData($booking->fresh(['investor', 'sponsorEvent.exhibition']))]);
+    }
+
+    private function organizerBookingData(SponsorshipBooking $booking): array
+    {
+        $event = $booking->sponsorEvent;
+        $investor = $booking->investor;
+        $status = match ($booking->status) {
+            'approved', 'ended' => 'accepted',
+            'rejected', 'canceled' => 'rejected',
+            default => 'new',
+        };
+
+        return [
+            'id' => (string) $booking->id,
+            'exhibitionId' => (string) $event->exhibition_id,
+            'eventName' => $event->name,
+            'eventDate' => $event->start_time,
+            'companyName' => $booking->company_name,
+            'companyType' => 'other',
+            'contactName' => $investor?->company_name ?? $booking->company_name,
+            'contactPhone' => $booking->company_phone ?? $investor?->phone ?? '',
+            'contactEmail' => $investor?->email ?? '',
+            'proposedAmount' => (float) $booking->total_price,
+            'offerDetails' => $booking->description ?? '',
+            'conditions' => null,
+            'requestDate' => $booking->booked_at,
+            'status' => $status,
+            'rejectReason' => null,
+            'organizerNotes' => null,
+            'selectedDays' => $booking->days,
+        ];
+    }
     //===============================================================
     public function approveBooking($booking_id)//قبول الرعاية/o
     {
-        $booking = SponsorshipBooking::findOrFail($booking_id);
+        $booking = SponsorshipBooking::with('sponsorEvent.exhibition.organizer')
+            ->findOrFail($booking_id);
+        abort_unless(
+            $booking->sponsorEvent->exhibition->organizer?->user_id === Auth::id(),
+            403,
+        );
 
         if (in_array($booking->status, ['approved', 'ended']))
         {
@@ -380,6 +487,14 @@ class SponsorshipBookingController extends Controller
         $booking->status = 'approved';
         $booking->save();
 
+        app(NotificationService::class)->forUserId(
+            (int) $booking->investor->user_id,
+            'تمت الموافقة على طلب الرعاية',
+            'تمت الموافقة على طلب رعايتك للفعالية.',
+            'sponsorship_approved',
+            ['booking_id' => $booking->id, 'event_id' => $booking->sponsor_event_id],
+        );
+
         return response()->json([
             'message' => 'Booking approved successfully',
             'booking' => $booking
@@ -388,7 +503,12 @@ class SponsorshipBookingController extends Controller
     //===============================================================
     public function rejectBooking($booking_id)//رفض الرعاية/o
     {
-        $booking = SponsorshipBooking::findOrFail($booking_id);
+        $booking = SponsorshipBooking::with('sponsorEvent.exhibition.organizer')
+            ->findOrFail($booking_id);
+        abort_unless(
+            $booking->sponsorEvent->exhibition->organizer?->user_id === Auth::id(),
+            403,
+        );
 
         if (in_array($booking->status, ['rejected', 'ended']))
         {
@@ -399,6 +519,14 @@ class SponsorshipBookingController extends Controller
 
         $booking->status = 'rejected';
         $booking->save();
+
+        app(NotificationService::class)->forUserId(
+            (int) $booking->investor->user_id,
+            'تم رفض طلب الرعاية',
+            'تم رفض طلب رعايتك للفعالية.',
+            'sponsorship_rejected',
+            ['booking_id' => $booking->id, 'event_id' => $booking->sponsor_event_id],
+        );
 
         return response()->json([
             'message' => 'Booking rejected successfully',

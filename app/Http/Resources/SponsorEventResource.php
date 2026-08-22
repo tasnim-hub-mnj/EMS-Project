@@ -18,6 +18,12 @@ class SponsorEventResource extends JsonResource
         [
             'id' => 'ev-' . $this->id,
             'exhibitionId' => (string) $this->exhibition_id,
+            'exhibitionName' => $this->exhibition?->name,
+            'exhibition_name' => $this->exhibition?->name,
+            'exhibition' => $this->exhibition ? [
+                'id' => $this->exhibition->id,
+                'name' => $this->exhibition->name,
+            ] : null,
 
             'title' => $this->name,
             'description' => $this->description,

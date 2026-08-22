@@ -123,6 +123,11 @@ class DashboardInvestorController extends Controller
                 'type'                  => $ev->type,
                 'exhibition_id'         => $ev->exhibition_id,
                 'exhibition_name'       => $ex->name ?? null,
+                'exhibitionName'        => $ex->name ?? null,
+                'exhibition'            => $ex ? [
+                    'id' => $ex->id,
+                    'name' => $ex->name,
+                ] : null,
                 'exhibition_image_url'  => $this->publicImageUrl($ex->exhibitionImages->pluck('image')->first()),
                 'date'                  => Carbon::parse($ev->start_time)->format('Y-m-d'),
                 'start_time'            => Carbon::parse($ev->start_time)->format('H:i'),
