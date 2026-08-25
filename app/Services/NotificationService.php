@@ -22,6 +22,10 @@ class NotificationService
         ?string $actionUrl = null,
         ?int $exhibitionId = null,
     ): void {
+        if (!$this->isEnabledForUser($userId, $type)) {
+            return;
+        }
+
         Notification::create([
             'id' => (string) Str::uuid(),
             'user_id' => $userId,
@@ -61,7 +65,7 @@ class NotificationService
 
         $organizerUserId = $exhibition->organizer?->user_id;
         $recipientUserIds = [];
-        if ($organizerUserId) {
+        if ($organizerUserId && $this->isEnabledForUser($organizerUserId, $type)) {
             Notification::create(array_merge($base, ['user_id' => $organizerUserId]));
             $recipientUserIds[] = $organizerUserId;
         }
@@ -79,7 +83,7 @@ class NotificationService
             }
 
             $userId = $link->staff?->user_id;
-            if (!$userId) {
+            if (!$userId || !$this->isEnabledForUser($userId, $type)) {
                 continue;
             }
 
@@ -119,6 +123,10 @@ class NotificationService
                     continue;
                 }
 
+                if (!$this->isEnabledForUser($staff->user_id, $type)) {
+                    continue;
+                }
+
                 Notification::create(array_merge($base, [
                     'id' => (string) Str::uuid(),
                     'user_id' => $staff->user_id,
@@ -132,7 +140,11 @@ class NotificationService
 
     private function sendPush(array $userIds, string $title, string $body, string $type, array $data): void
     {
-        $tokens = \App\Models\FcmToken::whereIn('user_id', array_unique($userIds))
+        $enabledUserIds = collect(array_unique($userIds))
+            ->filter(fn ($userId) => $this->isEnabledForUser((int) $userId, $type))
+            ->values()
+            ->all();
+        $tokens = \App\Models\FcmToken::whereIn('user_id', $enabledUserIds)
             ->pluck('fcm_token')
             ->filter()
             ->values()
@@ -153,5 +165,22 @@ class NotificationService
                 'exception' => $exception,
             ]);
         }
+    }
+
+    private function isEnabledForUser(int $userId, string $type): bool
+    {
+        $user = \App\Models\User::find($userId);
+        if (!$user || $user->notifications_enabled === false) {
+            return false;
+        }
+
+        if (in_array($type, ['favorite', 'favorite_update'], true)) {
+            return (bool) $user->favorites_notify;
+        }
+        if (in_array($type, ['report', 'report_ready'], true)) {
+            return (bool) $user->reports_notify;
+        }
+
+        return true;
     }
 }

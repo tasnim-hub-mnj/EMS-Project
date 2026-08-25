@@ -84,6 +84,32 @@ class NotificationController extends Controller
             'count' => $count
         ];
     }
+
+    public function preferences()
+    {
+        $user = Auth::user();
+
+        return response()->json([
+            'data' => [
+                'notifications_enabled' => (bool) $user->notifications_enabled,
+                'favorites_notify' => (bool) $user->favorites_notify,
+                'reports_notify' => (bool) $user->reports_notify,
+            ],
+        ]);
+    }
+
+    public function updatePreferences(Request $request)
+    {
+        $data = $request->validate([
+            'notifications_enabled' => ['sometimes', 'boolean'],
+            'favorites_notify' => ['sometimes', 'boolean'],
+            'reports_notify' => ['sometimes', 'boolean'],
+        ]);
+
+        Auth::user()->update($data);
+
+        return $this->preferences();
+    }
     //===============================================================
     public function destroy($id)
     {

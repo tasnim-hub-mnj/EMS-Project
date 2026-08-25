@@ -142,6 +142,8 @@ function applyInstanceColor(object, value) {
       const copy = material.clone();
       if (copy.color) copy.color.copy(tint);
       if (copy.emissive) {
+        copy.userData.expoOriginalEmissive = copy.emissive.clone();
+        copy.userData.expoOriginalEmissiveIntensity = copy.emissiveIntensity;
         copy.emissive.copy(tint);
         copy.emissiveIntensity = 0.18;
       }
@@ -298,6 +300,7 @@ window.setExpoScene = async (value) => {
     await Promise.all(instances.map((instance) => addInstance(instance, assets)));
     frameMap(width, depth);
     loading.style.display = 'none';
+    requestRender();
   } catch (error) {
     loading.style.display = 'none';
     errorBox.hidden = mapRoot.children.length > 0;
@@ -311,14 +314,38 @@ window.setExpoSelected = (id) => {
   objects.forEach((object, objectId) => {
     object.traverse((node) => {
       if (!node.material || !node.material.emissive) return;
-      node.material.emissive.set(objectId === selectedId ? 0xffd700 : 0x000000);
-      node.material.emissiveIntensity = objectId === selectedId ? 0.35 : 0;
+      const material = node.material;
+      if (objectId === selectedId) {
+        material.emissive.set(0xffd700);
+        material.emissiveIntensity = 0.35;
+        return;
+      }
+      const original = material.userData.expoOriginalEmissive;
+      if (original) material.emissive.copy(original);
+      material.emissiveIntensity =
+        material.userData.expoOriginalEmissiveIntensity ?? 0;
     });
   });
+  requestRender();
 };
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
+let renderPending = false;
+
+controls.addEventListener('change', requestRender);
+
+function requestRender() {
+  if (renderPending) return;
+  renderPending = true;
+  requestAnimationFrame(() => {
+    renderPending = false;
+    const stillMoving = controls.update();
+    renderer.render(scene, camera);
+    if (stillMoving) requestRender();
+  });
+}
+
 renderer.domElement.addEventListener('pointerup', (event) => {
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -341,12 +368,8 @@ function resize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
+  requestRender();
 }
 window.addEventListener('resize', resize);
 resize();
 window.SceneBridge?.postMessage(JSON.stringify({ type: 'sceneReady' }));
-(function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-})();

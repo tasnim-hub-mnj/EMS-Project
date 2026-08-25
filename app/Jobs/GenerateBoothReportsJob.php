@@ -18,12 +18,8 @@ class GenerateBoothReportsJob implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
+    public function __construct(public readonly ?int $investorId = null)
     {
-        //
     }
 
     /**
@@ -31,7 +27,9 @@ class GenerateBoothReportsJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $bookings = BoothBooking::where('status', 'approved')->get();
+        $bookings = BoothBooking::where('status', 'approved')
+            ->when($this->investorId, fn ($query) => $query->where('investor_id', $this->investorId))
+            ->get();
         $today = Carbon::today()->format('Y-m-d');
 
         foreach ($bookings as $booking)

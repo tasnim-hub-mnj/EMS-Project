@@ -14,13 +14,15 @@
 <body>
   <div id="app"></div><div id="loading">Loading map...</div><div id="error" hidden></div>
   <script>
-    window.SceneBridge = {
-      postMessage: function (message) {
-        if (window.chrome && window.chrome.webview) {
-          window.chrome.webview.postMessage(message);
+    if (!window.SceneBridge) {
+      window.SceneBridge = {
+        postMessage: function (message) {
+          if (window.chrome && window.chrome.webview) {
+            window.chrome.webview.postMessage(message);
+          }
         }
-      }
-    };
+      };
+    }
     window.addEventListener('error', function (event) {
       window.SceneBridge.postMessage(JSON.stringify({
         type: 'viewerError',

@@ -24,13 +24,41 @@ class DashboardInvestorController extends Controller
 
         $page     = $request->query('page', 1);
         $per_page = $request->query('per_page', 5);
+        $investorLocation = trim(mb_strtolower((string) $investor->location));
+        $locationTerms = collect(preg_split('/[\s,،\/\\|\-_]+/u', $investorLocation))
+            ->filter(fn ($term) => mb_strlen($term) >= 3)
+            ->values();
 
         $query = Exhibition::query()
         ->join('copies', 'copies.exhibition_id', '=', 'exhibitions.id')
         ->where('copies.copy_status', 'active') // النسخ النشطة فقط
-        ->where('exhibitions.location', $investor->location)
-        ->where('exhibitions.type', $investor->activity_type)
-        ->whereIn('exhibitions.status', ['upcoming', 'ongoing'])
+        ->where(function ($q) use ($investor, $investorLocation, $locationTerms) {
+            $q->where('exhibitions.type', $investor->activity_type);
+
+            if ($investorLocation !== '') {
+                $q->orWhereRaw('LOWER(exhibitions.location) = ?', [$investorLocation])
+                    ->orWhereRaw('LOWER(exhibitions.city) = ?', [$investorLocation]);
+
+                foreach ($locationTerms as $term) {
+                    $q->orWhereRaw('LOWER(exhibitions.location) LIKE ?', ["%{$term}%"])
+                        ->orWhereRaw('LOWER(exhibitions.city) LIKE ?', ["%{$term}%"]);
+                }
+            }
+        })
+        ->where(function ($q) {
+            $q->where('exhibitions.start_date', '>', now())
+                ->orWhere(function ($q) {
+                    $q->where(function ($q) {
+                        $q->whereNull('exhibitions.start_date')
+                            ->orWhere('exhibitions.start_date', '<=', now());
+                    })->where(function ($q) {
+                        $q->whereNull('exhibitions.end_date')
+                            ->orWhere('exhibitions.end_date', '>=', now());
+                    });
+                });
+        })
+        ->where('exhibitions.status', '!=', 'hidden')
+
         ->where(function ($q) {
             $q->whereHas('booths', function ($booths) {
                 $booths->where(function ($status) {
@@ -44,6 +72,7 @@ class DashboardInvestorController extends Controller
         })
         ->orderBy('exhibitions.start_date', 'asc')
         ->select('exhibitions.*') // مهم حتى يرجع موديل Exhibition كامل
+        ->distinct()
         ->paginate($per_page, ['*'], 'page', $page);
 
         $data = $query->map(function ($ex)
@@ -57,7 +86,7 @@ class DashboardInvestorController extends Controller
                 'end_date'         => Carbon::parse($ex->end_date)->format('Y-m-d'),
                 'location'         => $ex->location,
                 'city'             => $ex->city,
-                'status'           => $ex->status,
+                'status'           => $this->effectiveExhibitionStatus($ex),
                 'available_booths' => $ex->booths()
                     ->whereIn('status_inv', ['available', null])
                     ->whereIn('status', ['available', null])
@@ -80,6 +109,28 @@ class DashboardInvestorController extends Controller
         ], 200);
 
     }
+
+    private function effectiveExhibitionStatus(Exhibition $exhibition): string
+    {
+        $storedStatus = strtolower((string) ($exhibition->status ?? ''));
+        $now = now();
+
+        if ($exhibition->end_date && $now->greaterThan($exhibition->end_date)) {
+            return 'ended';
+        }
+        if ($exhibition->start_date && $now->lessThan($exhibition->start_date)) {
+            return 'upcoming';
+        }
+        if (in_array($storedStatus, ['finished', 'ended'], true)) {
+            return 'ended';
+        }
+        if (in_array($storedStatus, ['far', 'upcoming'], true)) {
+            return 'upcoming';
+        }
+
+        return 'active';
+    }
+
     //=====================================================================
     public function featuredSponsorEvents(Request $request)//✅
     {

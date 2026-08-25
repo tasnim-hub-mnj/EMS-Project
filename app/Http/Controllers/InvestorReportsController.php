@@ -6,6 +6,10 @@ use App\Exports\BoothReportExport;
 use App\Exports\EventReportExport;
 use App\Exports\SponsorshipReportExport;
 use App\Exports\VisitorReportExport;
+use App\Jobs\GenerateBoothReportsJob;
+use App\Jobs\GenerateEventReportsJob;
+use App\Jobs\GenerateSponsorshipReportsJob;
+use App\Jobs\GenerateVisitorReportsJob;
 use App\Models\InvestorBoothReports;
 use App\Models\InvestorEventReports;
 use App\Models\InvestorSponsorshipsReports;
@@ -20,6 +24,7 @@ class InvestorReportsController extends Controller
     public function getReports()
     {
         $investor = Auth::user()->investor;
+        $this->generateMissingReports($investor->id);
         $reports = collect()
             ->merge(InvestorVisitorReports::with('boothBooking.booth.exhibition')
                 ->where('investor_id', $investor->id)->latest()->get()
@@ -38,6 +43,22 @@ class InvestorReportsController extends Controller
         return response()->json([
             'data' => $reports,
         ], 200);
+    }
+
+    private function generateMissingReports(int $investorId): void
+    {
+        if (!InvestorBoothReports::where('investor_id', $investorId)->exists()) {
+            dispatch_sync(new GenerateBoothReportsJob($investorId));
+        }
+        if (!InvestorEventReports::where('investor_id', $investorId)->exists()) {
+            dispatch_sync(new GenerateEventReportsJob($investorId));
+        }
+        if (!InvestorVisitorReports::where('investor_id', $investorId)->exists()) {
+            dispatch_sync(new GenerateVisitorReportsJob($investorId));
+        }
+        if (!InvestorSponsorshipsReports::where('investor_id', $investorId)->exists()) {
+            dispatch_sync(new GenerateSponsorshipReportsJob($investorId));
+        }
     }
     //===============================================================
     public function getReportDetail(Request $request, $r_id)

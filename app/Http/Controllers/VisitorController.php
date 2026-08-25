@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\BoothReview;
 use App\Models\ExhibitionReview;
+use App\Mail\VerificationCodeMail;
+use App\Models\OtpCode;
 use App\Models\User;
 use App\Models\Visitor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class VisitorController extends Controller
@@ -49,14 +52,27 @@ class VisitorController extends Controller
                 'last_name' => $request->last_name,
             ]);
 
+            $otp = OtpCode::create([
+                'user_id' => $user->id,
+                'code' => $this->newOtpCode(),
+                'expires_at' => now()->addMinutes(10),
+                'is_used' => false,
+            ]);
             DB::commit();
+
+            try {
+                Mail::to($user->email)->sendNow(new VerificationCodeMail($otp));
+            } catch (\Throwable $mailException) {
+                report($mailException);
+            }
 
             return response()->json([
                 'status' => true,
                 'message' => 'User registered successfully',
+                'email' => $user->email,
             ], 201);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
 
             return response()->json([
@@ -67,6 +83,92 @@ class VisitorController extends Controller
     }
     //================================================================
 
+    public function verifyOtp(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+            'otp' => 'required|string',
+        ]);
+
+        $user = User::where('email', $request->email)
+            ->where('role', 'visitor')
+            ->firstOrFail();
+        $otp = OtpCode::where('user_id', $user->id)
+            ->where('code', $request->otp)
+            ->where('is_used', false)
+            ->latest()
+            ->first();
+
+        if (!$otp) {
+            return response()->json(['status' => false, 'message' => 'OTP not found'], 404);
+        }
+        if ($otp->expires_at && now()->greaterThan($otp->expires_at)) {
+            return response()->json(['status' => false, 'message' => 'OTP expired'], 400);
+        }
+
+        $otp->update(['is_used' => true]);
+        $user->update(['is_verified' => true]);
+        $visitor = $user->visitor;
+
+        return response()->json([
+            'status' => true,
+            'message' => 'OTP verified successfully',
+            'token' => $user->createToken('visitor_token')->plainTextToken,
+            'token_type' => 'Bearer',
+            'user' => $this->visitorPayload($user, $visitor),
+        ], 200);
+    }
+
+    public function resendOtp(Request $request)
+    {
+        $request->validate(['email' => 'required|email|exists:users,email']);
+        $user = User::where('email', $request->email)
+            ->where('role', 'visitor')
+            ->firstOrFail();
+
+        OtpCode::where('user_id', $user->id)->delete();
+        $otp = OtpCode::create([
+            'user_id' => $user->id,
+            'code' => $this->newOtpCode(),
+            'expires_at' => now()->addMinutes(10),
+            'is_used' => false,
+        ]);
+        Mail::to($user->email)->sendNow(new VerificationCodeMail($otp));
+
+        return response()->json([
+            'status' => true,
+            'message' => 'OTP resent successfully',
+        ], 200);
+    }
+
+    private function newOtpCode(): int
+    {
+        do {
+            $code = random_int(100000, 999999);
+        } while (OtpCode::where('code', $code)->exists());
+
+        return $code;
+    }
+
+    private function visitorPayload(User $user, ?Visitor $visitor): array
+    {
+        return [
+            'id' => $user->id,
+            'first_name' => $visitor?->first_name ?? '',
+            'last_name' => $visitor?->last_name ?? '',
+            'email' => $user->email,
+            'phone' => $user->phone ?? '',
+            'avatar' => $visitor?->avatar_url,
+            'interests' => $visitor?->interests ?? [],
+            'profession' => $visitor?->profession ?? '',
+            'city' => $visitor?->city ?? '',
+            'hobby' => $visitor?->hobby ?? '',
+            'schedule_count' => 0,
+            'tickets_count' => 0,
+            'favorites_count' => 0,
+        ];
+    }
+
     public function login(Request $request)
     {
 
@@ -75,7 +177,11 @@ class VisitorController extends Controller
             'password' => 'required',
         ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        if (!Auth::attempt([
+            'email' => $request->email,
+            'password' => $request->password,
+            'role' => 'visitor',
+        ])) {
             return response()->json([
                 'status' => false,
                 'message' => 'بيانات الدخول غير صحيحة، البريد الإلكتروني أو كلمة المرور خاطئة.',
@@ -83,6 +189,13 @@ class VisitorController extends Controller
         }
 
         $user = Auth::user();
+        if (!$user->is_verified) {
+            Auth::logout();
+            return response()->json([
+                'status' => false,
+                'message' => 'يرجى التحقق من البريد الإلكتروني قبل تسجيل الدخول.',
+            ], 403);
+        }
         $visitor = $user->visitor;
 
         $ticketsCount = 0;
@@ -94,7 +207,7 @@ class VisitorController extends Controller
                 ($visitor->eventTickets()->count() ?? 0) +
                 ($visitor->sponsorEventTickets()->count() ?? 0);
 
-            $scheduleCount = method_exists($visitor, 'schedules') ? $visitor->schedules()->count() : 0;
+            $scheduleCount = $visitor->schedule()->count();
             $favoritesCount = method_exists($visitor, 'favorites') ? $visitor->favorites()->count() : 0;
         }
 

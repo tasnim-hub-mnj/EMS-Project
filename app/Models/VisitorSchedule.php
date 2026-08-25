@@ -13,6 +13,8 @@ class VisitorSchedule extends Model
         [
             'visitor_id',
             'event_id',
+            'sponsor_event_id',
+            'event_source',
             'added_at'
         ];
 
@@ -34,6 +36,11 @@ class VisitorSchedule extends Model
     public function event()
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function sponsorEvent()
+    {
+        return $this->belongsTo(SponsorEvent::class, 'sponsor_event_id');
     }
     //==============================================
 }

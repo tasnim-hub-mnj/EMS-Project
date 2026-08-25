@@ -38,6 +38,9 @@ class BoothManagementController extends Controller
         return response()->json([
             'data' => [
                 'company_nature'    => $investor->activity_type,
+                'company_name'      => $investor->company_name,
+                'company_email'     => $investor->user?->email,
+                'section'           => $booking->booth?->section ?? '',
                     'services_products' => $booking->company_services_products ?? '',
                 'headquarters'      => $investor->location,
 
@@ -196,6 +199,9 @@ class BoothManagementController extends Controller
             'message' => 'Booth profile updated successfully.',
             'data' => [
                 'company_nature'    => $investor->activity_type,
+                'company_name'      => $investor->company_name,
+                'company_email'     => $investor->user?->email,
+                'section'           => $booking->booth?->section ?? '',
                 'services_products' => $booking->company_services_products ?? '',
                 'headquarters'      => $investor->location,
                 'social_links'      => $investor->socialLinks()->pluck('link')->values(),

@@ -264,12 +264,16 @@ class EventController extends Controller
             ->get();
 
         $data = $tickets->map(function ($ticket) {
+            $visitor = $ticket->visitor;
+            $user = $visitor?->user;
+
             return
                 [
                     'id' => $ticket->id,
-                    'visitor_name' => $ticket->visitor->first_name . ' ' . $ticket->visitor->last_name,
-                    'visitor_phone' => $ticket->visitor->user->phone,
-                    'visitor_email' => $ticket->visitor->user->email,
+                    'event_id' => $ticket->event_id,
+                    'visitor_name' => trim(($visitor?->first_name ?? '') . ' ' . ($visitor?->last_name ?? '')),
+                    'visitor_phone' => $user?->phone,
+                    'visitor_email' => $user?->email,
                     'status' => $ticket->status,
                     'amount' => $ticket->amount,
                     'booked_at' => $ticket->booked_at,
@@ -709,6 +713,13 @@ class EventController extends Controller
 
         $events = $query->paginate($perPage);
 
+        $sponsorEvents = SponsorEvent::with(['exhibition', 'sponsorEventImages'])
+            ->where('copy_status', 'published')
+            ->whereIn('status', ['upcoming', 'ongoing'])
+            ->when($isLatest == 1, fn ($sponsorQuery) => $sponsorQuery->latest())
+            ->limit($perPage)
+            ->get();
+
         $registeredEventIds = [];
         if ($visitor) {
             $registeredEventIds = \DB::table('event_tickets')
@@ -741,6 +752,7 @@ class EventController extends Controller
 
             return [
                 'id' => (int) $event->id,
+                'event_source' => 'event',
                 'exhibition_id' => $exhibition?->id ? (int) $exhibition->id : null,
                 'name' => $event->name ?? '',
                 'type' => $event->type ?? '',
@@ -750,14 +762,56 @@ class EventController extends Controller
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'description' => $event->description ?? '',
-                'image_url' => $event->eventImages?->first()?->image_url ?? $event->video_promo_url ?? null,
-                'speaker_name' => $event->speaker_name ?? '',
+                'image_url' => $this->publicImageUrl(
+                    $event->eventImages?->first()?->image ?? $event->video_promo_url
+                ),
+                'speaker_name' => '',
                 'available_seats' => max(0, $totalSeats - $registeredCount),
                 'total_seats' => $totalSeats,
+                'ticket_price' => $event->ticket_price !== null
+                    ? (float) $event->ticket_price
+                    : null,
                 'is_registered' => in_array($event->id, $registeredEventIds),
                 'exhibition_name' => $exhibition?->name ?? '',
             ];
         });
+
+        $formattedSponsorEvents = $sponsorEvents->map(function ($event) {
+            $totalSeats = (int) ($event->max_participants ?? 0);
+            $registeredCount = (int) ($event->registered_count ?? 0);
+
+            return [
+                'id' => (int) $event->id,
+                'event_source' => 'sponsor_event',
+                'exhibition_id' => $event->exhibition_id ? (int) $event->exhibition_id : null,
+                'name' => $event->name ?? '',
+                'type' => $event->type ?? '',
+                'hall' => $event->place ?? '',
+                'booth' => '',
+                'company_name' => $event->exhibition?->name ?? '',
+                'start_time' => $event->start_time
+                    ? Carbon::parse($event->start_time)->toIso8601String()
+                    : null,
+                'end_time' => $event->end_time
+                    ? Carbon::parse($event->end_time)->toIso8601String()
+                    : null,
+                'description' => $event->description ?? '',
+                'image_url' => $this->publicImageUrl(
+                    $event->sponsorEventImages?->first()?->image
+                ),
+                'speaker_name' => $event->speaker_name ?? '',
+                'available_seats' => max(0, $totalSeats - $registeredCount),
+                'total_seats' => $totalSeats,
+                'is_registered' => false,
+                'exhibition_name' => $event->exhibition?->name ?? '',
+            ];
+        });
+
+        $formattedEvents = $formattedEvents
+            ->concat($formattedSponsorEvents)
+            ->sortByDesc(fn ($event) => $event['start_time'] ?? '')
+            ->take($perPage)
+            ->values();
 
         return response()->json([
             'status' => true,
@@ -777,7 +831,7 @@ class EventController extends Controller
 
         $event = Event::with([
             'boothBooking.booth.exhibition',
-            'images'
+            'eventImages'
         ])->findOrFail($id);
 
         $booking = $event->boothBooking;
@@ -811,7 +865,9 @@ class EventController extends Controller
                 ? \Carbon\Carbon::parse($event->date . ' ' . $event->end_time)->toIso8601String()
                 : null,
             'description' => $event->description,
-            'image_url' => $event->images?->first()?->image_url ?? $event->video_promo_url ?? null,
+            'image_url' => $this->publicImageUrl(
+                $event->eventImages?->first()?->image ?? $event->video_promo_url
+            ),
             'speaker_name' => $event->by ?? 'متحدث رسمي',
             'available_seats' => $availableSeats,
             'total_seats' => $totalSeats,
@@ -824,6 +880,14 @@ class EventController extends Controller
             'data' => $formattedEvent
         ], 200);
     }
+    private function publicImageUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        return str_starts_with($path, 'data:') || filter_var($path, FILTER_VALIDATE_URL)
+            ? $path
+            : asset('storage/' . ltrim($path, '/'));
+    }
+
     //=====================================================
 
 }

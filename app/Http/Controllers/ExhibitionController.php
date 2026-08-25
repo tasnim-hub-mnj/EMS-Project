@@ -291,11 +291,11 @@ class ExhibitionController extends Controller
         $search = $request->query('search');
         $city   = $request->query('city');
         $sector = $request->query('sector');
+        $type   = $request->query('type');
         $status = $request->query('status');
+        $isActive = $request->query('is_active');
 
         $query = Exhibition::query()
-            ->join('copies', 'copies.exhibition_id', '=', 'exhibitions.id')
-            ->where('copies.copy_status', 'active')
             ->orderBy('exhibitions.start_date', 'asc')
             ->with([
                 'sponsorEvents',
@@ -324,17 +324,50 @@ class ExhibitionController extends Controller
             $query->whereJsonContains('sectors', $sector);
         }
 
+        if ($type) {
+            $query->where('exhibitions.type', $type);
+        }
+
         // status
         if ($status) {
-            $statusMap = [
-                'upcoming' => 'upcoming',
-                'active'   => 'ongoing',
-                'ended'    => 'finished'
-            ];
+            $now = now();
 
-            if (isset($statusMap[$status])) {
-                $query->where('status', $statusMap[$status]);
+            if ($status === 'upcoming') {
+                $query->where(function ($q) use ($now) {
+                    $q->where('start_date', '>', $now)
+                        ->orWhere(function ($q) {
+                            $q->where(function ($q) {
+                                $q->whereNull('start_date')
+                                    ->orWhere('start_date', '<=', now());
+                            })->where('status', 'upcoming');
+                        });
+                });
+            } elseif ($status === 'active') {
+                $query->where(function ($q) {
+                    $q->whereNull('start_date')
+                        ->orWhere('start_date', '<=', now());
+                })->where(function ($q) {
+                    $q->whereNull('end_date')
+                        ->orWhere('end_date', '>=', now());
+                })->whereNotIn('status', ['upcoming', 'finished', 'ended']);
+            } elseif ($status === 'ended') {
+                $query->where(function ($q) {
+                    $q->where('end_date', '<', now())
+                        ->orWhere(function ($q) {
+                            $q->where(function ($q) {
+                                $q->whereNull('end_date')
+                                    ->orWhere('end_date', '>=', now());
+                            })->whereIn('status', ['finished', 'ended']);
+                        });
+                })->where(function ($q) {
+                    $q->whereNull('start_date')
+                        ->orWhere('start_date', '<=', now());
+                });
             }
+        }
+
+        if ($isActive === '1' || $isActive === 'true') {
+            $query->whereIn('exhibitions.status', ['upcoming', 'ongoing']);
         }
 
         // paginate
@@ -343,6 +376,7 @@ class ExhibitionController extends Controller
         $user = auth('sanctum')->user();
 
         $exhibitions_data = $exhibitions->map(function ($exhibition) use ($user) {
+            $effectiveStatus = $this->effectiveExhibitionStatus($exhibition);
             return [
                 'id'               => $exhibition->id,
                 'name'             => $exhibition->name,
@@ -361,7 +395,9 @@ class ExhibitionController extends Controller
                 'end_date'         => Carbon::parse($exhibition->end_date)->format('Y-m-d'),
                 'location'         => $exhibition->location,
                 'city'             => $exhibition->city,
-                'status'           => $exhibition->status,
+                'status'           => $effectiveStatus,
+                'is_active'        => $effectiveStatus === 'ongoing',
+                'days_left'        => $this->exhibitionDaysLeft($exhibition),
                 'available_booths' => $this->investorAvailableBooths($exhibition),
                 'sectors'          => $exhibition->sectors ?? [],
                 'is_favorite'      => $user ? $user->favorites()
@@ -372,6 +408,7 @@ class ExhibitionController extends Controller
         });
 
         return response()->json([
+            'status' => true,
             'data' => $exhibitions_data,
             'pagination' => [
                 'current_page' => $exhibitions->currentPage(),
@@ -794,6 +831,7 @@ class ExhibitionController extends Controller
                     'sponsorEvents'
                 ])
                 ->withAvg('exhibitionReviews as average_rating', 'rating')
+                ->whereIn('status', ['upcoming', 'ongoing'])
                 ->latest()
                 ->limit($perPage)
                 ->get();
@@ -806,7 +844,11 @@ class ExhibitionController extends Controller
             // معالجة الصور
             $imagesList = [];
             if ($exhibition->relationLoaded('exhibitionImages') && $exhibition->exhibitionImages->isNotEmpty()) {
-                $imagesList = $exhibition->exhibitionImages->pluck('image_url')->toArray();
+                $imagesList = $exhibition->exhibitionImages
+                    ->map(fn ($image) => $this->publicImageUrl($image->image))
+                    ->filter()
+                    ->values()
+                    ->all();
             } elseif (!empty($exhibition->image)) {
                 $imagesList = [asset('storage/' . $exhibition->image)];
             }
@@ -833,7 +875,8 @@ class ExhibitionController extends Controller
                 'end_date' => $exhibition->end_date ? $exhibition->end_date->format('Y-m-d') : null,
                 'description' => (string) ($exhibition->description ?? ''),
                 'rating' => (float) round($exhibition->average_rating ?? 0.0, 1),
-                'is_active' => true,
+                'status' => $this->effectiveExhibitionStatus($exhibition),
+                'is_active' => $this->effectiveExhibitionStatus($exhibition) === 'ongoing',
                 'images' => $imagesList,
                 'days_left' => (int) $daysLeft,
                 'latitude' => $latitude,
@@ -850,6 +893,23 @@ class ExhibitionController extends Controller
             'status' => true,
             'data' => $formattedExhibitions
         ], 200);
+    }
+
+    private function effectiveExhibitionStatus(Exhibition $exhibition): string
+    {
+        $storedStatus = strtolower((string) ($exhibition->status ?? ''));
+        $now = now();
+        if ($exhibition->end_date && $now->greaterThan($exhibition->end_date)) return 'finished';
+        if ($exhibition->start_date && $now->lessThan($exhibition->start_date)) return 'upcoming';
+        if (in_array($storedStatus, ['finished', 'ended'], true)) return 'finished';
+        if ($storedStatus === 'upcoming') return 'upcoming';
+        return 'ongoing';
+    }
+
+    private function exhibitionDaysLeft(Exhibition $exhibition): int
+    {
+        if (!$exhibition->end_date) return 0;
+        return max(0, (int) now()->diffInDays($exhibition->end_date, false));
     }
     //===============================================================
     public function getEventsExh(Request $request, $id)
@@ -874,6 +934,7 @@ class ExhibitionController extends Controller
             ->with([
                 'boothBooking.booth',
                 'boothBooking.investor',
+                'eventImages',
                 'eventTickets' => function ($query) use ($visitorId) {
                     if ($visitorId) {
                         $query->where('visitor_id', $visitorId);
@@ -919,7 +980,9 @@ class ExhibitionController extends Controller
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'description' => $event->description ?? '',
-                'image_url' => $event->video_promo_url ?? null,
+                'image_url' => $this->publicImageUrl(
+                    $event->eventImages?->first()?->image ?? $event->video_promo_url
+                ),
                 'speaker_name' => $event->speaker_name ?? '',
                 'available_seats' => $availableSeats,
                 'total_seats' => $totalSeats,
@@ -949,12 +1012,29 @@ class ExhibitionController extends Controller
                 'message' => 'المعرض غير موجود'
             ], 404);
         }
-        $booths = Booth::where('exhibition_id', $id)->get();
+        $booths = Booth::with(['boothBookings.investor.user'])
+            ->where('exhibition_id', $id)
+            ->get();
+
+        $data = $booths->map(function ($booth) {
+            $booking = $booth->boothBookings->sortByDesc('created_at')->first();
+            $investor = $booking?->investor;
+            $isBooked = $booking?->status === 'approved';
+
+            return array_merge($booth->toArray(), [
+                'status' => $isBooked ? 'booked' : 'available',
+                'company_name' => $isBooked ? $investor?->company_name : null,
+                'company_email' => $isBooked ? $investor?->user?->email : null,
+                'company_initials' => $isBooked && $investor?->company_name
+                    ? mb_substr($investor->company_name, 0, 2)
+                    : null,
+            ]);
+        });
 
         return response()->json([
             'status' => true,
             'message' => 'تم جلب أجنحة المعرض بنجاح',
-            'data' => $booths
+            'data' => $data
         ], 200);
     }
     //===============================================================
@@ -967,6 +1047,25 @@ class ExhibitionController extends Controller
                 'status' => false,
                 'message' => 'المعرض غير موجود'
             ], 404);
+        }
+
+        $publishedMap = \App\Models\Map::where('exhibition_id', $id)
+            ->where('status', 'published')
+            ->latest('published_at')
+            ->first();
+
+        if ($publishedMap) {
+            $mapData = is_array($publishedMap->map_json)
+                ? $publishedMap->map_json
+                : [];
+            $mapData['map_id'] = (int) $publishedMap->id;
+            $mapData['exhibition_id'] = (int) $exhibition->id;
+            $mapData['exhibition_name'] = (string) $exhibition->name;
+
+            return response()->json([
+                'status' => true,
+                'data' => $mapData,
+            ], 200);
         }
 
         $mapData = (array) ($exhibition->extra_services ?? []);

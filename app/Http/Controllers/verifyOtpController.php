@@ -74,6 +74,7 @@ class verifyOtpController extends Controller
         Mail::to($user->email)->send(new VerificationCodeMail($otp));
 
         return response()->json([
+            'status' => true,
             'message' => 'OTP resent successfully',
             // 'otp'=>$otp
         ], 200);
@@ -103,9 +104,10 @@ class verifyOtpController extends Controller
             'is_used' => false,
         ]);
 
-        Mail::to($user->email)->send(new VerificationCodeMail($otp));
+        Mail::to($user->email)->sendNow(new VerificationCodeMail($otp));
 
         return response()->json([
+            'status' => true,
             'message' => 'Verification code sent to your email.',
             // 'otp'=>$otp
         ], 200);
@@ -137,6 +139,7 @@ class verifyOtpController extends Controller
         }
 
         return response()->json([
+            'status' => true,
             'message' => 'OTP verified successfully'
         ], 200);
     }
@@ -169,6 +172,7 @@ class verifyOtpController extends Controller
         $otp->update(['is_used' => true]);
 
         return response()->json([
+            'status' => true,
             'message' => 'Password changed successfully.',
             'data' => [
                 'token' => $user->createToken('investor_token')->plainTextToken,
@@ -225,6 +229,16 @@ class verifyOtpController extends Controller
         return response()->json([
             'message' => 'FCM token saved successfully.',
             'fcm_token' => $user->fcm_token
+        ], 200);
+    }
+
+    public function deleteFcmToken(Request $request)
+    {
+        $user = Auth::user();
+        $user->update(['fcm_token' => null]);
+
+        return response()->json([
+            'message' => 'FCM token deleted successfully.'
         ], 200);
     }
     //================================================================

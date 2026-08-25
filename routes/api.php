@@ -297,6 +297,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/investor/notifications/unread', [NotificationController::class, 'unread']);
         Route::patch('/investor/notifications/{id}/read', [NotificationController::class, 'markRead']);
         Route::post('/investor/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+        Route::get('/investor/notifications/preferences', [NotificationController::class, 'preferences']);
+        Route::patch('/investor/notifications/preferences', [NotificationController::class, 'updatePreferences']);
         Route::delete('/investor/notifications/{id}', [NotificationController::class, 'destroy']);
 
         //Exhibitions
@@ -359,10 +361,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('/auth/login', [VisitorController::class, 'login'])->middleware('throttle:log');
 Route::post('/auth/register', [VisitorController::class, 'register']);
-Route::post('/visitor/auth/verify-otp', [verifyOtpController::class, 'verifyOtp']);
-Route::post('/visitor/auth/resend-otp', [verifyOtpController::class, 'resendOtp']);
+Route::post('/visitor/auth/verify-otp', [VisitorController::class, 'verifyOtp']);
+Route::post('/visitor/auth/resend-otp', [VisitorController::class, 'resendOtp']);
 Route::post('/visitor/auth/forgot-password', [verifyOtpController::class, 'forgotPassword1']);// الخطوة 1: إرسال OTP
 Route::post('/visitor/auth/forgot-password/verify-otp', [verifyOtpController::class, 'forgotPassword2']);// الخطوة 2: التحقق من OTP
+Route::post('/visitor/auth/forgot-password/resend-otp', [verifyOtpController::class, 'resendOtp']);
 Route::post('/visitor/auth/reset-password', [verifyOtpController::class, 'resetPassword']);// الخطوة 3: تعيين كلمة مرور جديدة
 
 
@@ -370,6 +373,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('checkIsVisitor')->group(function () {
         Route::post('/visitor/auth/change-password', [verifyOtpController::class, 'updatePassword']);
         Route::post('/visitor/auth/fcm-token', [verifyOtpController::class, 'saveFcmToken']);
+        Route::delete('/visitor/auth/fcm-token', [verifyOtpController::class, 'deleteFcmToken']);
 
         //profile+logout
         Route::get('/profile', [ProfileVisitorController::class, 'getProfile']);
@@ -419,6 +423,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
         //تذاكر الزائر
+        Route::get('/visitor/bookings/my-tickets', [TicketController::class, 'myTickets']);
         Route::get('/bookings/my-tickets', [TicketController::class, 'myTickets']);
         Route::post('/bookings/exhibition', [TicketController::class, 'bookExhibition']);
         Route::get('/booking/exhibition/{id}', [TicketController::class, 'getExhibitionTicket']);
@@ -448,7 +453,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/events/{id}', [EventController::class, 'getEventById']);
         Route::get('/events', [EventController::class, 'getLatestEvents']);
         //__________________________________________________________________________________________
-        Route::get('/visitor/favorites', [FavoriteController::class, 'getFavoritesInvestor']);
+        Route::get('/visitor/favorites', [FavoriteController::class, 'getFavoritesVisitor']);
         Route::post('/visitor/favorites/{id}', [FavoriteController::class, 'addFavorite']);
         Route::delete('/visitor/favorites/{id}', [FavoriteController::class, 'removeFavorite']);
     });

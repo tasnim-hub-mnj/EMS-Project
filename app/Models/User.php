@@ -29,6 +29,9 @@ class User extends Authenticatable
             'role',
             'status',
             'is_verified',
+            'notifications_enabled',
+            'favorites_notify',
+            'reports_notify',
         ];
 
     /**
@@ -51,6 +54,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'notifications_enabled' => 'boolean',
+            'favorites_notify' => 'boolean',
+            'reports_notify' => 'boolean',
         ];
     }
     //------------------------------------------------

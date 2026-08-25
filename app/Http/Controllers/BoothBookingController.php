@@ -155,6 +155,7 @@ class BoothBookingController extends Controller
                 'start_date' => Carbon::parse($booking->start_date)->format('Y-m-d'),
                 'end_date' => Carbon::parse($booking->end_date)->format('Y-m-d'),
                 'location' => $booth->location,
+                'section' => $booth->section,
                 'amenities' => $amenities,
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $booth->id)
@@ -257,6 +258,7 @@ class BoothBookingController extends Controller
                 'start_date' => $booking->start_date,
                 'end_date' => $booking->end_date,
                 'location' => $booth->location,
+                'section' => $booth->section,
                 'amenities' => $booth->amenities ?? [],
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $booth->id)
@@ -328,6 +330,7 @@ class BoothBookingController extends Controller
                 'start_date' => $booking->start_date,
                 'end_date' => $booking->end_date,
                 'location' => $booth->location,
+                'section' => $booth->section,
                 'amenities' => $amenities,
                 'is_favorite' => Auth::user()->favorites()
                     ->where('favoritable_id', $booth->id)

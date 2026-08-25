@@ -16,10 +16,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Services\NotificationService;
 
 class TicketController extends Controller
 {
-    //طلب حجز تذكرة معرض 
+    //طلب حجز تذكرة معرض
 
     public function bookExhibition(Request $request)
     {
@@ -84,9 +85,24 @@ class TicketController extends Controller
                     'event_name' => null,
                     'paid_amount' => (float) $ticket->amount,
                     'seat_number' => null,
+                    'is_paid' => (float) $ticket->amount > 0,
+                    'can_show_qr' => true,
                 ];
             }
         });
+
+        app(NotificationService::class)->forUserId(
+            (int) $user->id,
+            'تم تأكيد حجز التذكرة',
+            "تم حجز {$quantity} تذكرة لمعرض {$exhibition->name} بنجاح.",
+            'ticket.created',
+            [
+                'ticket_type' => 'exhibition',
+                'exhibition_id' => (int) $exhibition->id,
+            ],
+            '/tickets',
+            (int) $exhibition->id,
+        );
 
         return response()->json([
             'status' => true,
@@ -173,6 +189,20 @@ class TicketController extends Controller
             $event->increment('registered_count', $quantity);
         });
 
+        app(NotificationService::class)->forUserId(
+            (int) $user->id,
+            'تم تأكيد حجز التذكرة',
+            "تم حجز {$quantity} تذكرة لفعالية {$event->title} بنجاح.",
+            'ticket.created',
+            [
+                'ticket_type' => 'event',
+                'event_id' => (int) $event->id,
+                'exhibition_id' => $exhibition?->id ? (int) $exhibition->id : null,
+            ],
+            '/tickets',
+            $exhibition?->id ? (int) $exhibition->id : null,
+        );
+
         return response()->json([
             'status' => true,
             'data' => $quantity === 1 ? $createdTickets[0] : $createdTickets
@@ -246,6 +276,21 @@ class TicketController extends Controller
             'paid_amount' => (float) $ticket->amount,
             'seat_number' => null,
         ];
+
+        app(NotificationService::class)->forUserId(
+            (int) $user->id,
+            'تم تأكيد حجز التذكرة',
+            "تم حجز تذكرتك لفعالية {$eventName} بنجاح.",
+            'ticket.created',
+            [
+                'ticket_type' => 'sponsor_event',
+                'ticket_id' => (int) $ticket->id,
+                'event_id' => (int) $sponsorEvent->id,
+                'exhibition_id' => $exhibition?->id ? (int) $exhibition->id : null,
+            ],
+            '/tickets',
+            $exhibition?->id ? (int) $exhibition->id : null,
+        );
 
         return response()->json([
             'status' => true,
@@ -344,7 +389,7 @@ class TicketController extends Controller
         ]);
     }
     //==========================================================
-    //عرض حجوزات الزائر ككل 
+    //عرض حجوزات الزائر ككل
     public function myTickets()
     {
         $visitor = Auth::user()?->visitor;
@@ -376,21 +421,28 @@ class TicketController extends Controller
                     'event_name' => null,
                     'paid_amount' => (float) ($t->amount ?? $t->paid_amount ?? 0),
                     'seat_number' => $t->seat_number ?? null,
+                    'is_paid' => (float) ($t->amount ?? 0) > 0,
+                    'can_show_qr' => true,
                 ];
             });
 
         // 2. تذاكر الفعاليات
-        $eventTickets = EventTicket::with('event')
+        $eventTickets = EventTicket::with('event.boothBooking.booth.exhibition')
             ->where('visitor_id', $visitor->id)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($t) {
                 $bookedAt = $t->booked_at ?? $t->created_at;
+                $isPaid = ($t->event?->ticket_type ?? null) === 'paid'
+                    || (float) ($t->amount ?? 0) > 0;
+                $canShowQr = !$isPaid || in_array(strtolower((string) $t->status), ['approved', 'confirmed'], true);
 
                 return [
                     'id' => (int) $t->id,
-                    'exhibition_id' => $t->event?->exhibition_id ? (int) $t->event->exhibition_id : null,
-                    'exhibition_name' => $t->event?->exhibition?->name ?? null,
+                    'exhibition_id' => $t->event?->boothBooking?->booth?->exhibition?->id
+                        ? (int) $t->event->boothBooking->booth->exhibition->id
+                        : null,
+                    'exhibition_name' => $t->event?->boothBooking?->booth?->exhibition?->name ?? null,
                     'qr_data' => (string) ($t->qr_code ?? $t->qr_data ?? ''),
                     'booked_at' => $bookedAt ? Carbon::parse($bookedAt)->toIso8601String() : null,
                     'type' => 'event',
@@ -399,6 +451,8 @@ class TicketController extends Controller
                     'event_name' => $t->event?->title ?? $t->event?->name ?? '',
                     'paid_amount' => (float) ($t->amount ?? $t->paid_amount ?? 0),
                     'seat_number' => $t->seat_number ?? null,
+                    'is_paid' => $isPaid,
+                    'can_show_qr' => $canShowQr,
                 ];
             });
 
@@ -448,12 +502,23 @@ class TicketController extends Controller
             ], 403);
         }
 
-        $ticket = Ticket::where('id', $id)
+        $ticket = Ticket::with('exhibition')->where('id', $id)
             ->where('visitor_id', $visitor->id)
             ->first();
 
         if ($ticket) {
             $ticket->update(['status' => 'rejected']);
+            $exhibitionName = $ticket->exhibition?->name ?? 'المعرض';
+
+            app(NotificationService::class)->forUserId(
+                (int) Auth::id(),
+                'تم إلغاء التذكرة',
+                "تم إلغاء تذكرتك لمعرض {$exhibitionName} بنجاح.",
+                'ticket.cancelled',
+                ['ticket_id' => (int) $ticket->id, 'ticket_type' => 'exhibition'],
+                '/tickets',
+                $ticket->exhibition_id ? (int) $ticket->exhibition_id : null,
+            );
 
             return response()->json([
                 'status' => true,
@@ -474,6 +539,16 @@ class TicketController extends Controller
                     $eventTicket->event->decrement('registered_count');
                 }
             });
+            $eventName = $eventTicket->event?->title ?? 'الفعالية';
+
+            app(NotificationService::class)->forUserId(
+                (int) Auth::id(),
+                'تم إلغاء التذكرة',
+                "تم إلغاء تذكرتك لفعالية {$eventName} بنجاح.",
+                'ticket.cancelled',
+                ['ticket_id' => (int) $eventTicket->id, 'ticket_type' => 'event'],
+                '/tickets',
+            );
 
             return response()->json([
                 'status' => true,
@@ -487,6 +562,15 @@ class TicketController extends Controller
 
         if ($sponsorTicket) {
             $sponsorTicket->update(['status' => 'rejected']);
+
+            app(NotificationService::class)->forUserId(
+                (int) Auth::id(),
+                'تم إلغاء التذكرة',
+                'تم إلغاء تذكرتك للفعالية الإعلانية بنجاح.',
+                'ticket.cancelled',
+                ['ticket_id' => (int) $sponsorTicket->id, 'ticket_type' => 'sponsor_event'],
+                '/tickets',
+            );
 
             return response()->json([
                 'status' => true,

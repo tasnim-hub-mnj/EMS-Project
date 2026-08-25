@@ -15,12 +15,8 @@ class GenerateSponsorshipReportsJob implements ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
+    public function __construct(public readonly ?int $investorId = null)
     {
-        //
     }
 
     /**
@@ -28,7 +24,8 @@ class GenerateSponsorshipReportsJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $investors = Investor::whereHas('sponsorshipBookings', function ($query)
+        $investors = Investor::when($this->investorId, fn ($query) => $query->whereKey($this->investorId))
+            ->whereHas('sponsorshipBookings', function ($query)
         {
             $query->where('status', 'approved');
         })->get();
@@ -86,7 +83,7 @@ class GenerateSponsorshipReportsJob implements ShouldQueue
                 {
                     $dailyVisitors = is_array($booking->daily_visitors)
                         ? $booking->daily_visitors
-                        : json_decode($booking->daily_visitors, true) ?? [];
+                        : (json_decode($booking->daily_visitors ?? '[]', true) ?? []);
 
                     foreach ($dailyVisitors as $date => $visitorsCount)
                     {

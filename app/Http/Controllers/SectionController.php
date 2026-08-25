@@ -208,12 +208,9 @@ class SectionController extends Controller
 
             $boothData = [
                 'section_id' => $sectionId,
+                'section' => $sectionName,
                 'area' => $area,
-                'status' => $boothInput['status'] ?? 'available',
-                'price' => $boothInput['price'] ?? 0,
                 'location' => $boothInput['location'] ?? null,
-                'services' => $boothInput['services'] ?? [],
-                'amenities' => $boothInput['amenities'] ?? [],
                 'map_x' => $boothInput['map_x'] ?? $boothInput['mapX'] ?? null,
                 'map_y' => $boothInput['map_y'] ?? $boothInput['mapY'] ?? null,
                 'map_width' => $boothInput['map_width'] ?? $boothInput['mapWidth'] ?? null,
@@ -224,14 +221,35 @@ class SectionController extends Controller
                 $boothData['description'] = $boothInput['description'];
             }
 
-            $booth = Booth::updateOrCreate(
-                [
-                    'exhibition_id' => $exhibitionId,
-                    'number' => $number,
-                    'section' => $sectionName,
-                ],
-                $boothData
-            );
+            $booth = Booth::where('exhibition_id', $exhibitionId)
+                ->where('number', $number)
+                ->where('section', $sectionName)
+                ->first();
+
+            if (!$booth) {
+                $sameNumberBooths = Booth::where('exhibition_id', $exhibitionId)
+                    ->where('number', $number)
+                    ->get();
+                $booth = $sameNumberBooths->count() === 1
+                    ? $sameNumberBooths->first()
+                    : Booth::firstOrNew(
+                        [
+                            'exhibition_id' => $exhibitionId,
+                            'number' => $number,
+                            'section' => $sectionName,
+                        ]
+                    );
+            }
+
+            if (!$booth->exists) {
+                $boothData['status'] = $boothInput['status'] ?? 'available';
+                $boothData['price'] = $boothInput['price'] ?? 0;
+                $boothData['services'] = $boothInput['services'] ?? [];
+                $boothData['amenities'] = $boothInput['amenities'] ?? [];
+            }
+
+            $booth->fill($boothData);
+            $booth->save();
 
             $boothNames[] = $booth->id;
         }
